@@ -2,7 +2,18 @@
 
 ## Command-center iteration — 9 November 2026
 
-Review branch: `codex/defense-command-center`, targeting `codex/node-v0.1`. This iteration adds the navy command-center presentation, randomized cursor construction, six-host compatibility strip and scoped offline update-inventory planning. Local verification: 38 tests, 114 browser checks, 10 motion checks, build/lint/typecheck/skills and demo pass. Canonical EN/PL URLs remain unchanged. Remote CI and publication evidence will be appended after observation; earlier deployments below refer to the previous release.
+Published and checked:
+
+- [PR #4](https://github.com/aievolutionpl/cyber-defense-agent/pull/4) merged into the default source branch; merge commit `99bf974260390967b148c6658c7f943bd3ea351c`.
+- [Node 22 CI run 42706796021](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42706796021): Windows, Ubuntu and macOS **success**; each ran **38 tests, 38 passed, zero skipped**, plus skills/lint/typecheck/build/demo checks.
+- Pages artifact `55f45411b454e3e2763bfd45842b6a8f519f5e1a`; [deployment 42707107861](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42707107861) **success**.
+- Public canonical EN/PL: **114/114 Chromium checks pass**, no uncaught browser errors or failed same-origin requests. An initial harness assertion raced the public policy-return navigation; the test now awaits the landing URL and visible hero before asserting. No runtime change was needed.
+- **12/12** unique GitHub destinations returned HTTP 200; **58** relative documentation references resolve. All four README graphics returned HTTP 200 and match the committed assets (SVG comparison normalizes Git line endings).
+- Previous comparison redirects and artifact history are preserved. Full model-host sessions and live OS update collection remain unverified/unimplemented as documented.
+
+Evidence: local `output/release/command-center-public.json`, `command-center-github-links.json`, `command-center-readme-assets.json`, screenshots and motion recording. Reproducible checks are in `scripts/ui-acceptance.js` and `scripts/motion-acceptance.js`.
+
+Review branch: `codex/defense-command-center`, targeting `codex/node-v0.1`. This iteration adds the navy command-center presentation, randomized cursor construction, six-host compatibility strip and scoped offline update-inventory planning. Local verification: 38 tests, 114 browser checks, 10 motion checks, build/lint/typecheck/skills and demo pass. Canonical EN/PL URLs remain unchanged. Remote evidence is recorded above; older deployments below refer to the previous release.
 
 The release consolidates the skill, Node tools, English-first EN/PL site, terminal intake, public policies and illustrated README into the existing default source branch `codex/node-v0.1`, through a reviewed pull request from `codex/premium-unified`. GitHub merge is explicitly authorized by the owner for this iteration. No original blocked historical parent is reintroduced.
 

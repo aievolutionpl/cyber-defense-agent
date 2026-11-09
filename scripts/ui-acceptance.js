@@ -155,6 +155,8 @@ async (page) => {
     assert(await page.evaluate(() => !localStorage.length && !sessionStorage.length && !document.cookie), `${locale}: application creates no cookies or browser storage`);
     const back = page.getByRole('link', { name: pl ? 'Wróć do prezentacji' : 'Back to the presentation', exact: true });
     await back.focus(); await back.press('Enter');
+    await page.waitForURL(base + (pl ? 'pl/' : ''));
+    await page.locator('.hero').waitFor({ state: 'visible' });
     assert(await page.locator('.hero').isVisible(), `${locale}: keyboard return from policy`);
     await page.locator('#trust').screenshot({ path: `output/playwright/${locale}-trust.png` });
   }
