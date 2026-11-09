@@ -1,5 +1,7 @@
 # Wersja porównawcza Node v0.1
 
+Stan: opublikowana. GitHub Pages build zakończony sukcesem, URL HTTP 200; 27/27 kontroli w publicznym Chromium, brak błędów i ostrzeżeń konsoli.
+
 - Strona: https://aievolutionpl.github.io/cyber-defense-agent/compare/node-v0.1/
 - Pełny kod: https://github.com/aievolutionpl/cyber-defense-agent/tree/codex/node-v0.1
 - Repozytorium: https://github.com/aievolutionpl/cyber-defense-agent

@@ -35,7 +35,7 @@ npx --yes --package @playwright/cli playwright-cli --session cda-node open http:
 npx --yes --package @playwright/cli playwright-cli --session cda-node run-code --filename scripts/ui-acceptance.js
 ```
 
-Wygenerowane zrzuty i logi są w lokalnym output/playwright/ (wyłączone z Gita). W końcowym przebiegu: 27/27, konsola 0 błędów i 0 ostrzeżeń. Osiem unikalnych linków GitHub strony sprawdzono HTTP HEAD: wszystkie 200. Pierwszy serwer Python na Windows resetował równoległe połączenia z plikami JS. Po zmianie na statyczny serwer Node i dodaniu oczekiwania na widoczne stany paneli cały scenariusz przeszedł bez błędów. Jeśli port jest zajęty, serve wybiera inny; otwórz zwrócony adres (test używa bieżącego origin). Nie testowano na fizycznym telefonie ani w Safari/Firefox. Kontrole klawiatury nie są pełnym audytem WCAG.
+Wygenerowane zrzuty i logi są w lokalnym output/playwright/ (wyłączone z Gita). W końcowym przebiegu: 27/27, konsola 0 błędów i 0 ostrzeżeń. Dziewięć unikalnych linków GitHub strony sprawdzono HTTP HEAD: wszystkie 200. Pełne 27 kontroli powtórzono na publicznej stronie GitHub Pages: PASS, konsola 0 błędów i 0 ostrzeżeń. Pierwszy serwer Python na Windows resetował równoległe połączenia z plikami JS. Po zmianie na statyczny serwer Node i dodaniu oczekiwania na widoczne stany paneli cały scenariusz przeszedł bez błędów. Jeśli port jest zajęty, serve wybiera inny; otwórz zwrócony adres (test używa bieżącego origin). Nie testowano na fizycznym telefonie ani w Safari/Firefox. Kontrole klawiatury nie są pełnym audytem WCAG.
 
 ## Codex i Claude Code
 

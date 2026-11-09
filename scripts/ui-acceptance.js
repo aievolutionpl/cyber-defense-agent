@@ -1,5 +1,6 @@
 async (page) => {
   const checks = [];
+  await page.waitForLoadState('networkidle');
   const assert = (condition, name) => { if (!condition) throw new Error(name); checks.push(name); };
   await page.context().grantPermissions(['clipboard-read','clipboard-write'], { origin:new URL(page.url()).origin });
   await page.setViewportSize({width:1440,height:1000});
