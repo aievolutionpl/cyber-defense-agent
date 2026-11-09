@@ -1,5 +1,16 @@
 # Verification record
 
+## Command-center and update planning — 9 November 2026
+
+- Windows local: **38/38 tests**, canonical skill contracts, ESLint, TypeScript, production-prefix static build and synthetic audit demo pass. Five update-inventory tests cover exact scope, untrusted fields, stale/missing/equal versions, invalid calendar/future dates, duplicate/bounded records and all seven documented OS/manager label pairs.
+- The synthetic Windows inventory produced a local Markdown/JSON plan: two reported updates and one unknown available version. No network, target execution, installation or model calls. OS-manager labels are input metadata, not executing integrations.
+- Production static export: **114/114 Chromium checks** for EN/PL, 320/390/768/1440 px, keyboard, clipboard, full audit demo, onboarding, policies, protection tabs, host-status disclosure, reduced motion and no-JS content. Zero uncaught errors or failed assets.
+- Motion acceptance: **10/10 checks** for three independent changing cursor paths, left-to-right host strip, pause, compact single cursor, keyboard interaction during construction and dynamic reduced motion. Actual desktop/mobile, in-progress cursor and protection screenshots were inspected. This is simulated construction, not connected autonomous agents.
+- transitions-agent **0.11.2**, source-only scan: **78 → 78** final score. Polish retained a valid reduced-motion guard; three incorrect decorative-loop speed changes were reverted. The intermediate service score of 81 is not the final result. Remaining menu/global recipe findings are unresolved; Business Revamp was refused by the Free license and is deferred. See [design provenance](COMMAND_CENTER_DESIGN.md).
+- Codex, Claude Code, Cursor, Antigravity, Lovable and Hermes full model sessions remain **unverified**. Local tests, documented format support and CI are separate evidence. Physical phones, Safari/Firefox and sustained GPU/frame-rate measurements remain untested.
+
+Public deployment and remote matrix results are recorded in [RELEASE.md](RELEASE.md) after observation. Older records below are historical.
+
 ## Unified release hardening — 9 November 2026
 
 - Windows local: **33/33 security and workflow tests**, skill contracts, ESLint, TypeScript, static build and synthetic demo pass. Four new intake tests cover all 36 choice combinations, invalid input, cancellation/EOF and the absence of approval/transmission side effects.

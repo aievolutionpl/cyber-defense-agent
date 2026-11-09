@@ -47,3 +47,7 @@ Exact/ranged unresolved versions and malformed package.json return inconclusive.
 Local report schema cda.report.v1 records source, scope root fingerprint, paths, findings, rule versions and per-control content digest/result. No absolute target path is included in the report; it remains in local scope state.
 
 Retest needs an unexpired approved scope and two reports for the same canonical root. A missing finding is confirmed_fixed only when after was a local review, the same supported rule was clear, the current file digest still matches, and rerunning that rule now is clear. Otherwise it is insufficient_data. Matching findings are still_present; new finding groups are reported separately. Rules with multiple findings in a file are treated conservatively as one rule/file group for retest. No absence in imported data is treated as verified remediation.
+
+## Offline update inventories
+
+`cda.updates.v1` input and `cda.update-plan.v1` output are separate from audit/retest reports. See [UPDATE_PLANNING.md](UPDATE_PLANNING.md) for the bounded fields, timestamp rules, supported OS/manager labels and conservative outcomes. `summary` and `retest` do not accept update plans.

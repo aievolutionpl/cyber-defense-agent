@@ -1,0 +1,41 @@
+async (page) => {
+ const checks=[];
+ const assert=(ok,name)=>{if(!ok)throw new Error(name);checks.push(name);};
+ const base=page.url().replace(/pl\/$/,'').replace(/\/$/,'')+'/';
+ await page.emulateMedia({reducedMotion:'no-preference'});
+ await page.setViewportSize({width:1440,height:1000});
+ await page.goto(base);
+ await page.waitForFunction(()=>document.querySelector('.agent-build-overlay')?.dataset.active==='true');
+ const samples=await page.evaluate(()=>new Promise(resolve=>{
+  const samples=[];let n=0;
+  const sample=()=>{samples.push([...document.querySelectorAll('.build-cursor')].filter(c=>!c.hidden).map(c=>({transform:c.style.transform,side:c.dataset.side,label:c.querySelector('span').textContent})));if(++n<50)requestAnimationFrame(sample);else resolve(samples);};sample();
+ }));
+ assert(samples.some(s=>s.length===3),'desktop uses three independent visual cursors');
+ assert(new Set(samples.map(s=>s[0]?.transform)).size>10,'cursor travels along a changing path');
+ assert(samples.some(s=>new Set(s.map(c=>c.transform)).size===3),'cursors follow distinct routes');
+ await page.screenshot({path:'output/playwright/command-cursors-building.png'});
+ await page.locator('#protection').scrollIntoViewIfNeeded();
+ await page.waitForFunction(()=>document.querySelector('.protection-workbench')?.dataset.buildStage==='assembled');
+ await page.locator('#protection').screenshot({path:'output/playwright/command-protection.png'});
+ await page.locator('.host-workflows').scrollIntoViewIfNeeded();
+ await page.mouse.move(20,20);
+ await page.waitForFunction(()=>document.querySelector('.host-workflows')?.dataset.inView==='true');
+ const frames=await page.locator('.host-track').evaluate(el=>el.getAnimations()[0].effect.getKeyframes().map(k=>k.transform));
+ assert(frames[0].includes('-50%')&&frames.at(-1).includes('0'),'host strip moves from left to right');
+ await page.getByRole('button',{name:'Pause animations',exact:true}).click();
+ assert(await page.locator('.host-track').evaluate(el=>el.getAnimations().every(a=>a.playState==='paused')),'pause stops host strip');
+ assert(await page.locator('.agent-build-overlay').getAttribute('data-active')==='false','pause clears cursor work');
+ await page.getByRole('button',{name:'Resume animations',exact:true}).click();
+ await page.setViewportSize({width:390,height:844});
+ await page.goto(base);
+ await page.waitForFunction(()=>document.querySelector('.agent-build-overlay')?.dataset.active==='true');
+ assert(await page.locator('.build-cursor').evaluateAll(c=>c.filter(x=>!x.hidden).length)===1,'compact viewport uses one cursor');
+ const scope=page.getByRole('tab',{name:'Scope',exact:true});await scope.focus();await scope.press('Enter');
+ await page.waitForFunction(()=>document.querySelector('#preview-tab-scope')?.getAttribute('aria-selected')==='true');
+ assert(await scope.getAttribute('aria-selected')==='true','keyboard remains functional during construction');
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await page.waitForFunction(()=>document.documentElement.dataset.motion==='paused');
+ assert(await page.locator('.agent-build-overlay').evaluate(el=>getComputedStyle(el).display==='none'),'reduced motion removes the decorative overlay');
+ assert(await page.locator('.hero-copy').evaluate(el=>getComputedStyle(el).opacity==='1'),'reduced motion leaves real content fully readable');
+ return {passed:checks.length,checks};
+}

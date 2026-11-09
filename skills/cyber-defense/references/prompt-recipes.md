@@ -23,3 +23,7 @@ Invoke the skill explicitly in the host: `$cyber-defense` in Codex or `/cyber-de
 > Help me design an authorized, isolated security lab. Ask about the assets, accounts, egress controls and STOP conditions. Provide an architecture and review checklist only; do not run network tests or install tools.
 
 If the user asks to stop, stop work and explain how to revoke the current scope. Revocation does not delete existing reports.
+
+## Plan workstation or server updates
+
+> Help me review an offline update inventory. Ask about the OS, source/date, production impact and backup/rollback constraints. Propose an exact-file scope for my approval. Mark stale or missing data, explain the unverified version/security labels and prepare a maintenance plan. Do not query or update the machine, run imported commands or share private inventory with a provider.

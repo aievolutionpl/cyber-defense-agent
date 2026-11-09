@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="apps/site/public/assets/defense-core.webp" alt="A sculptural security core on a dark graphite surface — Cyber Defense Agent" width="100%" />
+  <img src="docs/assets/product-preview.png" alt="Cyber Defense Agent — actual command-center presentation with evidence and audit controls" width="100%" />
 </p>
 
 <h1 align="center">Cyber Defense Agent</h1>
@@ -34,7 +34,7 @@ The skill is the workflow; the CLI enforces file access and validates reports; t
 
 ## See it before you run it
 
-[![Actual product presentation: dark interface, audit evidence, scope and retest tabs](docs/assets/product-preview.png)](https://aievolutionpl.github.io/cyber-defense-agent/)
+[![AI cursors assembling a security workflow: dependency, configuration and update planning](docs/assets/protection-preview.png)](https://aievolutionpl.github.io/cyber-defense-agent/#protection)
 
 The [interactive presentation](https://aievolutionpl.github.io/cyber-defense-agent/) walks through one synthetic dependency finding, the blocked out-of-scope action, its remediation and a retest. English by default, Polish available, with keyboard navigation, reduced motion and an optional agent-cursor build effect. Website buttons never grant access to your local files.
 
@@ -81,6 +81,14 @@ The intake does not save answers, approve a scope, read a target or call a model
 | Hermes | Experimental thin entry | Discovery and full session **unverified** |
 
 [Latest platform checks](https://github.com/aievolutionpl/cyber-defense-agent/actions/workflows/node-v01-check.yml) · [Exact results and limitations](docs/VERIFICATION.md). A passing local tool test is not proof of an authenticated model-host session. Node commands work in PowerShell, Bash and zsh; quote absolute paths containing spaces. OS isolation and permission configuration belong to your host and operating system.
+
+## Keep maintenance in the loop
+
+Review an operator-supplied Windows, Linux or macOS update inventory with `node tools/cda.mjs updates`. Get a local Markdown plan with priorities, stale/unknown data, backup, rollback and health checks. This is **offline inventory review**, not a live OS scan or an automatic installer. [Format, commands and boundaries](docs/UPDATE_PLANNING.md).
+
+## Choose your host
+
+The `.agents/skills` entry is compatible with the documented skill format in Codex, Cursor and Google Antigravity. Claude Code has its own thin entry into the same canonical instructions. Lovable documents importing Markdown skills, but our local CLI is not established there; use planning guidance or a separate local host. Hermes remains experimental. All end-to-end model sessions are still unverified. [Exact host matrix and official sources](docs/HOST_COMPATIBILITY.md).
 
 ## What works
 

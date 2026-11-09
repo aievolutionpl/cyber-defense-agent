@@ -1,5 +1,9 @@
 # Unified product release
 
+## Command-center iteration — 9 November 2026
+
+Review branch: `codex/defense-command-center`, targeting `codex/node-v0.1`. This iteration adds the navy command-center presentation, randomized cursor construction, six-host compatibility strip and scoped offline update-inventory planning. Local verification: 38 tests, 114 browser checks, 10 motion checks, build/lint/typecheck/skills and demo pass. Canonical EN/PL URLs remain unchanged. Remote CI and publication evidence will be appended after observation; earlier deployments below refer to the previous release.
+
 The release consolidates the skill, Node tools, English-first EN/PL site, terminal intake, public policies and illustrated README into the existing default source branch `codex/node-v0.1`, through a reviewed pull request from `codex/premium-unified`. GitHub merge is explicitly authorized by the owner for this iteration. No original blocked historical parent is reintroduced.
 
 Canonical presentation: https://aievolutionpl.github.io/cyber-defense-agent/ (English), with `/pl/` for Polish and `/policies/` for privacy and responsible use. The old comparison landing URLs redirect to the canonical presentation. The static artifact remains on `codex/node-v01-preview`; source and artifacts remain in the same repository.

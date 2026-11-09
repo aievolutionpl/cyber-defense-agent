@@ -1,3 +1,5 @@
+import { HostWorkflows } from "./host-workflows";
+import { ProtectionMap } from "./protection-map";
 import {
   ArrowDown,
   ArrowRight,
@@ -21,7 +23,7 @@ import { Installation } from "./installation";
 import { TrustSection } from "./trust-section";
 import { Onboarding } from "./onboarding";
 import { AgentBuildScroll } from "./motion-system";
-import { HeroMedia } from "./hero-media";
+import { HeroSignal } from "./hero-signal";
 import { GitHubLink, Mark } from "./ui";
 import { asset, github, type Locale } from "@/lib/config";
 
@@ -32,7 +34,7 @@ export function Landing({ locale }: { locale: Locale }) {
     ? [
         [
           "Co działa w v0.1?",
-          "Lokalny przegląd wskazanych plików czterema regułami (lodash, TLS, możliwy sekret, eval), onboarding z zatwierdzonej listy, import cda.scan.v1 JSON i ograniczonego SARIF 2.1.0, Markdown i retest. To wąskie, jawne kontrole, a nie pełny SAST lub aktualizowana baza CVE.",
+          "Lokalny przegląd wskazanych plików czterema regułami (lodash, TLS, możliwy sekret, eval), onboarding z zatwierdzonej listy, import cda.scan.v1 JSON i ograniczonego SARIF 2.1.0, Markdown, retest i plan aktualizacji na podstawie dostarczonego wykazu offline. To wąskie, jawne kontrole, a nie pełny SAST lub aktualizowana baza CVE.",
         ],
         [
           "Czy kod opuszcza mój komputer?",
@@ -62,7 +64,7 @@ export function Landing({ locale }: { locale: Locale }) {
     : [
         [
           "What actually works in v0.1?",
-          "Local review of explicit files with four rules (lodash, TLS, possible secrets, eval), onboarding from the approved list, cda.scan.v1 JSON and limited SARIF 2.1.0 import, Markdown reports and conservative retesting. These are narrow, transparent checks, not a complete SAST engine or a live CVE database.",
+          "Local review of explicit files with four rules (lodash, TLS, possible secrets, eval), onboarding from the approved list, cda.scan.v1 JSON and limited SARIF 2.1.0 import, Markdown reports, conservative retesting and offline update-inventory planning. These are narrow, transparent checks, not a complete SAST engine or a live CVE database.",
         ],
         [
           "Does my code leave my machine?",
@@ -148,7 +150,6 @@ export function Landing({ locale }: { locale: Locale }) {
       <Navigation locale={locale} />
       <main id="main">
         <section className="hero" aria-labelledby="hero-title">
-          <HeroMedia />
           <div className="hero-grid section-shell">
             <div
               className="hero-copy"
@@ -166,22 +167,26 @@ export function Landing({ locale }: { locale: Locale }) {
               <h1 id="hero-title">
                 {pl ? (
                   <>
-                    Znajdź ryzyko.
+                    Twój agent tworzy kod.
                     <br />
-                    <span>Sprawdź poprawkę.</span>
+                    <span>Naucz go chronić.</span>
                   </>
                 ) : (
                   <>
-                    Find the risk.
+                    Your agent builds.
                     <br />
-                    <span>Prove the fix.</span>
+                    <span>
+                      Now teach it
+                      <br />
+                      to defend.
+                    </span>
                   </>
                 )}
               </h1>
               <p className="hero-description">
                 {pl
-                  ? "Sprawdź bezpieczeństwo swojej firmy z agentem AI. Przejrzyj kod, uporządkuj wyniki audytu i zobacz, co poprawić najpierw — w Codex lub Claude Code."
-                  : "Put a security-minded AI agent in your workflow. Review code, make sense of audit findings and know what to fix first — in Codex or Claude Code."}
+                  ? "Zamień pośpiech przed wdrożeniem w uporządkowany przegląd. Sprawdź kod, konfigurację i listy aktualizacji. Zobacz dowód, ustal priorytet i zweryfikuj poprawkę."
+                  : "Turn the pre-release rush into a repeatable security review. Inspect code, configuration and update inventories. See the evidence, prioritise the change and verify the fix."}
               </p>
               <div className="hero-ctas">
                 <GitHubLink>{start}</GitHubLink>
@@ -203,10 +208,7 @@ export function Landing({ locale }: { locale: Locale }) {
               </div>
             </div>
             <div className="hero-product">
-              <div className="sculpture-caption mono">
-                <span>DEFENSE CORE / 001</span>
-                <span>LOCAL · READ-ONLY</span>
-              </div>
+              <HeroSignal locale={locale} />
               <ReportPreview locale={locale} />
             </div>
           </div>
@@ -221,29 +223,7 @@ export function Landing({ locale }: { locale: Locale }) {
             <span className="mono">BUILT FOR EVIDENCE</span>
           </div>
         </section>
-        <div className="environment-strip">
-          <div className="section-shell environment-inner">
-            <span className="environment-label">
-              {pl ? "JEDEN SKILL. TWÓJ WORKFLOW." : "ONE SKILL. YOUR WORKFLOW."}
-            </span>
-            <span className="environment-name">
-              <span aria-hidden="true">›_</span>Codex
-            </span>
-            <span className="environment-name">
-              <span className="claude-symbol" aria-hidden="true">
-                ✳
-              </span>
-              Claude Code
-            </span>
-            <span className="environment-format">
-              JSON <i>/</i> SARIF <i>/</i> Markdown
-            </span>
-            <a href={github("/blob/main/skills/cyber-defense/SKILL.md")}>
-              {pl ? "Zobacz instrukcję" : "Inspect the skill"}
-              <ArrowUpRight size={14} />
-            </a>
-          </div>
-        </div>
+        <HostWorkflows locale={locale} />
         <section className="workflow-section section-shell" id="workflow">
           <div className="section-heading">
             <div>
@@ -317,6 +297,7 @@ export function Landing({ locale }: { locale: Locale }) {
             ))}
           </div>
         </section>
+        <ProtectionMap locale={locale} />
         <section className="operations-section section-shell">
           <div className="section-heading">
             <div>

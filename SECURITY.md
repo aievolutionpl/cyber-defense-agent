@@ -17,6 +17,7 @@ The current unified v0.1 source is on `codex/node-v0.1`. Older comparison branch
 - Imported free text never enters normalized reports. Metadata remains potentially private.
 - Optional `cda.model-input.v1` summaries cap output at 100 validated facts and omit paths, imported free text and arbitrary rule names. Review locally before sharing; no model is called by the CLI.
 - Retest verifies current local rule coverage and content; imported absence cannot establish remediation.
+- Offline update inventories accept at most 1,000 unique package entries within the same file boundary. Dates, platform/manager pairs and labels are validated; old data is marked stale. Version strings and security labels are unverified operator claims, never execution instructions or proof of whole-host patch status. No OS updates or restarts are performed.
 - Separate local .cda state, private file modes where supported, ignored by Git.
 
 This is not an OS sandbox, a certification, or a substitute for professional security review. Approval state is locally editable by its owner. Use trusted tools outside the target, an immutable snapshot, and OS isolation for adversarial filesystems. Do not run the tools against a directory being modified concurrently.

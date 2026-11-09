@@ -1,4 +1,5 @@
 async (page) => {
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   const checks = [], errors = [], badResponses = [];
   const assert = (condition, name) => { if (!condition) throw new Error(name); checks.push(name); };
   const base = page.url().replace(/pl\/$/, '').replace(/\/$/, '') + '/';
@@ -10,11 +11,13 @@ async (page) => {
     const pl = locale === 'pl';
     await page.goto(base + (pl ? 'pl/' : ''));
     await page.waitForLoadState('networkidle');
+    await page.waitForFunction(() => !!document.documentElement.dataset.motion);
     await page.setViewportSize({ width: 1440, height: 1000 });
     assert(await page.locator('html').getAttribute('lang') === locale, `${locale}: server document language`);
     assert(await page.locator('h1').count() === 1, `${locale}: single primary headline`);
     const scopeTab = page.getByRole('tab', { name: pl ? 'Zakres' : 'Scope', exact: true });
     await scopeTab.click();
+    await page.waitForFunction(() => document.querySelector('#preview-tab-scope')?.getAttribute('aria-selected') === 'true');
     assert(await scopeTab.getAttribute('aria-selected') === 'true', `${locale}: scope tab`);
     await scopeTab.press('ArrowRight');
     assert(await page.getByRole('tab', { name: pl ? 'Ustalenia' : 'Findings', exact: true }).getAttribute('aria-selected') === 'true', `${locale}: report keyboard tabs`);
@@ -24,6 +27,13 @@ async (page) => {
     await page.getByRole('tab', { name: 'Retest', exact: true }).click();
     assert(await page.getByRole('heading', { name: pl ? 'Poprawka potwierdzona.' : 'Fix confirmed.', exact: true }).isVisible(), `${locale}: preview retest`);
 
+    assert(await page.locator('.host-group').first().getByText('Antigravity', {exact:true}).count() === 1, `${locale}: Antigravity workflow listed`);
+    assert(await page.locator('.host-note').innerText().then(t => t.includes(pl ? 'niezweryfikowane' : 'unverified')), `${locale}: model-session status disclosed`);
+    const updates = page.getByRole('tab', {name: pl ? 'Aktualizacje' : 'Updates', exact:true});
+    await updates.click();
+    assert((await page.locator('.protection-explanation:not([hidden])').innerText()).includes(pl ? 'wyeksportowaną' : 'exported'), `${locale}: update feature states inventory requirement`);
+    await updates.press('Home');
+    assert(await page.getByRole('tab', {name: pl ? 'Kod' : 'Code', exact:true}).getAttribute('aria-selected') === 'true', `${locale}: protection keyboard tabs`);
     const onboarding = page.locator('.onboarding');
     const choose = async label => { await onboarding.getByRole('button', { name: label, exact: true }).click(); };
     await choose(pl ? 'Lokalne repozytorium' : 'A local repository');
@@ -100,12 +110,12 @@ async (page) => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.waitForFunction(() => document.documentElement.dataset.motion === 'paused');
     assert(await page.locator('.agent-build-overlay').evaluate(el => getComputedStyle(el).display === 'none'), `${locale}: reduced motion disables overlay`);
-    assert(await page.locator('.hero-media video').evaluate(el => el.paused), `${locale}: reduced motion pauses video`);
+    assert(await page.locator('.signal-stream').evaluate(el => el.getAnimations().every(a => a.playState !== 'running')), `${locale}: reduced motion stops signal animation`);
     assert(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior === 'auto'), `${locale}: reduced motion disables smooth scrolling`);
     await page.emulateMedia({ reducedMotion: 'no-preference' });
     await page.waitForFunction(() => document.documentElement.dataset.motion === 'running');
     await page.getByRole('button', { name: pl ? 'Wstrzymaj animacje' : 'Pause animations', exact: true }).click();
-    assert(await page.locator('.hero-media video').evaluate(el => el.paused), `${locale}: pause stops video`);
+    assert(await page.locator('.signal-stream').evaluate(el => el.getAnimations().every(a => a.playState !== 'running')), `${locale}: pause stops signal animation`);
     assert(await page.locator('.agent-build-overlay').getAttribute('data-active') === 'false', `${locale}: pause stops overlay`);
     await page.getByRole('button', { name: pl ? 'Wznów animacje' : 'Resume animations', exact: true }).click();
   }
