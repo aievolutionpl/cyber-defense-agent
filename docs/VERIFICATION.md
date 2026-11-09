@@ -9,7 +9,7 @@
 - transitions-agent **0.11.2**, source-only scan: **78 → 78** final score. Polish retained a valid reduced-motion guard; three incorrect decorative-loop speed changes were reverted. The intermediate service score of 81 is not the final result. Remaining menu/global recipe findings are unresolved; Business Revamp was refused by the Free license and is deferred. See [design provenance](COMMAND_CENTER_DESIGN.md).
 - Codex, Claude Code, Cursor, Antigravity, Lovable and Hermes full model sessions remain **unverified**. Local tests, documented format support and CI are separate evidence. Physical phones, Safari/Firefox and sustained GPU/frame-rate measurements remain untested.
 
-Public deployment and remote matrix results are recorded in [RELEASE.md](RELEASE.md) after observation. Older records below are historical.
+Public EN/PL acceptance also passed **114/114**. The three-OS Node 22 matrix passed **38/38 tests on each OS, zero skipped**; Pages deployment succeeded. See [RELEASE.md](RELEASE.md) for exact commits and runs. Older records below are historical.
 
 ## Unified release hardening — 9 November 2026
 
