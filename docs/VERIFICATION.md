@@ -69,3 +69,5 @@ Prior local host-attempt evidence remains in `output/integrations/`. Repeating a
 ## Public release
 
 Current public URLs, unique-link HTTP checks, remote CI and public-browser results are recorded in [RELEASE.md](RELEASE.md) after deployment. Historical Node-only branch checks remain historical; they are not substituted for unified-release results.
+
+Observed unified release: Node 22/Linux CI **success**, Pages build **success**, public EN/PL acceptance **80/80 PASS**, console 0 errors/warnings and 10/10 unique GitHub destination checks HTTP 200. Source: `ddae6c4`; artifact: `a7aa35d`. The public-browser run used the same committed acceptance script as the production export.

@@ -10,6 +10,20 @@ Source: `codex/premium-unified`. The earlier Node-only branch remains available.
 
 Local release checks: 29 unit/security tests, 80 browser checks for EN/PL under the production prefix, lint, TypeScript, build, demo, skill contracts and JSON schemas pass. `npm audit` reports zero vulnerabilities. Public deployment and remote run IDs are appended after observation; see [VERIFICATION.md](VERIFICATION.md) for the full scope and host/model limits.
 
+## Observed public outcome
+
+Published successfully on 2026-11-09:
+
+- Reviewed source tree: `ddae6c4efa1a63e4637e4f76e6e861de7abe4d8e`.
+- Node 22 / Linux CI: [42695577415](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42695577415), completed **success** (`npm ci`, checks, demo, onboarding and model summary).
+- Pages artifact commit: `a7aa35d3c66ede1f4938facfb9a4fcc1ab580069`.
+- Pages build/deployment: [42695744477](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42695744477), completed **success**.
+- Public EN and PL pages: HTTP 200; English is the default document.
+- Public Chromium acceptance: **80/80 PASS**, zero uncaught/hydration errors, zero failed same-origin assets; console zero errors/warnings.
+- Unique GitHub destinations (anchors deduplicated): **10/10 HTTP 200**. All visible repo buttons and copied clone commands target the actual unified branch.
+
+Local evidence: `output/playwright/public-acceptance.json`, `production-acceptance.json`, `github-links.json`, screenshots and motion recording. The source tree contains the reproducible browser procedure; private local evidence/state is not published.
+
 The existing public comparison URL is upgraded in place as requested; this does not overwrite a `main` branch or create an unreviewed root-site rollout. All page GitHub buttons point to the actual unified source branch. Both code and artifact changes use ordinary commits, with no force push.
 
 ## Rebuild
