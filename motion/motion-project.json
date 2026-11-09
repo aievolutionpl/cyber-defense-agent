@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0",
+  "project": { "id": "cda-premium-unified", "name": "Cyber Defense Agent — agent-built landing", "duration_sec": 8, "fps": 30, "formats": ["16:9", "9:16"], "mode": "balanced", "max_review_iterations": 3 },
+  "creative": {
+    "goal": "Convert an interested developer through an inspectable security demo to the actual GitHub repository.",
+    "audience": "Developers and small technical teams using Codex or Claude Code",
+    "hook": "Find the risk. Prove the fix.",
+    "story_arc": ["Security core and evidence preview", "Bounded workflow", "Defense overview", "Three-question intake", "Capabilities", "Interactive audit", "Local installation"],
+    "motion_personality": "Precise, restrained, industrial. Agents construct frames rather than scramble content.",
+    "style_dna": { "palette": ["#090D0B", "#17201A", "#B4EED2", "#EEF2E9"], "type": ["Manrope Variable", "IBM Plex Mono"], "materials": ["brushed titanium", "smoked glass", "matte graphite"], "easing": "cubic-bezier(.16,1,.3,1)", "signature": "Three named cursors tracing the real page's evidence surfaces" }
+  },
+  "scenes": [
+    { "id": "hero-core", "start_sec": 0, "duration_sec": 8, "purpose": "Establish security product identity without obstructing the main action", "type": "decorative-loop", "engine": "ffmpeg", "patterns": ["subtle-periodic-camera-drift"], "visual": { "source": "assets/defense-core-source.png", "poster": "../apps/site/public/assets/defense-core.webp" }, "motion": { "zoom": "1.015 + 0.015*sin(2*pi*frame/240)", "mute": true }, "acceptance": ["Seamless 8-second loop", "Permanent poster", "Paused for reduced motion/coarse pointer/offscreen/hidden tab"] },
+    { "id": "agent-build", "start_sec": 0, "duration_sec": 1.5, "purpose": "Make scroll reveal feel assembled by named agents while preserving the real DOM", "type": "scroll-interaction", "engine": "native-dom-waapi", "patterns": ["frame-draw", "named-cursors", "bounded-reveal"], "motion": { "trigger": "IntersectionObserver + passive scroll", "duration_ms": 1500, "reveal_ms": 650, "coarse_ms": 800 }, "acceptance": ["No content hidden without JS", "Pointer-transparent overlay", "One cursor on mobile", "Visible pause control", "No idle infinite RAF"] }
+  ],
+  "audio": { "music": null, "bpm": null, "downbeat_sec": null, "cues": [] },
+  "cost": { "currency": null, "budget": null, "estimated": null },
+  "outputs": ["apps/site/public/assets/defense-core-loop.mp4", "apps/site/public/assets/defense-core.webp", "skills/agent-build-scroll/assets/AgentBuildScroll.tsx", "output/playwright/"]
+}

@@ -1,19 +1,18 @@
-# Wersja porównawcza Node v0.1
+# Unified premium v0.1 release
 
-Stan: opublikowana. GitHub Pages build zakończony sukcesem, URL HTTP 200; 27/27 kontroli w publicznym Chromium, brak błędów i ostrzeżeń konsoli.
+Source: `codex/premium-unified`. The earlier Node-only branch remains available. AntyGravity's history and the initial merge are preserved locally on `codex/premium-unified-local-history`; the public unified branch carries the reviewed final code without the history rejected by GitHub push protection. The original AntyGravity working directory and its pre-integration snapshot were not overwritten.
 
-- Strona: https://aievolutionpl.github.io/cyber-defense-agent/compare/node-v0.1/
-- Pełny kod: https://github.com/aievolutionpl/cyber-defense-agent/tree/codex/node-v0.1
-- Repozytorium: https://github.com/aievolutionpl/cyber-defense-agent
-- Artefakty strony: gałąź codex/node-v01-preview, wyłącznie katalog compare/node-v0.1.
-- CI Node 22 / Linux: https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42682757047 — sukces.
-- Build Pages: https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42683553335
+- EN page: https://aievolutionpl.github.io/cyber-defense-agent/compare/node-v0.1/
+- PL page: https://aievolutionpl.github.io/cyber-defense-agent/compare/node-v0.1/pl/
+- Unified source: https://github.com/aievolutionpl/cyber-defense-agent/tree/codex/premium-unified
+- Repository: https://github.com/aievolutionpl/cyber-defense-agent
+- Pages artifact branch: `codex/node-v01-preview`, scoped to `compare/node-v0.1/`.
 
-Ta wersja jest przeznaczona do porównania. Nie publikuje własnego landingu pod adresem głównym GitHub Pages. Strona główna i gałąź main należą do drugiej implementacji. Przy utworzeniu pustego repo GitHub automatycznie ustawił pierwszą wypchniętą gałąź jako domyślną; docelowo main należy ustawić po pojawieniu się drugiej wersji. Nie utworzono i nie nadpisano plików main.
+Local release checks: 29 unit/security tests, 80 browser checks for EN/PL under the production prefix, lint, TypeScript, build, demo, skill contracts and JSON schemas pass. `npm audit` reports zero vulnerabilities. Public deployment and remote run IDs are appended after observation; see [VERIFICATION.md](VERIFICATION.md) for the full scope and host/model limits.
 
-GitHub Pages nie było wcześniej skonfigurowane. Publikacja używa gałęzi codex/node-v01-preview i pliku .nojekyll. Jeśli główna implementacja w przyszłości użyje tego samego GitHub Pages, trzeba zachować katalog compare/node-v0.1 w jej artefakcie albo przenieść porównanie na osobny hosting. Nie nadpisuj folderu tej wersji przy zmianie publikacji.
+The existing public comparison URL is upgraded in place as requested; this does not overwrite a `main` branch or create an unreviewed root-site rollout. All page GitHub buttons point to the actual unified source branch. Both code and artifact changes use ordinary commits, with no force push.
 
-## Odtworzenie builda
+## Rebuild
 
 ```powershell
 $env:SITE_BASE_PATH='/cyber-defense-agent/compare/node-v0.1'
@@ -22,10 +21,6 @@ npm ci
 npm run build
 ```
 
-Wynik apps/site/out skopiuj do compare/node-v0.1 w gałęzi publikacyjnej, zachowując inne istniejące katalogi. Nie zapisuj .cda, .env ani lokalnych logów do artefaktu.
+Copy `apps/site/out/` into the Pages artifact's `compare/node-v0.1/`, preserving all other paths and `.nojekyll`. Do not publish `.cda`, private scope files, secrets or local logs. Font license notices are included in `THIRD_PARTY_LICENSES.txt`. For `/` local development, omit the two deployment variables and use `npm run dev`.
 
-Do lokalnej wersji na / uruchom build bez tych zmiennych lub npm run dev. Strona zawiera samohostowane fonty; wymagane noty licencyjne są w THIRD_PARTY_LICENSES.txt w eksporcie.
-
-Vercel nie utworzył podglądu: konektor był niedostępny, a endpoint dawnej metody bez logowania zwrócił informację o przejściu na CLI. Nie zmieniano konta, DNS ani domen Vercel i nie tworzono płatnych zasobów. Zamiast tego użyto GitHub Pages.
-
-Pełna tabela możliwości i ograniczeń: [VERIFICATION.md](VERIFICATION.md). Integracje z Codex i Claude Code pozostają jawnie niezweryfikowane; lokalne narzędzia, demo i CI są sprawdzone.
+No Vercel account/DNS changes or paid hosting resources are required. No model session, network scanner, IOC reputation service or active containment capability is implied by a successful website deployment.

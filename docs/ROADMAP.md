@@ -7,6 +7,13 @@ v0.1 is local-only: 4 simple static rules, bounded JSON/SARIF import, prioritize
 1. Evaluate pinned Semgrep, Gitleaks and Trivy SARIF exporters against adversarial fixtures. Keep running scanners external until execution isolation and resource limits are in place.
 2. Add lockfile/SBOM adapters, tested advisory snapshots, clear supported versions and reachability distinctions.
 3. Add held-out clean/vulnerable fixtures and measure false positives, false negatives, evidence completeness and missing coverage. A knowledge pack or popular repository does not establish expert performance.
+4. Expand the implemented bounded `cda.model-input.v1` envelope with validated, versioned adapters. Keep raw logs outside model context. See [architecture](ARCHITECTURE.md).
+
+## Planned agent platform
+
+Provider-neutral model routing (local/small → explicitly authorized frontier analysis), separately scoped MCP adapters, episodic incident correlation and opt-in false-positive memory are designs, not available integrations. Sigma/YARA, LiteLLM/Ollama and SIEM/EDR remain candidate modules. Before shipping: schemas, quotas, timeouts, evaluation fixtures, provenance, retention, privacy review and independent authorization gates. External IOC lookups also need consent to transmit private indicators.
+
+Active response stays disabled: reversible actions require preapproved policy, TTL, allowlists and rollback; disruptive production/IAM actions require authenticated human approval of the exact action digest. No Slack/Telegram approval or firewall/EDR executor exists in this release.
 
 ## Later: web / API
 

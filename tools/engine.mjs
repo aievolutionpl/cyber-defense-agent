@@ -123,7 +123,7 @@ export function importScan(scope, input) {
   return report;
 }
 
-function validateReport(report, scope) {
+export function validateReport(report, scope) {
   if (report?.format !== 'cda.report.v1' || report.version !== VERSION || report.scope?.rootKey !== sha(scope.root) || !Array.isArray(report.findings) || report.findings.length > 2000 || !Array.isArray(report.checks)) deny('INCOMPATIBLE_REPORT');
   const reader = authorized(scope);
   for (const f of report.findings) importedFinding(reader, f, false);

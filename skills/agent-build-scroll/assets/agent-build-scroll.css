@@ -1,0 +1,20 @@
+.agent-build-overlay{position:fixed;inset:0;z-index:70;pointer-events:none;contain:strict;opacity:0}
+.agent-build-overlay[data-active="false"]{visibility:hidden}
+.build-outline{position:absolute;top:0;left:0;border:1px solid #97e7ca;box-shadow:0 0 0 1px #97e7ca12;border-radius:5px;will-change:transform}
+.build-outline:before,.build-outline:after{content:"";position:absolute;width:7px;height:7px;background:#a4eccc;top:-4px;left:-4px}
+.build-outline:after{top:auto;left:auto;bottom:-4px;right:-4px}
+.build-caption{position:absolute;top:-24px;left:12px;background:#0b1512;color:#b2eed7;border:1px solid #375446;padding:2px 8px;font:10px/1.6 'IBM Plex Mono',monospace;white-space:nowrap}
+.build-cursor{position:absolute;left:0;top:0;color:#a9f1d3;will-change:transform;filter:drop-shadow(0 2px 5px #0008)}
+.build-cursor span{position:absolute;top:22px;left:15px;font:10px/1.6 'IBM Plex Mono',monospace;background:currentColor;padding:3px 8px;border-radius:0 5px 5px 5px}
+.build-cursor span:after{content:attr(data-label);color:#07100d}
+.build-cursor span{color:#06160f;background:#a9f1d3}
+.build-cursor[data-side="left"] span{left:auto;right:-5px;border-radius:5px 0 5px 5px}
+.cursor-1{color:#a0c7f3}.cursor-1 span{background:#a0c7f3}.cursor-2{color:#efcea3}.cursor-2 span{background:#efcea3}
+.motion-dock{position:fixed;bottom:18px;left:20px;z-index:80;display:flex;align-items:center;background:#101614ed;border:1px solid #46534d;box-shadow:0 8px 24px #0005;border-radius:8px;backdrop-filter:blur(12px);color:#c1d1c8;font:10px/1.5 'IBM Plex Mono',monospace}
+.motion-dock-label{padding:9px 12px;display:flex;align-items:center;gap:8px}
+.motion-dock button{min-width:40px;min-height:38px;padding:6px 10px;border:0;border-left:1px solid #3f4c46;background:transparent;color:#e1eee6;cursor:pointer}
+.motion-dock button:disabled{cursor:default;color:#b9c8bf}
+.motion-dock button:focus-visible{outline:2px solid #a9f1d3;outline-offset:3px}
+html[data-motion="paused"] *,html[data-motion="paused"] *:before,html[data-motion="paused"] *:after{animation-play-state:paused!important}
+@media(max-width:699px){.motion-dock{bottom:10px;left:10px}.motion-dock-label{font-size:8px;padding:7px 8px}.build-caption{display:none}}
+@media(prefers-reduced-motion:reduce){.agent-build-overlay{display:none}.motion-dock-label .status-dot{animation:none}}

@@ -40,6 +40,10 @@ Exact/ranged unresolved versions and malformed package.json return inconclusive.
 
 ## Reports and retest
 
+`cda.onboarding.v1` is an approved-filenames-only metadata response: technology hints, file count, expiry and three structured intake questions. It does not enumerate a target or read its content.
+
+`cda.model-input.v1` is an optional local, bounded JSON summary of a validated `cda.report.v1`: at most 100 facts, severity/priority/confidence enums, numeric lines, opaque file/external-rule references and known local rule IDs only. Paths, arbitrary imported rule IDs and all free text are excluded. It includes total/included/omitted counts. See [schema](../schemas/cda.model-input.v1.schema.json). No provider call is made; the user reviews the summary before including it in model context. It is not a lossless replacement for the original report.
+
 Local report schema cda.report.v1 records source, scope root fingerprint, paths, findings, rule versions and per-control content digest/result. No absolute target path is included in the report; it remains in local scope state.
 
 Retest needs an unexpired approved scope and two reports for the same canonical root. A missing finding is confirmed_fixed only when after was a local review, the same supported rule was clear, the current file digest still matches, and rerunning that rule now is clear. Otherwise it is insufficient_data. Matching findings are still_present; new finding groups are reported separately. Rules with multiple findings in a file are treated conservatively as one rule/file group for retest. No absence in imported data is treated as verified remediation.
