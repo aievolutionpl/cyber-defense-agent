@@ -1,11 +1,11 @@
 # Cyber Defense Agent — retest
 
-## CDA-DEP-001 · Brak danych do potwierdzenia
+## CDA-DEP-001 · Insufficient data
 
-- Lokalizacja: package.json:7
-- Priorytet: P1
-- Dowód: Brak porównywalnego pokrycia. Sam brak wpisu w raporcie nie potwierdza poprawki.
+- Location: package.json:7
+- Priority: P1
+- Evidence: No comparable coverage. An absent report entry alone cannot confirm a fix.
 
-Nowe ustalenia: 0.
+New findings: 0.
 
-Potwierdzenie dotyczy wyłącznie konkretnej reguły i lokalnego pliku, nie bezpieczeństwa całego projektu.
+Confirmation applies only to this local rule and file, not the security of the whole project.
