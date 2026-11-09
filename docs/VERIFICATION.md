@@ -11,6 +11,8 @@
 - Full model-host sessions remain **unverified** for Codex, Claude Code and Hermes. Earlier launcher/quota limitations below still apply; no unsupported integration claim was added.
 - Physical phones, Safari/Firefox, OS-isolation guarantees, live hostile-filesystem races and professional legal review are not verified. The macOS result is GitHub-hosted CI, not an interactive Mac desktop session.
 
+The deployed canonical EN/PL site also passed all **106/106** checks after publication. The final PR matrix on `9a3e2f4` passed all three OS jobs with no skipped tests. See [release evidence](RELEASE.md).
+
 The older results below are retained as historical evidence. Deployment and final merge references are recorded in [RELEASE.md](RELEASE.md).
 
 # Unified v0.1 verification · 2026-11-09

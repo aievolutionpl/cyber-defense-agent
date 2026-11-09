@@ -2,9 +2,19 @@
 
 The release consolidates the skill, Node tools, English-first EN/PL site, terminal intake, public policies and illustrated README into the existing default source branch `codex/node-v0.1`, through a reviewed pull request from `codex/premium-unified`. GitHub merge is explicitly authorized by the owner for this iteration. No original blocked historical parent is reintroduced.
 
-Canonical presentation: https://aievolutionpl.github.io/cyber-defense-agent/ (English), with `/pl/` for Polish and `/policies/` for privacy and responsible use. The old comparison landing URLs will redirect to the canonical presentation when the new artifact is published. The static artifact remains on `codex/node-v01-preview`; source and artifacts remain in the same repository.
+Canonical presentation: https://aievolutionpl.github.io/cyber-defense-agent/ (English), with `/pl/` for Polish and `/policies/` for privacy and responsible use. The old comparison landing URLs redirect to the canonical presentation. The static artifact remains on `codex/node-v01-preview`; source and artifacts remain in the same repository.
 
-Current verification and remaining host-model limitations: [VERIFICATION.md](VERIFICATION.md). Final merge and deployment outcomes are appended after observation.
+Current verification and remaining host-model limitations: [VERIFICATION.md](VERIFICATION.md). ## Observed final outcome — 9 November 2026
+
+- [PR #2](https://github.com/aievolutionpl/cyber-defense-agent/pull/2) **merged** into the default branch `codex/node-v0.1` at 21:13:42 UTC. Merge commit: `a7faf6591a47fd807438f51ac1afb05d9c1bc294`.
+- Final source head before merge: `9a3e2f44c58a53bbaddfe9741c30e2af95fe7f7a`. Both [PR matrix 42700193596](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42700193596) and [push matrix 42700185284](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42700185284) passed Windows, Ubuntu and macOS. Each ran all 33 tests with zero skipped, plus lint, types, build, demo, onboarding and summary.
+- Pages artifact: `7cefeae` on `codex/node-v01-preview`. [Deployment 42700510683](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42700510683) completed **success**.
+- Canonical public EN/PL static pages: **106/106 Chromium acceptance checks passed**; zero uncaught errors or failed same-origin assets. Policies, clipboard, demo, keyboard, reduced motion and 320–1440 px behavior included.
+- Both previous comparison landing URLs redirect to the appropriate canonical language page. GitHub repository homepage metadata points to the new presentation.
+- All four README graphics loaded on the actual default-branch GitHub page, including the large presentation button. Twelve unique repository/document destinations returned HTTP 200. Forty-one relative documentation links resolved locally.
+- Source and deployment use ordinary commits and review-based merges. No force push or push-protection bypass occurred.
+
+Local evidence: `output/release/public-acceptance-final.json`, `output/release/final-links.json`, `output/playwright/` screenshots and the reproducible `scripts/ui-acceptance.js`. CLI/host verification boundaries remain documented in VERIFICATION.md; a successful CI matrix does not establish an authenticated model session.
 
 ## Previous comparison release (historical)
 
