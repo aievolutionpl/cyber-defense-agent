@@ -9,7 +9,7 @@
 - Original imagegen artwork: 1200×800 WebP, approximately 57 KB. Visual review confirmed coherent module geometry, green/graphite palette and no generated text/logos. The illustration is explicitly conceptual; network scanning remains on the roadmap, remediation remains human-controlled.
 - Previous transitions-agent license/service results are historical. This iteration adds the requested original hero presentation; no additional hosted motion fix or Business license is claimed.
 
-Remote release evidence is recorded in RELEASE.md. Full model-host sessions remain unverified.
+Public verification also passed **114/114 + 18/18 + 10/10**; Windows/Ubuntu/macOS CI and Pages deployment succeeded. Exact runs and commits are recorded in RELEASE.md. Full model-host sessions remain unverified.
 
 ## Command-center and update planning — 9 November 2026
 

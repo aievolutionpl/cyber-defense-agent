@@ -106,4 +106,4 @@ async (page) => {
     "generated artwork loads with descriptive alt text",
   );
   return { passed: checks.length, checks };
-};
+}
