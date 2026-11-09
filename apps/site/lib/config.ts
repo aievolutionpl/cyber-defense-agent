@@ -1,6 +1,6 @@
 /** Single repository URL used by every GitHub button, command and README link. */
 export const REPOSITORY = 'https://github.com/aievolutionpl/cyber-defense-agent';
-export const BRANCH = 'codex/premium-unified';
+export const BRANCH = 'codex/node-v0.1';
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL;
 export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 export const asset = (path: string) => `${BASE_PATH}${path}`;

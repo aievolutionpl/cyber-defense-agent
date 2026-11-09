@@ -89,7 +89,7 @@ test('static review reports location, confidence, priority, redacted evidence an
   const report = review(scope);
   assert.equal(report.findings.length, 2);
   for (const f of report.findings) for (const field of ['path', 'line', 'priority', 'confidence', 'evidence', 'fix']) assert.ok(f[field]);
-  assert.ok(render(report).includes('Pokrycie i ograniczenia'));
+  assert.ok(render(report).includes('Coverage and limitations'));
 });
 test('secret rule never emits the detected value', () => {
   const result = inspect('config.ts', 'const apiKey = "fixture-value-sensitive";');
