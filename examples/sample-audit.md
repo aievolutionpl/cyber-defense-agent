@@ -1,31 +1,31 @@
-# Cyber Defense Agent — raport v0.1.0
+# Cyber Defense Agent — report v0.1.0
 
-Data: 2026-11-09T19:04:35.955Z
+Date: 2026-11-09T21:03:38.360Z
 
-Źródło: lokalne reguły statyczne
+Source: local static rules
 
-## Zakres
+## Scope
 
 - package.json
 - reports/before.sarif
 - reports/partial.json
 
-## Ustalenia (1)
+## Findings (1)
 
-### P1 · Lodash: wersja objęta GHSA-35jh-r3h4-6jhm
+### P1 · Lodash version affected by GHSA-35jh-r3h4-6jhm
 
-- Reguła: CDA-DEP-001
-- Lokalizacja: package.json:7
-- Waga: high
-- Pewność: high
-- Status: do weryfikacji
-- Zredagowany dowód: Manifest deklaruje lodash 4.17.20; znana poprawka: 4.17.21. Osiągalność funkcji template nie była badana.
-- Proponowana poprawka: Zaktualizuj lodash do co najmniej 4.17.21, odśwież lockfile w swoim procesie i sprawdź zgodność. Agent nie instaluje zależności.
+- Rule: CDA-DEP-001
+- Location: package.json:7
+- Severity: high
+- Confidence: high
+- Status: needs review
+- Redacted evidence: Manifest declares lodash 4.17.20; known fix: 4.17.21. Reachability of the template function was not assessed.
+- Suggested fix: Update lodash to at least 4.17.21, refresh the lockfile in your workflow and check compatibility. The agent does not install dependencies.
 
-## Pokrycie i ograniczenia
+## Coverage and limitations
 
-Kontrole: 5; niejednoznaczne: 0; pominięte pliki: 1.
+Checks: 5; inconclusive: 0; skipped files: 1.
 
-Kontrole statyczne nie potwierdzają osiągalności ani wykorzystania podatności.
+Static checks do not establish reachability or exploitability.
 
-Brak wyniku nie jest dowodem bezpieczeństwa. Narzędzie nie wykonuje kodu ani ruchu sieciowego.
+An absent finding is not evidence of security. The tool executes no target code or network traffic.

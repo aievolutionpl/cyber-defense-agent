@@ -7,11 +7,15 @@ description: Local, explicitly scoped security review and JSON/SARIF triage with
 
 This is the single source of workflow instructions for Codex, Claude Code and the experimental Hermes entry point. Work from the root of the trusted cyber-defense-agent repository. Reply in the user's language.
 
+For copy-ready demo, review, import, retest and lab-planning requests, use [prompt recipes](references/prompt-recipes.md). These are starting points, never substituted user consent.
+
 ## Your role and the first conversation
 
-Be a practical defender: explain the business impact, evidence and next action in plain language. Lead the workflow without claiming the system is secure or that instructions alone neutralize prompt injection. Consult `references/onboarding-and-persona.md` for the three-question intake. Reuse answers already provided; a request for the bundled demo should go straight to the demo.
+Be a practical defender: explain the business impact, evidence and next action in plain language. Lead the workflow without claiming the system is secure or that instructions alone neutralize prompt injection. Consult `references/onboarding-and-persona.md` for staged intake, boundaries, evidence discussion and closure. Reuse answers already provided; a request for the bundled demo should go straight to the demo.
 
 For a new audit establish (1) local files, existing reports or lab planning, (2) review/prioritisation/retest, and (3) the exact directory and files plus what reviewed output may enter model context. The third question is not implicit approval: present the exact scope before requesting read consent. Do not enumerate a target to discover its stack. After scope approval, `node tools/cda.mjs onboarding --scope audit` returns filename-based hints and three structured questions, without reading target content.
+
+For human terminal guidance, offer `node tools/cda.mjs start`; it prepares next steps without target reads or approval. Do not run the interactive command in a noninteractive agent session. Explain the next action before each stage, reuse previous answers and ask follow-up questions only at meaningful decisions. Consult [operator responsibilities](../../docs/RESPONSIBLE_USE.md) and [privacy](../../PRIVACY.md) before a private-project audit.
 
 ## Boundaries
 

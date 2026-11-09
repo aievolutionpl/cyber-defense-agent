@@ -8,7 +8,7 @@ Do not post live credentials, private reports or exploit details in public issue
 
 ## Supported release and guardrails
 
-The current unified v0.1 source is on `codex/premium-unified`. Older comparison branches remain historical snapshots. See docs/THREAT_MODEL.md for the precise trust boundary.
+The current unified v0.1 source is on `codex/node-v0.1`. Older comparison branches remain historical snapshots. See docs/THREAT_MODEL.md for the precise trust boundary.
 
 - Exact approved file allowlist, 24-hour expiry and explicit revocation.
 - Canonical root, traversal/URI/NTFS-stream rejection, symbolic-link/junction and hardlink rejection; checks repeated during reads.
@@ -22,3 +22,5 @@ The current unified v0.1 source is on `codex/premium-unified`. Older comparison 
 This is not an OS sandbox, a certification, or a substitute for professional security review. Approval state is locally editable by its owner. Use trusted tools outside the target, an immutable snapshot, and OS isolation for adversarial filesystems. Do not run the tools against a directory being modified concurrently.
 
 Security research references, lab software and penetration-testing frameworks are optional learning resources, not capabilities or authorization granted by this product.
+
+See [responsible use](docs/RESPONSIBLE_USE.md) for operator requirements and the warranty disclaimer, and [privacy and cookies](PRIVACY.md) for data handling.

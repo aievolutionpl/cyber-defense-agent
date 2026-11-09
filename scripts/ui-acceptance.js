@@ -59,7 +59,7 @@ async (page) => {
       await page.getByRole('tab', { name: host, exact: true }).click();
       await page.getByRole('button', { name: `${pl ? 'Skopiuj polecenia' : 'Copy commands for'} ${host}`, exact: true }).click();
       const clip = await page.evaluate(() => navigator.clipboard.readText());
-      assert(clip.includes('--branch codex/premium-unified') && clip.endsWith(command), `${locale}: ${host} clipboard commands`);
+      assert(clip.includes('--branch codex/node-v0.1') && clip.endsWith(command), `${locale}: ${host} clipboard commands`);
       await page.getByRole('button', { name: `${pl ? 'Skopiuj prompt' : 'Copy prompt for'} ${host}`, exact: true }).click();
       assert((await page.evaluate(() => navigator.clipboard.readText())).startsWith(prompt), `${locale}: ${host} clipboard prompt`);
     }
@@ -73,7 +73,7 @@ async (page) => {
     assert(!unresolved.length, `${locale}: all section anchors resolve`);
     const external = await page.locator('a[href^="https://"]').evaluateAll(as => as.map(a => a.getAttribute('href')));
     external.forEach(link => links.add(link));
-    assert(external.every(h => h.startsWith('https://github.com/aievolutionpl/cyber-defense-agent/') && h.includes('codex/premium-unified')), `${locale}: GitHub links use actual unified repository`);
+    assert(external.every(h => h.startsWith('https://github.com/aievolutionpl/cyber-defense-agent/') && h.includes('codex/node-v0.1')), `${locale}: GitHub links use actual unified repository`);
     for (const width of [1440, 768, 390, 320]) {
       await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
@@ -91,6 +91,7 @@ async (page) => {
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       const pause = page.getByRole('button', { name: pl ? 'Wstrzymaj animacje' : 'Pause animations', exact: true });
       if (await pause.count()) await pause.click();
+      assert(await page.locator('.hero-copy').evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), `${locale}: hero is inside viewport at ${width}px`);
       await page.screenshot({ path: `output/playwright/${locale}-${width}-hero.png` });
       if (width === 1440 || width === 390) await page.screenshot({ path: `output/playwright/${locale}-${width}-full.png`, fullPage: true });
       const resume = page.getByRole('button', { name: pl ? 'Wznów animacje' : 'Resume animations', exact: true });
@@ -124,6 +125,29 @@ async (page) => {
   const fallback = await nojs.newPage(); await fallback.goto(base);
   assert(await fallback.locator('h1').isVisible() && await fallback.locator('.repo-choice').isVisible(), 'no-JS content and demo introduction remain visible');
   await nojs.close();
+  for (const locale of ['en', 'pl']) {
+    const pl = locale === 'pl';
+    await page.goto(base + (pl ? 'pl/' : ''));
+    const intake = page.locator('.onboarding');
+    await intake.getByRole('button', { name: pl ? 'Raport JSON / SARIF' : 'A JSON / SARIF report', exact: true }).click();
+    await intake.getByRole('button', { name: pl ? 'Uporządkowanie ryzyk' : 'Prioritise the risks', exact: true }).click();
+    await intake.getByRole('button', { name: pl ? 'Tylko package.json' : 'Only package.json', exact: true }).click();
+    assert((await intake.locator('.onboarding-plan').innerText()).includes(pl ? 'Bez raportu import nie jest możliwy' : 'Import cannot proceed without the report'), `${locale}: intake does not widen missing import scope`);
+    await page.locator('.responsibility-note a').click();
+    assert(page.url().endsWith(pl ? '/pl/policies/' : '/policies/'), `${locale}: policy link resolves with base path`);
+    assert(await page.locator('html').getAttribute('lang') === locale, `${locale}: policy document language`);
+    assert(await page.locator('.policy-sections section').count() === 8, `${locale}: full privacy and responsible-use policy`);
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({ width, height: 900 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale}: policy reflow ${width}px`);
+    }
+    await page.screenshot({ path: `output/playwright/${locale}-policies.png`, fullPage: true });
+    assert(await page.evaluate(() => !localStorage.length && !sessionStorage.length && !document.cookie), `${locale}: application creates no cookies or browser storage`);
+    const back = page.getByRole('link', { name: pl ? 'Wróć do prezentacji' : 'Back to the presentation', exact: true });
+    await back.focus(); await back.press('Enter');
+    assert(await page.locator('.hero').isVisible(), `${locale}: keyboard return from policy`);
+    await page.locator('#trust').screenshot({ path: `output/playwright/${locale}-trust.png` });
+  }
   assert(errors.length === 0, 'no uncaught browser or hydration errors');
   assert(badResponses.length === 0, 'no failing same-origin asset requests');
   return { passed: checks.length, checks, links: [...links], errors, badResponses };

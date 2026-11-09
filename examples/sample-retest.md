@@ -1,11 +1,11 @@
 # Cyber Defense Agent — retest
 
-## CDA-DEP-001 · Potwierdzona poprawka
+## CDA-DEP-001 · Confirmed fix
 
-- Lokalizacja: package.json:7
-- Priorytet: P1
-- Dowód: Ta sama reguła została ponownie wykonana lokalnie. Aktualny plik odpowiada wynikowi po poprawce.
+- Location: package.json:7
+- Priority: P1
+- Evidence: The same rule was repeated locally. The current file matches the after-check evidence.
 
-Nowe ustalenia: 0.
+New findings: 0.
 
-Potwierdzenie dotyczy wyłącznie konkretnej reguły i lokalnego pliku, nie bezpieczeństwa całego projektu.
+Confirmation applies only to this local rule and file, not the security of the whole project.

@@ -1,3 +1,18 @@
+# Verification record
+
+## Unified release hardening — 9 November 2026
+
+- Windows local: **33/33 security and workflow tests**, skill contracts, ESLint, TypeScript, static build and synthetic demo pass. Four new intake tests cover all 36 choice combinations, invalid input, cancellation/EOF and the absence of approval/transmission side effects.
+- Node 22 CI: **Windows, Ubuntu and macOS all passed** `npm ci`, `npm run check`, demo, approved-filename onboarding and bounded model summary. [Run 42698960894](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42698960894), source `eeb1b57`.
+- Real Windows terminal: completed the four-question `start` intake and received the expected retest plan. This is deterministic interaction, not a model session.
+- Chromium static export at `/cyber-defense-agent/`: **106/106 acceptance checks pass**, EN/PL, 1440/768/390/320, keyboard, copying, demo, onboarding, policy navigation, reduced motion and no-JS fallback. No uncaught browser errors or failed assets. No application cookies/localStorage/sessionStorage were created in the tested flow.
+- Visual inspection found an internal horizontal scroll offset in the hero after viewport resizing and focus changes. Replaced the backdrop's `overflow: hidden` with `overflow: clip` and added eight explicit hero-bound checks. Both mobile language layouts were inspected again after the fix.
+- README infographic, large website button, actual product screenshot and new policy layout visually inspected. Production dependency audit: zero reported vulnerabilities at this check; this is not a comprehensive security assessment.
+- Full model-host sessions remain **unverified** for Codex, Claude Code and Hermes. Earlier launcher/quota limitations below still apply; no unsupported integration claim was added.
+- Physical phones, Safari/Firefox, OS-isolation guarantees, live hostile-filesystem races and professional legal review are not verified. The macOS result is GitHub-hosted CI, not an interactive Mac desktop session.
+
+The older results below are retained as historical evidence. Deployment and final merge references are recorded in [RELEASE.md](RELEASE.md).
+
 # Unified v0.1 verification · 2026-11-09
 
 Source branch: `codex/premium-unified`. Local checkout: `projects/cyber-defense-agent-release`. Both previous source histories are preserved locally; the published tree excludes a historical parent rejected by push protection. Integration decisions are in [INTEGRATION.md](INTEGRATION.md).

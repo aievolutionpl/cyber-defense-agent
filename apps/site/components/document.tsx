@@ -11,7 +11,7 @@ export function pageMetadata(locale: Locale): Metadata {
   const description = pl ? 'Lokalny przegląd kodu, analiza JSON/SARIF i retest. Jeden otwarty skill dla Codex i Claude Code. Poznaj interaktywne demo.' : 'Local code review, JSON/SARIF triage and evidence-based retesting. One open-source skill for Codex and Claude Code. Explore the interactive demo.';
   return {
     ...(SITE_URL ? { metadataBase: new URL(SITE_URL), alternates: { canonical: pl ? 'pl/' : './', languages: { en: './', pl: 'pl/' } } } : {}),
-    title, description, robots: { index: false, follow: true },
+    title, description, robots: { index: true, follow: true },
     openGraph: { title, description, type: 'website', locale: pl ? 'pl_PL' : 'en_GB' },
   };
 }

@@ -1,10 +1,86 @@
-# Cyber Defense Agent · v0.1
+<p align="center">
+  <img src="apps/site/public/assets/defense-core.webp" alt="A sculptural security core on a dark graphite surface — Cyber Defense Agent" width="100%" />
+</p>
 
-**Find the risk. Prove the fix.** Local code review, offline JSON/SARIF triage and conservative retesting in Codex or Claude Code. English and Polish product pages, one shared skill and transparent local tools.
+<h1 align="center">Cyber Defense Agent</h1>
+<p align="center"><strong>Give your AI agent a disciplined security workflow.</strong><br/>Find the risk. Understand the evidence. Verify the fix.</p>
 
-[Unified source](https://github.com/aievolutionpl/cyber-defense-agent/tree/codex/premium-unified) · [Public EN demo](https://aievolutionpl.github.io/cyber-defense-agent/compare/node-v0.1/) · [Polski](https://aievolutionpl.github.io/cyber-defense-agent/compare/node-v0.1/pl/) · [Example audit](examples/sample-audit.md) · [Security](SECURITY.md)
+<p align="center">
+  <a href="https://aievolutionpl.github.io/cyber-defense-agent/"><img src="docs/assets/explore.svg" alt="Explore the interactive presentation — open the website and try the demo" width="640" /></a>
+</p>
+<p align="center">
+  <a href="#start-in-one-minute">Quick start</a> ·
+  <a href="examples/sample-audit.md">Example audit</a> ·
+  <a href="skills/cyber-defense/SKILL.md">Read the skill</a> ·
+  <a href="docs/VERIFICATION.md">Verification</a> ·
+  <a href="https://aievolutionpl.github.io/cyber-defense-agent/pl/">Polski</a>
+</p>
 
-The unified branch preserves both earlier implementations and ports the useful AntyGravity onboarding/persona into the stricter Node runtime. [Integration decisions](docs/INTEGRATION.md).
+One inspectable skill for **Codex** and **Claude Code**, backed by local Node tools. It gives your coding agent a repeatable defensive process: ask the right questions, approve exact files, review evidence, explain the fix and retest conservatively. The website includes a guided, static-data presentation; it does not scan your machine.
+
+> **For experienced AI-agent operators.** Use only resources you are authorized to assess. You control host permissions, data disclosure and applied changes. Provided as is, without warranty; not a security certification or a replacement for professional judgment. Read [responsible use](docs/RESPONSIBLE_USE.md) and [privacy & cookies](PRIVACY.md).
+
+## How it works
+
+![Scope approval, local review or import, redacted evidence, human remediation review, and three honest retest outcomes](docs/assets/workflow.svg)
+
+1. **Orient:** a staged conversation establishes the goal, experience, desired outcome and data boundaries.
+2. **Authorize:** approve the canonical root and exact files. No target content is read during the proposal.
+3. **Inspect:** run four local rules or import supported JSON/SARIF. Review a Markdown report with location, redacted evidence, priority, confidence and suggested remediation.
+4. **Decide:** assess the suggested fix in your normal development process. The tools do not change the target.
+5. **Verify:** repeat the check. A confirmed fix needs fresh local evidence; missing data remains inconclusive.
+
+The skill is the workflow; the CLI enforces file access and validates reports; the human controls permissions and changes. [Architecture and trust boundaries](docs/ARCHITECTURE.md).
+
+## See it before you run it
+
+[![Actual product presentation: dark interface, audit evidence, scope and retest tabs](docs/assets/product-preview.png)](https://aievolutionpl.github.io/cyber-defense-agent/)
+
+The [interactive presentation](https://aievolutionpl.github.io/cyber-defense-agent/) walks through one synthetic dependency finding, the blocked out-of-scope action, its remediation and a retest. English by default, Polish available, with keyboard navigation, reduced motion and an optional agent-cursor build effect. Website buttons never grant access to your local files.
+
+## Start in one minute
+
+**Node.js 22+ and Git.** The local CLI has no npm dependencies. No provider account or paid model call is needed for the demo.
+
+```sh
+git clone --branch codex/node-v0.1 https://github.com/aievolutionpl/cyber-defense-agent.git
+cd cyber-defense-agent
+node tools/demo.mjs
+```
+
+For a guided terminal introduction:
+
+```sh
+node tools/cda.mjs start
+```
+
+```text
++-----------------------------------------+
+| CYBER DEFENSE AGENT / OPERATOR INTAKE    |
+| Local tools. Explicit scope. Evidence.  |
++-----------------------------------------+
+01 / YOUR WORKSPACE  → experience & authorization
+02 / YOUR GOAL       → files, report or lab planning
+03 / YOUR OUTCOME    → review, prioritise or retest
+04 / YOUR DATA       → local-only or ask before sharing
+                       ↓
+                A concrete next-step plan
+```
+
+The intake does not save answers, approve a scope, read a target or call a model. Type `q` to leave. In a noninteractive host, the skill conducts the same staged conversation directly.
+
+## Platform and host support
+
+| Environment | What is supported | Evidence |
+|---|---|---|
+| Windows / PowerShell | Node CLI, synthetic demo and static-site build | Local checks plus the CI matrix |
+| Linux | Same Node CLI and site | Ubuntu Node 22 CI |
+| macOS | Same Node CLI and site | macOS Node 22 CI; see latest run below |
+| Codex | Thin skill entry → shared instructions | Contract verified; full model session **unverified** |
+| Claude Code | Thin skill entry → shared instructions | Contract verified; full model session **unverified** |
+| Hermes | Experimental thin entry | Discovery and full session **unverified** |
+
+[Latest platform checks](https://github.com/aievolutionpl/cyber-defense-agent/actions/workflows/node-v01-check.yml) · [Exact results and limitations](docs/VERIFICATION.md). A passing local tool test is not proof of an authenticated model-host session. Node commands work in PowerShell, Bash and zsh; quote absolute paths containing spaces. OS isolation and permission configuration belong to your host and operating system.
 
 ## What works
 
@@ -19,15 +95,7 @@ The unified branch preserves both earlier implementations and ports the useful A
 
 Active web/API/network audits, IOC enrichment, model routing, MCP connectors, incident graphs and automatic response are [planned](docs/ROADMAP.md), not shipped capabilities. The current [architecture](docs/ARCHITECTURE.md) separates working controls from future adapters.
 
-## Quick start without a model
-
-Requirements: **Node.js 22+** and Git. The CLI has no npm dependencies.
-
-```sh
-git clone --branch codex/premium-unified https://github.com/aievolutionpl/cyber-defense-agent.git
-cd cyber-defense-agent
-node tools/demo.mjs
-```
+## Inspect the demo outputs
 
 The demo copies known synthetic files into a new temporary directory. It changes only that copy, never executes fixture code and writes:
 
@@ -76,6 +144,8 @@ Then ask:
 ```
 
 [Entry point](.claude/skills/cyber-defense/SKILL.md) loads the same canonical instruction. Model access is your separate provider service. An end-to-end authenticated model session is not established by a passing CLI test.
+
+For your next conversation, use the [copy-ready prompts](skills/cyber-defense/references/prompt-recipes.md) for a local review, report import, retest or isolated-lab plan. The agent asks only what is missing, explains the next step and waits at real scope and data-sharing boundaries.
 
 ## Hermes (experimental)
 
@@ -162,4 +232,12 @@ docs/                           architecture, research, integration, verificatio
 motion/                         direction, IR, source graphic and provenance
 ```
 
-First-party code: [MIT](LICENSE). Research includes [20 external repositories](docs/RESEARCH.md) for defensive methodology and authorized labs; they are not automatically installed, executed or relicensed here.
+First-party code: [MIT](LICENSE). Research includes [curated external repositories](docs/RESEARCH.md) for defensive methodology and authorized labs; they are not automatically installed, executed or relicensed here.
+
+## Trust, maintenance and contribution
+
+All first-party tools, prompts, examples, site source and tests are public. There is no network client, model SDK, telemetry or target-code executor in the audit CLI. Dependencies for the site are pinned in the lockfile. Inspect source and history; public code does not guarantee the absence of defects or supply-chain risk. [Security policy](SECURITY.md) · [Threat model](docs/THREAT_MODEL.md) · [Responsible use](docs/RESPONSIBLE_USE.md).
+
+To contribute, use a branch and pull request, keep target reads behind `ScopedReader`, add meaningful regression tests for changed trust boundaries, and run `npm run check` plus `npm run demo`. Never attach private `.cda/` state or real secrets. Skill changes belong in the canonical folder; entry points remain thin. See [AGENTS.md](AGENTS.md) for engineering guidance and [CLAUDE.md](CLAUDE.md) for the Claude entry.
+
+The site has no application cookies or analytics. Hosting still receives normal requests. The CLI is local; content placed in an AI-host conversation may reach that host's provider. [Privacy & cookies](PRIVACY.md).
