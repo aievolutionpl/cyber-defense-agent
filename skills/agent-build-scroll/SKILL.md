@@ -18,7 +18,7 @@ For React/Next.js, reuse `assets/AgentBuildScroll.tsx` and `assets/agent-build-s
 1. Copy both asset files to the target project's own source and import the CSS globally. In a Next App Router app keep the component as a client boundary.
 2. Add `data-agent-target="Builder"` and optional `data-agent-label="Assembling the report"` to visible sections/cards. Use Scout, Builder and Verifier as the default roles; adapt names and colors to the brand.
 3. Mount `<AgentBuildScroll locale="en" />` once near the root. Polish is supported with `locale="pl"`.
-4. The overlay is fixed, `pointer-events:none` and `aria-hidden`. It draws a rectangle and moves three labeled cursors around the active region. Under coarse pointers/small viewports use one cursor and no target translation. Keep fallback content fully visible even before JavaScript runs.
+4. The overlay is fixed, `pointer-events:none` and `aria-hidden`. It draws a temporary wireframe, assembles real child elements and moves three labelled cursors along independent randomized Bézier paths with brief inspection pauses. These are synthetic visual roles, not connected agents. Paths are bounded to the viewport; bursts end after about three seconds. Under coarse pointers/small viewports use one cursor and no target translation. Keep fallback content fully visible even before JavaScript runs.
 5. The component writes `data-motion="running|paused"` on the document and dispatches `agent-build:motion`. Subscribe decorative video/canvas controllers to this event; pause those renderers when paused, reduced-motion, hidden or offscreen. CSS pauses keyframes, but renderer APIs need explicit pause calls.
 
 Use the same surface palette and typography as the target page. Place the dock away from main actions. Do not announce decorative movement to screen readers. Do not hide content behind a clone or screenshot. Do not install or copy an unlicensed extension's implementation. `DhvanilPatel/swarm-cursors` and `califa/swarm-site` are conceptual references only; verify their current licenses before considering any reuse. This package's code is original and MIT licensed by the containing project.
@@ -33,3 +33,5 @@ Use the same surface palette and typography as the target page. Place the dock a
 - Capture actual desktop/mobile frames and a short motion recording. A build alone does not verify choreography or physical-device performance.
 
 Report implementation location, preview, controls and tested limitations. Do not claim a live multi-agent system or guaranteed frame rate.
+
+The new choreography also observes `[data-motion-region]` and sets `data-in-view` for optional diagram and marquee animations. Pause offscreen regions. Focus entering an active target cancels its construction effect immediately; resize and backgrounding cancel it too. Do not hide the page by default.

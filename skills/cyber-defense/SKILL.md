@@ -1,6 +1,6 @@
 ---
 name: cyber-defense
-description: Local, explicitly scoped security review and JSON/SARIF triage with evidence and conservative retesting. No target execution or network auditing.
+description: Local, explicitly scoped security review, JSON/SARIF triage and offline PC/server update-inventory planning with evidence and conservative retesting. No target execution or network auditing.
 ---
 
 # Cyber Defense Agent v0.1
@@ -57,3 +57,12 @@ Use the shell's literal argument quoting; never concatenate user data into comma
 ## Sandbox, network and future modules
 
 Use `references/sandbox-and-network-defense.md` only for planning and supported offline artifact review. Network scanning, IOC enrichment, SIEM/EDR connectors, model routing, MCP servers, persistent incident graphs and active response are not implemented in v0.1. Read `docs/ARCHITECTURE.md` to distinguish the working Observe/Orient steps from planned adapters and decision/action gates. Do not perform external lookups on private indicators without explicit consent to transmit them.
+
+
+## PC and server update planning
+
+For maintenance requests read `docs/UPDATE_PLANNING.md`. Ask which OS and workstation/server role, the inventory source/date, production impact, backup/rollback and maintenance-window constraints. Obtain explicit scope approval for the supplied inventory just as for any target file, then run `node tools/cda.mjs updates --scope maintenance --input updates.json --name maintenance-plan`.
+
+Explain stale data, unknown versions, report-based priorities and coverage gaps. Do not claim to have queried Windows Update, winget, a Linux package manager or macOS. No OS inventory collector, package installation, restart or live advisory query is implemented. Versions and security labels are operator-supplied, not verified CVEs; different version strings do not prove newer versions. Never execute imported commands. The administrator performs updates outside this skill and supplies fresh inventory plus service-health evidence. An empty list does not prove that the whole host is current.
+
+For additional host setup consult `docs/HOST_COMPATIBILITY.md`. Cursor and Antigravity document the `.agents/skills` format; their live sessions are unverified. Lovable supports Markdown skill import, but imported instructions do not provide the local CLI; use planning guidance unless a trusted, fully reviewed execution environment exists. Never bypass missing tools with direct target reads.

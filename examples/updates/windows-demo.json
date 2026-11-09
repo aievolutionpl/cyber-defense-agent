@@ -1,0 +1,11 @@
+{
+  "format": "cda.updates.v1",
+  "platform": "windows",
+  "manager": "winget",
+  "observedAt": "2026-11-09T00:00:00Z",
+  "packages": [
+    { "name": "Example.Browser", "installed": "120.0.0", "available": "121.0.0", "classification": "security", "restart": "yes" },
+    { "name": "Example.Editor", "installed": "8.0.0", "available": "8.1.0", "classification": "regular", "restart": "no" },
+    { "name": "Example.Service", "installed": "2.0.0", "available": null, "classification": "unknown", "restart": "unknown" }
+  ]
+}

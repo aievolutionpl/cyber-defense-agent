@@ -14,10 +14,11 @@ import { review, importScan, retest, render } from "./engine.mjs";
 import { onboarding } from "./onboarding.mjs";
 import { modelSummary } from "./triage.mjs";
 import { welcomeTerminal } from "./welcome.mjs";
+import { reviewUpdates, renderUpdatePlan } from "./updates.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(ROOT);
-const help = `Cyber Defense Agent v0.1 — local only, no project execution\n\nnode tools/cda.mjs start\nnode tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>\nnode tools/cda.mjs approve --scope <scope> --root <directory> --yes\nnode tools/cda.mjs show --scope <scope>\nnode tools/cda.mjs onboarding --scope <scope>\nnode tools/cda.mjs summary --scope <scope> --report <report> --name <summary>\nnode tools/cda.mjs review --scope <scope> --name <report>\nnode tools/cda.mjs import --scope <scope> --input <relative.json|relative.sarif> --name <report>\nnode tools/cda.mjs retest --scope <scope> --before <report> --after <report> --name <retest>\nnode tools/cda.mjs revoke --scope <scope>\n\nScopes expire after 24 hours. Reports: .cda/reports/<name>.json and .md\nUse only a trusted copy of these tools, outside the reviewed project.\n`;
+const help = `Cyber Defense Agent v0.1 — local only, no project execution\n\nnode tools/cda.mjs start\nnode tools/cda.mjs updates --scope <scope> --input <inventory.json> --name <plan>\nnode tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>\nnode tools/cda.mjs approve --scope <scope> --root <directory> --yes\nnode tools/cda.mjs show --scope <scope>\nnode tools/cda.mjs onboarding --scope <scope>\nnode tools/cda.mjs summary --scope <scope> --report <report> --name <summary>\nnode tools/cda.mjs review --scope <scope> --name <report>\nnode tools/cda.mjs import --scope <scope> --input <relative.json|relative.sarif> --name <report>\nnode tools/cda.mjs retest --scope <scope> --before <report> --after <report> --name <retest>\nnode tools/cda.mjs revoke --scope <scope>\n\nScopes expire after 24 hours. Reports: .cda/reports/<name>.json and .md\nUse only a trusted copy of these tools, outside the reviewed project.\n`;
 
 async function main() {
   const { positionals, values: v } = parseArgs({
@@ -50,6 +51,7 @@ async function main() {
     summary: ["scope", "report", "name"],
     review: ["scope", "name"],
     import: ["scope", "input", "name"],
+    updates: ["scope", "input", "name"],
     retest: ["scope", "before", "after", "name"],
     revoke: ["scope"],
   };
@@ -88,6 +90,15 @@ async function main() {
     return;
   }
   authorized(scope);
+  if (command === "updates") {
+    const plan = reviewUpdates(scope, v.input);
+    store.write("reports", v.name, plan);
+    const output = store.write("reports", v.name, renderUpdatePlan(plan), "md");
+    process.stdout.write(
+      `${JSON.stringify({ output, packages: plan.total, updatesReported: plan.updatesReported, stale: plan.stale, network: false, installation: false })}\n`,
+    );
+    return;
+  }
   if (command === "onboarding") {
     process.stdout.write(`${JSON.stringify(onboarding(scope), null, 2)}\n`);
     return;

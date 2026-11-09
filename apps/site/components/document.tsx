@@ -3,6 +3,7 @@ import '@fontsource-variable/manrope';
 import '@fontsource/ibm-plex-mono/400.css';
 import '@fontsource/ibm-plex-mono/500.css';
 import '@/app/globals.css';
+import '@/app/command-center.css';
 import { SITE_URL, type Locale } from '@/lib/config';
 
 export function pageMetadata(locale: Locale): Metadata {

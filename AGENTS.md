@@ -11,6 +11,7 @@ Use Node.js >=22. The site is in apps/site. Local tools use only Node standard l
 - `skills/cyber-defense/SKILL.md`: canonical audit workflow and staged conversation. Host entry points only reference it.
 - `tools/scope.mjs`: exact file policy, approval and trusted local state. All target reads go through `ScopedReader`.
 - `tools/engine.mjs`: deterministic rules, validated imports and conservative retest. Keep provider logic out of this module.
+- `tools/updates.mjs`: bounded offline inventory validation and update plans; no OS collectors, installs or live catalog queries.
 - `tools/triage.mjs`: bounded model-input facts; no automatic transmission.
 - `tools/welcome.mjs`: deterministic terminal intake; no target access, persistence or consent side effects.
 - `apps/site/`: static presentation, EN/PL and synthetic examples. No real scan or model API.
