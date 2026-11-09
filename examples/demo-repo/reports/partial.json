@@ -1,0 +1,5 @@
+{
+  "format": "cda.scan.v1",
+  "description": "DEMO: an empty imported report does not establish coverage or remediation.",
+  "findings": []
+}

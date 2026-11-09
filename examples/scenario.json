@@ -1,0 +1,16 @@
+{
+  "label": "DEMO · dane statyczne",
+  "repository": "northstar / customer-portal",
+  "file": "package.json",
+  "line": 7,
+  "rule": "CDA-DEP-001",
+  "advisory": "GHSA-35jh-r3h4-6jhm",
+  "advisoryUrl": "https://github.com/advisories/GHSA-35jh-r3h4-6jhm",
+  "beforeVersion": "4.17.20",
+  "afterVersion": "4.17.21",
+  "priority": "P1",
+  "scope": ["package.json", "reports/before.sarif", "reports/partial.json"],
+  "blocked": "../private/.env",
+  "retest": "confirmed_fixed",
+  "partialRetest": "insufficient_data"
+}

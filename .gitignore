@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+.cda/
+.env*
+!.env.example
+*.tsbuildinfo
+output/
+playwright-report/
+test-results/
+.serena/
+.playwright-cli/
+.claude/settings.local.json
+.DS_Store

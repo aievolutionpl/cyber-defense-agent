@@ -1,0 +1,186 @@
+{
+  "source": "GitHub REST API",
+  "checked_at": "2026-11-09",
+  "repositories": [
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "Application Security Verification Standard",
+      "license": "CC-BY-SA-4.0",
+      "pushed_at": "2026-11-04T06:48:18Z",
+      "repository": "OWASP/ASVS",
+      "url": "https://github.com/OWASP/ASVS"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "The Web Security Testing Guide is a comprehensive Open Source guide to testing the security of web applications and web services.",
+      "license": "CC-BY-SA-4.0",
+      "pushed_at": "2026-11-09T14:44:00Z",
+      "repository": "OWASP/wstg",
+      "url": "https://github.com/OWASP/wstg"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "OWASP API Security Project",
+      "license": "NOASSERTION",
+      "pushed_at": "2026-09-22T14:25:04Z",
+      "repository": "OWASP/API-Security",
+      "url": "https://github.com/OWASP/API-Security"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "OWASP Juice Shop: Probably the most modern and sophisticated insecure web application",
+      "license": "MIT",
+      "pushed_at": "2026-11-08T19:00:39Z",
+      "repository": "juice-shop/juice-shop",
+      "url": "https://github.com/juice-shop/juice-shop"
+    },
+    {
+      "archived": false,
+      "default_branch": "develop",
+      "description": "completely ridiculous API (crAPI)",
+      "license": "Apache-2.0",
+      "pushed_at": "2026-11-08T11:12:54Z",
+      "repository": "OWASP/crAPI",
+      "url": "https://github.com/OWASP/crAPI"
+    },
+    {
+      "archived": false,
+      "default_branch": "develop",
+      "description": "Lightweight static analysis for many languages. Find bug variants with patterns that look like source code.",
+      "license": "LGPL-2.1",
+      "pushed_at": "2026-11-09T00:06:50Z",
+      "repository": "semgrep/semgrep",
+      "url": "https://github.com/semgrep/semgrep"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "Find secrets with Gitleaks 🔑",
+      "license": "MIT",
+      "pushed_at": "2026-10-28T04:14:29Z",
+      "repository": "gitleaks/gitleaks",
+      "url": "https://github.com/gitleaks/gitleaks"
+    },
+    {
+      "archived": false,
+      "default_branch": "main",
+      "description": "Find vulnerabilities, misconfigurations, secrets, SBOM in containers, Kubernetes, code repositories, clouds and more",
+      "license": "Apache-2.0",
+      "pushed_at": "2026-11-09T10:22:26Z",
+      "repository": "aquasecurity/trivy",
+      "url": "https://github.com/aquasecurity/trivy"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "Open-Source Unified Vulnerability Management, DevSecOps & ASPM",
+      "license": "BSD-3-Clause",
+      "pushed_at": "2026-11-09T18:47:17Z",
+      "repository": "DefectDojo/django-DefectDojo",
+      "url": "https://github.com/DefectDojo/django-DefectDojo"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "Main Sigma Rule Repository",
+      "license": "NOASSERTION",
+      "pushed_at": "2026-11-09T01:21:51Z",
+      "repository": "SigmaHQ/sigma",
+      "url": "https://github.com/SigmaHQ/sigma"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "Automated Adversary Emulation Platform",
+      "license": "Apache-2.0",
+      "pushed_at": "2026-10-12T19:16:34Z",
+      "repository": "apache/caldera",
+      "url": "https://github.com/apache/caldera"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "Small and highly portable detection tests based on MITRE's ATT&CK.",
+      "license": "MIT",
+      "pushed_at": "2026-11-09T11:15:26Z",
+      "repository": "redcanaryco/atomic-red-team",
+      "url": "https://github.com/redcanaryco/atomic-red-team"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "Nmap - the Network Mapper. Github mirror of official SVN repository.",
+      "license": "NOASSERTION",
+      "pushed_at": "2026-11-09T02:45:05Z",
+      "repository": "nmap/nmap",
+      "url": "https://github.com/nmap/nmap"
+    },
+    {
+      "archived": false,
+      "default_branch": "dev",
+      "description": "Nuclei is a fast, customizable vulnerability scanner powered by the global security community and built on a simple YAML-based DSL, enabling collaboration to tackle trending vulnerabilities on the internet. It helps you find vulnerabilities in your applications, APIs, networks, DNS, and cloud configurations.",
+      "license": "MIT",
+      "pushed_at": "2026-11-09T17:24:31Z",
+      "repository": "projectdiscovery/nuclei",
+      "url": "https://github.com/projectdiscovery/nuclei"
+    },
+    {
+      "archived": false,
+      "default_branch": "main",
+      "description": "Open-source AI penetration testing tool to find and fix your app’s vulnerabilities.",
+      "license": "Apache-2.0",
+      "pushed_at": "2026-11-09T06:21:36Z",
+      "repository": "usestrix/strix",
+      "url": "https://github.com/usestrix/strix"
+    },
+    {
+      "archived": false,
+      "default_branch": "main",
+      "description": "Shannon is an AI pentester for web applications and APIs. It analyzes your source code, identifies attack vectors, and executes real exploits to prove vulnerabilities before they reach production.",
+      "license": "AGPL-3.0",
+      "pushed_at": "2026-11-09T09:12:56Z",
+      "repository": "KeygraphHQ/shannon",
+      "url": "https://github.com/KeygraphHQ/shannon"
+    },
+    {
+      "archived": false,
+      "default_branch": "main",
+      "description": "Automated Penetration Testing Agentic Framework Powered by Large Language Models",
+      "license": "MIT",
+      "pushed_at": "2026-07-14T12:58:31Z",
+      "repository": "GreyDGL/PentestGPT",
+      "url": "https://github.com/GreyDGL/PentestGPT"
+    },
+    {
+      "archived": false,
+      "default_branch": "main",
+      "description": "Fully autonomous AI Agents system capable of performing complex penetration testing tasks",
+      "license": "MIT",
+      "pushed_at": "2026-10-22T23:26:13Z",
+      "repository": "vxcontrol/pentagi",
+      "url": "https://github.com/vxcontrol/pentagi"
+    },
+    {
+      "archived": true,
+      "default_branch": "archive",
+      "description": "Cybersecurity AI (CAI), the framework for AI Security",
+      "license": "NOASSERTION",
+      "pushed_at": "2026-08-22T13:05:58Z",
+      "repository": "aliasrobotics/cai",
+      "url": "https://github.com/aliasrobotics/cai"
+    },
+    {
+      "archived": false,
+      "default_branch": "master",
+      "description": "Welcome to the page where you will find each trick/technique/whatever I have learnt in CTFs, real life apps, and reading researches and news.",
+      "license": null,
+      "pushed_at": "2026-11-09T18:03:06Z",
+      "repository": "HackTricks-wiki/hacktricks",
+      "url": "https://github.com/HackTricks-wiki/hacktricks"
+    }
+  ]
+}

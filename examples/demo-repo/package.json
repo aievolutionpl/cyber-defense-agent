@@ -1,0 +1,9 @@
+{
+  "name": "northstar-demo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Static educational fixture. Never install or execute.",
+  "dependencies": {
+    "lodash": "4.17.20"
+  }
+}

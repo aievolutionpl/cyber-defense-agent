@@ -1,0 +1,35 @@
+{
+  "name": "cyber-defense-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/site"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "overrides": {
+    "minimatch@>=7.0.0 <11.0.1": "11.0.5"
+  },
+  "scripts": {
+    "dev": "npm run dev --workspace @cyber-defense/site",
+    "build": "npm run build --workspace @cyber-defense/site",
+    "lint": "npm run lint --workspace @cyber-defense/site",
+    "typecheck": "npm run typecheck --workspace @cyber-defense/site",
+    "test": "node --test tests/*.test.mjs",
+    "demo": "node tools/demo.mjs",
+    "check:skills": "node tools/check-skills.mjs",
+    "check": "npm run check:skills && npm test && npm run lint && npm run typecheck && npm run build"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.5",
+    "@types/node": "26.6.6",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "eslint": "9.39.5",
+    "eslint-config-next": "16.4.5",
+    "tailwindcss": "4.3.5",
+    "typescript": "6.0.3"
+  }
+}

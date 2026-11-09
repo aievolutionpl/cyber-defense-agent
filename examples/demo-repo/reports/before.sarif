@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [{
+    "tool": { "driver": { "name": "CDA static demonstration", "version": "0.1.0" } },
+    "results": [{
+      "ruleId": "CDA-DEP-001",
+      "level": "error",
+      "message": { "text": "DEMO: lodash 4.17.20; GHSA-35jh-r3h4-6jhm; fixed in 4.17.21." },
+      "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "package.json" }, "region": { "startLine": 7 } } }]
+    }]
+  }]
+}
