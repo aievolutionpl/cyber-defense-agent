@@ -17,7 +17,7 @@ Wariant porównawczy na gałęzi `codex/node-v0.1`. Główna wersja produktu jes
 
 Testy obejmują: zgodę i wygaśnięcie, mutację i cofnięcie zakresu, allowlistę, traversal/UNC/URL/NTFS, symlinki, junctiony Windows, hardlinki, podmianę ścieżki, binarne/duże pliki, bezpieczny stan, redakcję, prompt injection w imporcie, schematy i lokalizacje SARIF, brak pokrycia, nieaktualny/deletowany plik, obcy root oraz brak wykonania skryptu badanego projektu.
 
-Node: 26.12.1 lokalnie; wymagane >=22. CI przygotowane na Node 22. Narzędzia CLI nie mają zewnętrznych zależności. Niesprawdzane jeszcze systemy: macOS; Linux wymaga wyniku CI.
+Node: 26.12.1 lokalnie; wymagane >=22. CI przygotowane na Node 22. Narzędzia CLI nie mają zewnętrznych zależności. Linux / Node 22: PASS w GitHub Actions (npm ci, npm run check, npm run demo), run 42682757047. Niesprawdzany system: macOS.
 
 Zależności lintowania są scentralizowane w katalogu głównym. Override minimatch >=7,<11.0.1 → 11.0.5 usuwa GHSA-g3hv-75wg-m249 w łańcuchu typescript-eslint; lint i build zostały ponownie sprawdzone. minimatch 3 z osobnego łańcucha nie jest objęty tym advisory. Nie użyto automatycznego downgrade Next.js.
 
@@ -35,7 +35,7 @@ npx --yes --package @playwright/cli playwright-cli --session cda-node open http:
 npx --yes --package @playwright/cli playwright-cli --session cda-node run-code --filename scripts/ui-acceptance.js
 ```
 
-Wygenerowane zrzuty i logi są w lokalnym output/playwright/ (wyłączone z Gita). W końcowym przebiegu: 27/27, konsola 0 błędów i 0 ostrzeżeń. Pierwszy serwer Python na Windows resetował równoległe połączenia z plikami JS. Po zmianie na statyczny serwer Node i dodaniu oczekiwania na widoczne stany paneli cały scenariusz przeszedł bez błędów. Jeśli port jest zajęty, serve wybiera inny; otwórz zwrócony adres (test używa bieżącego origin). Nie testowano na fizycznym telefonie ani w Safari/Firefox. Kontrole klawiatury nie są pełnym audytem WCAG.
+Wygenerowane zrzuty i logi są w lokalnym output/playwright/ (wyłączone z Gita). W końcowym przebiegu: 27/27, konsola 0 błędów i 0 ostrzeżeń. Osiem unikalnych linków GitHub strony sprawdzono HTTP HEAD: wszystkie 200. Pierwszy serwer Python na Windows resetował równoległe połączenia z plikami JS. Po zmianie na statyczny serwer Node i dodaniu oczekiwania na widoczne stany paneli cały scenariusz przeszedł bez błędów. Jeśli port jest zajęty, serve wybiera inny; otwórz zwrócony adres (test używa bieżącego origin). Nie testowano na fizycznym telefonie ani w Safari/Firefox. Kontrole klawiatury nie są pełnym audytem WCAG.
 
 ## Codex i Claude Code
 
