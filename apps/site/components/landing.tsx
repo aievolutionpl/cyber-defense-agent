@@ -167,7 +167,7 @@ export function Landing({ locale }: { locale: Locale }) {
               <h1 id="hero-title">
                 {pl ? (
                   <>
-                    Twój agent tworzy kod.
+                    Twój agent tworzy.
                     <br />
                     <span>Naucz go chronić.</span>
                   </>
@@ -175,11 +175,7 @@ export function Landing({ locale }: { locale: Locale }) {
                   <>
                     Your agent builds.
                     <br />
-                    <span>
-                      Now teach it
-                      <br />
-                      to defend.
-                    </span>
+                    <span>Teach it to defend.</span>
                   </>
                 )}
               </h1>
@@ -209,7 +205,6 @@ export function Landing({ locale }: { locale: Locale }) {
             </div>
             <div className="hero-product">
               <HeroSignal locale={locale} />
-              <ReportPreview locale={locale} />
             </div>
           </div>
           <div className="hero-foot section-shell">
@@ -251,6 +246,26 @@ export function Landing({ locale }: { locale: Locale }) {
                 ? "Agent prowadzi. Ty zatwierdzasz zakres. Każda decyzja ma ślad w dowodach."
                 : "The agent guides. You approve the boundaries. Every decision has an evidence trail."}
             </p>
+          </div>
+          <div className="evidence-preview">
+            <div className="evidence-intro">
+              <span className="eyebrow">
+                {pl
+                  ? "ZA KAŻDYM SYGNAŁEM — DOWÓD"
+                  : "BEHIND EVERY SIGNAL — EVIDENCE"}
+              </span>
+              <h3>{pl ? "Zajrzyj do raportu." : "Look inside the report."}</h3>
+              <p>
+                {pl
+                  ? "Zakres, ustalenie i retest. Przejdź przez trzy zakładki przykładowego audytu i zobacz, co stoi za każdą decyzją."
+                  : "Scope, finding, retest. Explore the three tabs of a sample audit and see what supports each decision."}
+              </p>
+              <a className="subtle-link" href="#demo">
+                {pl ? "Przejdź przez pełne demo" : "Walk through the full demo"}
+                <ArrowRight size={16} />
+              </a>
+            </div>
+            <ReportPreview locale={locale} />
           </div>
           <div className="steps-grid">
             {(pl

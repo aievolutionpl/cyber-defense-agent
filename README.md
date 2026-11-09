@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/product-preview.png" alt="Cyber Defense Agent — actual command-center presentation with evidence and audit controls" width="100%" />
+  <img src="docs/assets/product-preview.png" alt="Cyber Defense Agent — emerald hero with original 3D illustration and a four-stage defensive workflow" width="100%" />
 </p>
 
 <h1 align="center">Cyber Defense Agent</h1>
@@ -35,6 +35,8 @@ The skill is the workflow; the CLI enforces file access and validates reports; t
 ## See it before you run it
 
 [![AI cursors assembling a security workflow: dependency, configuration and update planning](docs/assets/protection-preview.png)](https://aievolutionpl.github.io/cyber-defense-agent/#protection)
+
+The animated hero illustrates **inspect → find → human-reviewed fix → verify** using original graphite/emerald artwork. Its infrastructure map is conceptual: live network scanning remains on the roadmap. [Artwork and motion implementation](docs/EMERALD_HERO.md).
 
 The [interactive presentation](https://aievolutionpl.github.io/cyber-defense-agent/) walks through one synthetic dependency finding, the blocked out-of-scope action, its remediation and a retest. English by default, Polish available, with keyboard navigation, reduced motion and an optional agent-cursor build effect. Website buttons never grant access to your local files.
 
