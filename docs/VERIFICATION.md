@@ -1,5 +1,16 @@
 # Verification record
 
+## Emerald illustrated hero — 9 November 2026
+
+- Local `npm run check`: 38 tests, skill contracts, ESLint, TypeScript and production-prefix build pass. No CLI behavior or dependency changed.
+- **114/114** EN/PL static-export acceptance checks pass after moving the report into the workflow section; no uncaught browser errors or failed assets. Keyboard, clipboard, full demo, policies, no-JS fallback and 320/390/768/1440 layouts included.
+- **18/18** hero checks pass: automatic progression, four keyboard-selectable stages, manual hold, replay, global pause, offscreen timer stop, dynamic reduced motion, manual interaction without motion, reflow and image loading.
+- **10/10** existing cursor/marquee checks pass. Desktop/mobile and four hero phases were captured; a browser recording documents the real sequence. Physical-device and sustained performance testing remain unverified.
+- Original imagegen artwork: 1200×800 WebP, approximately 57 KB. Visual review confirmed coherent module geometry, green/graphite palette and no generated text/logos. The illustration is explicitly conceptual; network scanning remains on the roadmap, remediation remains human-controlled.
+- Previous transitions-agent license/service results are historical. This iteration adds the requested original hero presentation; no additional hosted motion fix or Business license is claimed.
+
+Remote release evidence is recorded in RELEASE.md. Full model-host sessions remain unverified.
+
 ## Command-center and update planning — 9 November 2026
 
 - Windows local: **38/38 tests**, canonical skill contracts, ESLint, TypeScript, production-prefix static build and synthetic audit demo pass. Five update-inventory tests cover exact scope, untrusted fields, stale/missing/equal versions, invalid calendar/future dates, duplicate/bounded records and all seven documented OS/manager label pairs.

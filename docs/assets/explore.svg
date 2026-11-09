@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="96" viewBox="0 0 640 96" role="img" aria-labelledby="title desc">
 <title id="title">Explore the interactive presentation</title><desc id="desc">Open the Cyber Defense Agent website and try the demo.</desc>
-<defs><linearGradient id="mint" x2="0" y2="1"><stop stop-color="#d7e6ff"/><stop offset="1" stop-color="#b5a4ff"/></linearGradient></defs>
-<rect x="1" y="5" width="638" height="90" rx="14" fill="#536188"/><rect x="1" y="1" width="638" height="84" rx="14" fill="url(#mint)" stroke="#ecf1ff"/>
-<text x="32" y="32" fill="#364569" font-family="monospace" font-size="11" letter-spacing="2">OPEN THE PRODUCT / TRY THE DEMO</text><text x="32" y="62" fill="#101a30" font-family="Arial,sans-serif" font-size="25" font-weight="700">Explore the interactive presentation</text><path d="M582 31h22v22m0-22-25 25" fill="none" stroke="#101a30" stroke-width="3"/>
+<defs><linearGradient id="mint" x2="0" y2="1"><stop stop-color="#d4f3da"/><stop offset="1" stop-color="#92d7a8"/></linearGradient></defs>
+<rect x="1" y="5" width="638" height="90" rx="14" fill="#447c56"/><rect x="1" y="1" width="638" height="84" rx="14" fill="url(#mint)" stroke="#effbf1"/>
+<text x="32" y="32" fill="#315b3e" font-family="monospace" font-size="11" letter-spacing="2">OPEN THE PRODUCT / TRY THE DEMO</text><text x="32" y="62" fill="#102c1b" font-family="Arial,sans-serif" font-size="25" font-weight="700">Explore the interactive presentation</text><path d="M582 31h22v22m0-22-25 25" fill="none" stroke="#102c1b" stroke-width="3"/>
 </svg>
