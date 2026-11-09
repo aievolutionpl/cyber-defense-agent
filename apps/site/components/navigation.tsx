@@ -1,10 +1,12 @@
 'use client';
-
 import { useState } from 'react';
-import { Menu, X } from 'lucide-react';
-import { GitHubLink, Mark } from './ui';
+import { ArrowUpRight, Menu, X } from 'lucide-react';
+import { asset, github, type Locale } from '@/lib/config';
+import { Mark } from './ui';
 
-export function Navigation() {
+export function Navigation({ locale }: { locale: Locale }) {
   const [open, setOpen] = useState(false);
-  return <header className="site-header"><div className="header-inner"><a href="#" className="brand" aria-label="Cyber Defense Agent — początek strony"><Mark/><span>cyber defense<span className="brand-second">agent</span></span></a><nav className={`main-nav ${open ? 'is-open' : ''}`} id="main-nav" aria-label="Nawigacja główna"><a href="#jak-to-dziala" onClick={() => setOpen(false)}>Jak to działa</a><a href="#mozliwosci" onClick={() => setOpen(false)}>Możliwości</a><a href="#demo" onClick={() => setOpen(false)}>Demo audytu</a><a href="#instalacja" onClick={() => setOpen(false)}>Instalacja</a></nav><div className="header-actions"><GitHubLink className="header-github">GitHub</GitHubLink><button className="menu-toggle" type="button" aria-label={open ? 'Zamknij nawigację' : 'Otwórz nawigację'} aria-expanded={open} aria-controls="main-nav" onClick={() => setOpen(!open)}>{open ? <X size={22} aria-hidden="true"/> : <Menu size={22} aria-hidden="true"/>}</button></div></div></header>;
+  const pl = locale === 'pl';
+  const links = [ ['#workflow', pl ? 'Jak to działa' : 'How it works'], ['#capabilities', pl ? 'Możliwości' : 'Capabilities'], ['#demo', pl ? 'Przykładowy audyt' : 'Live demo'], ['#install', pl ? 'Uruchom u siebie' : 'Get started'] ];
+  return <header className="site-header"><div className="nav-shell"><a href="#main" className="brand" aria-label="Cyber Defense Agent"><Mark small/><span>cyber<span className="brand-light">defense</span><small>AGENT / OPEN SOURCE</small></span></a><nav className="desktop-nav" aria-label={pl ? 'Nawigacja główna' : 'Main navigation'}>{links.map(([href, label]) => <a key={href} href={href}>{label}</a>)}</nav><div className="nav-actions"><div className="locale-switch" aria-label={pl ? 'Język' : 'Language'}><a href={asset('/')} hrefLang="en" lang="en" aria-current={!pl ? 'page' : undefined}>EN</a><a href={asset('/pl/')} hrefLang="pl" lang="pl" aria-current={pl ? 'page' : undefined}>PL</a></div><a className="nav-github" href={github()}>GitHub<ArrowUpRight size={15} aria-hidden="true"/></a><button className="menu-button" type="button" aria-expanded={open} aria-controls="mobile-menu" aria-label={pl ? 'Menu nawigacji' : 'Navigation menu'} onClick={() => setOpen(!open)}>{open ? <X/> : <Menu/>}</button></div></div><nav id="mobile-menu" className="mobile-nav" hidden={!open} aria-label={pl ? 'Menu mobilne' : 'Mobile menu'} onKeyDown={e => { if (e.key === 'Escape') { setOpen(false); document.querySelector<HTMLButtonElement>('.menu-button')?.focus(); } }}>{links.map(([href, label]) => <a key={href} href={href} onClick={() => setOpen(false)}>{label}<ArrowUpRight size={16}/></a>)}</nav></header>;
 }

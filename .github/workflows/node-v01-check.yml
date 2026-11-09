@@ -1,7 +1,8 @@
-name: Node v0.1 comparison checks
+name: Cyber Defense Agent checks
 on:
   push:
-    branches: [codex/node-v0.1]
+    branches: [codex/node-v0.1, codex/premium-unified]
+  pull_request:
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,3 +18,5 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run demo
+      - run: node tools/cda.mjs onboarding --scope demo
+      - run: node tools/cda.mjs summary --scope demo --report demo-before --name model-summary

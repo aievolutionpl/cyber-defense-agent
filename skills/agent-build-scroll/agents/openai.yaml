@@ -1,0 +1,7 @@
+interface:
+  display_name: "Agent Build Scroll"
+  short_description: "Build pages with animated AI cursors on scroll"
+  brand_color: "#B4EED2"
+  default_prompt: "Use $agent-build-scroll to add named agent cursors that assemble this page as I scroll."
+policy:
+  allow_implicit_invocation: true

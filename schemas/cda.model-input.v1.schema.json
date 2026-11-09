@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Bounded Cyber Defense Agent model input",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "trust", "source", "policy", "total", "included", "omitted", "findings", "limitations"],
+  "properties": {
+    "format": { "const": "cda.model-input.v1" },
+    "trust": { "const": "untrusted-observations" },
+    "source": { "enum": ["local-review", "import"] },
+    "policy": { "type": "object", "additionalProperties": false, "required": ["mode", "targetExecution", "network", "contentSharingRequiresReview"], "properties": { "mode": { "const": "advisory-only" }, "targetExecution": { "const": false }, "network": { "const": false }, "contentSharingRequiresReview": { "const": true } } },
+    "total": { "type": "integer", "minimum": 0, "maximum": 2000 },
+    "included": { "type": "integer", "minimum": 0, "maximum": 100 },
+    "omitted": { "type": "integer", "minimum": 0, "maximum": 2000 },
+    "findings": { "type": "array", "maxItems": 100, "items": { "type": "object", "additionalProperties": false, "required": ["ref", "fileRef", "line", "rule", "ruleRef", "severity", "priority", "confidence"], "properties": {
+      "ref": { "type": "string", "pattern": "^finding_[0-9]{3}$" },
+      "fileRef": { "type": "string", "pattern": "^file_[0-9]{3}$" },
+      "line": { "type": "integer", "minimum": 1, "maximum": 10000000 },
+      "rule": { "enum": ["CDA-DEP-001", "CDA-TLS-001", "CDA-SECRET-001", "CDA-EVAL-001", "external"] },
+      "ruleRef": { "type": "string", "pattern": "^rule_[0-9]{3}$" },
+      "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
+      "priority": { "enum": ["P0", "P1", "P2", "P3"] },
+      "confidence": { "enum": ["high", "medium", "low"] }
+    } } },
+    "limitations": { "type": "array", "maxItems": 3, "items": { "type": "string", "maxLength": 100 } }
+  }
+}

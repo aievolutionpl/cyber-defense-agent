@@ -1,0 +1,43 @@
+{
+  "checked_at": "2026-11-09",
+  "source": "GitHub REST API",
+  "status": "Research only; not installed or integrated",
+  "repositories": [
+    {
+      "full_name": "SigmaHQ/sigma",
+      "html_url": "https://github.com/SigmaHQ/sigma",
+      "description": "Main Sigma Rule Repository",
+      "archived": false,
+      "pushed_at": "2026-11-09T01:21:51Z",
+      "default_branch": "master",
+      "license": "NOASSERTION"
+    },
+    {
+      "full_name": "VirusTotal/yara",
+      "html_url": "https://github.com/VirusTotal/yara",
+      "description": "The pattern matching swiss knife",
+      "archived": false,
+      "pushed_at": "2026-10-27T11:53:52Z",
+      "default_branch": "master",
+      "license": "BSD-3-Clause"
+    },
+    {
+      "full_name": "BerriAI/litellm",
+      "html_url": "https://github.com/BerriAI/litellm",
+      "description": "The fastest, litest AI Gateway. Rust core with Python SDK. Call 100+ LLM APIs in OpenAI (or native) format with cost tracking, guardrails, load balancing, and logging [Bedrock, Azure, OpenAI, Anthropic, OpenAI, VertexAI, vLLM, Nvidia NIM]",
+      "archived": false,
+      "pushed_at": "2026-11-09T20:36:22Z",
+      "default_branch": "main",
+      "license": "NOASSERTION"
+    },
+    {
+      "full_name": "ollama/ollama",
+      "html_url": "https://github.com/ollama/ollama",
+      "description": "Get up and running with Kimi, GLM, MiniMax, DeepSeek, gpt-oss, Qwen, Gemma and other models.",
+      "archived": false,
+      "pushed_at": "2026-11-09T19:09:45Z",
+      "default_branch": "main",
+      "license": "MIT"
+    }
+  ]
+}

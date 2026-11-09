@@ -1,59 +1,73 @@
-# Odbiór v0.1 Node — 2026-11-09
+# Unified v0.1 verification · 2026-11-09
 
-Wariant porównawczy na gałęzi `codex/node-v0.1`. Główna wersja produktu jest prowadzona osobno. Katalog roboczy tej wersji: projects/cyber-defense-agent-release.
+Source branch: `codex/premium-unified`. Local checkout: `projects/cyber-defense-agent-release`. Both previous source histories are preserved locally; the published tree excludes a historical parent rejected by push protection. Integration decisions are in [INTEGRATION.md](INTEGRATION.md).
 
-## Narzędzia i kod
+## Code and CLI
 
-| Kontrola | Wynik |
+| Check | Observed result |
 |---|---|
-| npm run check:skills | PASS: oba cienkie punkty wejścia wskazują jeden kanoniczny SKILL.md |
-| npm test | PASS: 25 testów; 0 błędów, 0 pominiętych na Windows |
-| npm run lint | PASS: 0 ostrzeżeń |
-| npm run typecheck | PASS |
-| npm run build | PASS: statyczny eksport Next.js 16.4.5 |
-| npm audit | 0 podatności produkcyjnych i developerskich na dzień kontroli |
-| node tools/demo.mjs | PASS: import SARIF, lokalny dowód, poprawka kopii, potwierdzony retest, brak danych i blokada poza zakresem |
-| CLI review → retest + niedozwolony import | PASS: confirmed_fixed, INVALID_PATH i brak pliku wynikowego po odmowie |
+| `npm run check:skills` | PASS: Codex, Claude and experimental Hermes share the canonical defense instruction; motion wrappers share one source |
+| `npm test` | PASS: 29 tests, zero failures/skips on Windows |
+| `npm run lint` | PASS: zero warnings |
+| `npm run typecheck` | PASS: current Next route types regenerated, TypeScript clean |
+| `npm run build` | PASS: EN `/` and PL `/pl/` static routes |
+| Pages-prefix build | PASS with `/cyber-defense-agent/compare/node-v0.1` and configured public URL |
+| `npm audit --json` | Zero reported production/development vulnerabilities at check time |
+| `npm run demo` | PASS: SARIF import, local evidence, copy-only remediation, confirmed fix, insufficient data and out-of-scope denial |
+| `onboarding --scope demo` | PASS: structured questions and filename-only Node hint, no target content read |
+| `summary --scope demo --report demo-before --name model-summary` | PASS: bounded local JSON, providerCalled=false |
+| Generated JSON schema checks | PASS: actual model summary and Motion Project IR validated with JSON Schema |
+| Skill quick validation | PASS: repository skill and installed user skill in `.codex/skills/agent-build-scroll` |
+| `git diff --check` | PASS |
 
-Testy obejmują: zgodę i wygaśnięcie, mutację i cofnięcie zakresu, allowlistę, traversal/UNC/URL/NTFS, symlinki, junctiony Windows, hardlinki, podmianę ścieżki, binarne/duże pliki, bezpieczny stan, redakcję, prompt injection w imporcie, schematy i lokalizacje SARIF, brak pokrycia, nieaktualny/deletowany plik, obcy root oraz brak wykonania skryptu badanego projektu.
+The original 25 security tests cover consent, expiry/revocation, mutated scopes, exact paths, traversal/UNC/URL/NTFS, symbolic links/junctions/hardlinks, path replacement, binary/oversized files, state guards, redaction, malicious imports, SARIF validation, missing/stale coverage, deleted files, different roots and non-execution of target scripts. Four new tests cover approved-filename onboarding and bounded model summaries, including hostile report text/rule names, removal of paths, recomputed priorities and invalid consent/report rejection.
 
-Node: 26.12.1 lokalnie; wymagane >=22. CI przygotowane na Node 22. Narzędzia CLI nie mają zewnętrznych zależności. Linux / Node 22: PASS w GitHub Actions (npm ci, npm run check, npm run demo), run 42682757047. Niesprawdzany system: macOS.
+Local runtime: Node 26.12.1; minimum supported is Node 22. Linux/Node 22 is checked by `.github/workflows/node-v01-check.yml` on the unified branch; the actual remote run is recorded in [RELEASE.md](RELEASE.md). macOS is untested. No retained Python audit CLI is advertised as part of the verified runtime.
 
-Zależności lintowania są scentralizowane w katalogu głównym. Override minimatch >=7,<11.0.1 → 11.0.5 usuwa GHSA-g3hv-75wg-m249 w łańcuchu typescript-eslint; lint i build zostały ponownie sprawdzone. minimatch 3 z osobnego łańcucha nie jest objęty tym advisory. Nie użyto automatycznego downgrade Next.js.
+## Browser acceptance
 
-## Strona w Chromium
+**80/80 PASS** in Chromium on both the development page and the production static export under the exact Pages prefix. `scripts/ui-acceptance.js` exercises EN and PL:
 
-27 kontroli interakcyjnych: zakładki hero, strzałki klawiatury, dowód, retest, wymagana zgoda w demo, odmowa poza zakresem, kolejność dowodu, pełny retest, niepełny raport, restart, cztery warianty kopiowania, zakładki instalacji, FAQ z klawiatury, kotwice, wspólne linki repo, brak przewijania poziomego przy 320/375/390/768/1280 px, menu mobilne i reduced-motion.
+- Server-rendered document language, single main headline, report tabs and keyboard arrows, evidence disclosure and retest.
+- Onboarding with local-repo and lab-planning branches; the plan reflects choices and keeps active tests on the roadmap.
+- Full guided audit, required scope consent, blocked `../private/.env`, evidence-first progression, confirmed fix, incomplete data and reset.
+- Clipboard commands/prompts for Codex, Claude and experimental Hermes; installation keyboard Home key.
+- FAQ keyboard interaction, section anchors, actual unified repository URLs.
+- Reflow at 1440, 768, 390 and 320 px; mobile menu keyboard, Escape/focus restoration and close-after-navigation.
+- Dynamic reduced motion, cursor/video pause and resume, pointer-transparent overlay, EN/PL navigation and readable no-JS content.
+- Zero uncaught browser/hydration errors and zero failing same-origin asset requests in the passing run.
 
-Desktop: 1440×1000. Mobile: 390×844. Wykonano rzeczywisty przegląd zrzutów desktop/hero/mobile/demo, następnie zwiększono czytelność tekstów i odróżniono ikonę braku danych od poprawki.
+Actual desktop/mobile/Polish screenshots, incomplete-retest states, defense overview and a motion recording were captured in local `output/playwright/` (ignored by Git) and visually inspected. Opaque contrast samples: body text 8.538:1, primary-button text 10.624:1 and installation note text 6.705:1. These samples and keyboard tests are not a full WCAG audit.
 
-Reprodukcja (po npm run build, przy lokalnym serwerze na porcie 3107):
+The hero media was verified with ffprobe: silent H.264, 1600×800, 30 fps, 8 seconds, approximately 451 kB; WebP poster approximately 48 kB. A still was generated and then animated locally; no generative video model was claimed. Cursor frame/label behavior was reviewed from the real browser output. Mobile uses one cursor/no content translation; coarse pointers use the static hero poster. Physical phones, Safari, Firefox, battery use and sustained GPU/frame-rate benchmarks are untested.
 
-```sh
-npx --yes serve apps/site/out --listen tcp://127.0.0.1:3107 --no-clipboard
-npx --yes --package @playwright/cli playwright-cli --session cda-node open http://127.0.0.1:3107
-npx --yes --package @playwright/cli playwright-cli --session cda-node run-code --filename scripts/ui-acceptance.js
+An initial local `serve` attempt treated the dotted preview directory as a file/listing instead of serving its index. It did not reveal an application error. The reproducible loopback-only static server below fixes preview routing; the complete 80-check production run then passed.
+
+```powershell
+$env:SITE_BASE_PATH='/cyber-defense-agent/compare/node-v0.1'
+$env:NEXT_PUBLIC_SITE_URL='https://aievolutionpl.github.io/cyber-defense-agent/compare/node-v0.1/'
+npm run build
+node scripts/preview.mjs --port 3112 --base-path /cyber-defense-agent/compare/node-v0.1
+# In another terminal:
+npx --yes --package @playwright/cli playwright-cli --session cda-premium open http://127.0.0.1:3112/cyber-defense-agent/compare/node-v0.1/
+npx --yes --package @playwright/cli playwright-cli --session cda-premium --raw run-code --filename scripts/ui-acceptance.js
 ```
 
-Wygenerowane zrzuty i logi są w lokalnym output/playwright/ (wyłączone z Gita). W końcowym przebiegu: 27/27, konsola 0 błędów i 0 ostrzeżeń. Dziewięć unikalnych linków GitHub strony sprawdzono HTTP HEAD: wszystkie 200. Pełne 27 kontroli powtórzono na publicznej stronie GitHub Pages: PASS, konsola 0 błędów i 0 ostrzeżeń. Pierwszy serwer Python na Windows resetował równoległe połączenia z plikami JS. Po zmianie na statyczny serwer Node i dodaniu oczekiwania na widoczne stany paneli cały scenariusz przeszedł bez błędów. Jeśli port jest zajęty, serve wybiera inny; otwórz zwrócony adres (test używa bieżącego origin). Nie testowano na fizycznym telefonie ani w Safari/Firefox. Kontrole klawiatury nie są pełnym audytem WCAG.
+## Host/model integrations
 
-## Codex i Claude Code
-
-| Integracja | Stan | Dowód / ograniczenie |
+| Environment | Status | Evidence/limit |
 |---|---|---|
-| Punkty wejścia skilla | Sprawdzone statycznie | Oba wskazują skills/cyber-defense/SKILL.md |
-| Codex CLI 0.163.0 | **NIEZWERYFIKOWANA end-to-end** | Zalogowany; powłoka nie uruchamia się: registered Core launch requires an installed app. Skilla i demo nie uruchomiono w tym hoście. |
-| Claude Code 2.1.314 | **NIEZWERYFIKOWANA end-to-end** | Uruchomiony test /cyber-defense demo; dostawca zwrócił HTTP 429 usage_limit_reached (limit tygodniowy), 0 tokenów API. |
-| GitHub CLI | Działa | Autoryzowany dostęp do rzeczywistego publicznego repo |
-| Konektory GitHub / Exa / Vercel w sesji | Niedostępne | MCP tool is not available to the model; użyto GitHub CLI, źródeł oficjalnych i osobnego deployu preview |
-| Semgrep / Gitleaks / Trivy / Nuclei / Nmap | Brak integracji wykonawczej w v0.1 | Research i przyszłe adaptery; niczego nie instalowano i nie uruchamiano |
+| Codex defense entry | Static contract PASS; model session **unverified** | Earlier Codex CLI 0.163.0 attempt failed to launch its shell: `registered Core launch requires an installed app`. The full revised skill was not run end-to-end in that host. |
+| Claude Code defense entry | Static contract PASS; model session **unverified** | Earlier Claude Code 2.1.314 attempt returned HTTP 429 `usage_limit_reached`. No successful revised-skill model session is claimed. |
+| Hermes defense entry | **Experimental / unverified** | Thin canonical pointer only. Automatic discovery/installation behavior and model session not tested. |
+| Agent-build-scroll | Implemented and browser-tested | Repo entry points validated; user skill installed locally. Discovery in a future host session may need a reload. |
+| CLI, imports, onboarding and summary | Verified deterministically | These passing checks do not establish host/model integration success. |
+| Sigma/YARA, LiteLLM/Ollama, MCP, SIEM/EDR, incident memory, IOC enrichment | **Not integrated** | Researched architecture candidates only; no provider/scanner installs or calls. |
 
-Lokalne dowody prób hostów: output/integrations/ (niepublikowane). Sukces CLI i testów nie jest przedstawiany jako sukces integracji z modelem.
+Prior local host-attempt evidence remains in `output/integrations/`. Repeating a blocked or quota-limited model call was not necessary to validate these deterministic changes. [Architecture](ARCHITECTURE.md) makes the authority, privacy and implementation boundaries explicit.
 
-## Publikacja
+## Public release
 
-Adres repo: https://github.com/aievolutionpl/cyber-defense-agent
+Current public URLs, unique-link HTTP checks, remote CI and public-browser results are recorded in [RELEASE.md](RELEASE.md) after deployment. Historical Node-only branch checks remain historical; they are not substituted for unified-release results.
 
-Kod wariantu: https://github.com/aievolutionpl/cyber-defense-agent/tree/codex/node-v0.1
-
-Strona tej wersji będzie osobnym publicznym podglądem. Nie konfiguruje GitHub Pages ani nie zmienia wdrożenia głównej wersji. Szczegóły końcowego podglądu są zapisane w docs/RELEASE.md.
+Observed unified release: Node 22/Linux CI **success**, Pages build **success**, public EN/PL acceptance **80/80 PASS**, console 0 errors/warnings and 10/10 unique GitHub destination checks HTTP 200. Source: `ddae6c4`; artifact: `a7aa35d`. The public-browser run used the same committed acceptance script as the production export.

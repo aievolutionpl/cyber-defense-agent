@@ -4,17 +4,19 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 import { StateStore, PolicyError, propose, approve, authorized, deny } from './scope.mjs';
 import { review, importScan, retest, render } from './engine.mjs';
+import { onboarding } from './onboarding.mjs';
+import { modelSummary } from './triage.mjs';
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(ROOT);
-const help = `Cyber Defense Agent v0.1 — local only, no project execution\n\nnode tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>\nnode tools/cda.mjs approve --scope <scope> --root <directory> --yes\nnode tools/cda.mjs show --scope <scope>\nnode tools/cda.mjs review --scope <scope> --name <report>\nnode tools/cda.mjs import --scope <scope> --input <relative.json|relative.sarif> --name <report>\nnode tools/cda.mjs retest --scope <scope> --before <report> --after <report> --name <retest>\nnode tools/cda.mjs revoke --scope <scope>\n\nScopes expire after 24 hours. Reports: .cda/reports/<name>.json and .md\nUse only a trusted copy of these tools, outside the reviewed project.\n`;
+const help = `Cyber Defense Agent v0.1 — local only, no project execution\n\nnode tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>\nnode tools/cda.mjs approve --scope <scope> --root <directory> --yes\nnode tools/cda.mjs show --scope <scope>\nnode tools/cda.mjs onboarding --scope <scope>\nnode tools/cda.mjs summary --scope <scope> --report <report> --name <summary>\nnode tools/cda.mjs review --scope <scope> --name <report>\nnode tools/cda.mjs import --scope <scope> --input <relative.json|relative.sarif> --name <report>\nnode tools/cda.mjs retest --scope <scope> --before <report> --after <report> --name <retest>\nnode tools/cda.mjs revoke --scope <scope>\n\nScopes expire after 24 hours. Reports: .cda/reports/<name>.json and .md\nUse only a trusted copy of these tools, outside the reviewed project.\n`;
 
 function main() {
-  const { positionals, values: v } = parseArgs({ allowPositionals: true, options: { root: { type: 'string' }, allow: { type: 'string', multiple: true }, name: { type: 'string' }, scope: { type: 'string' }, input: { type: 'string' }, before: { type: 'string' }, after: { type: 'string' }, yes: { type: 'boolean' }, help: { type: 'boolean' } } });
+  const { positionals, values: v } = parseArgs({ allowPositionals: true, options: { root: { type: 'string' }, allow: { type: 'string', multiple: true }, name: { type: 'string' }, scope: { type: 'string' }, report: { type: 'string' }, input: { type: 'string' }, before: { type: 'string' }, after: { type: 'string' }, yes: { type: 'boolean' }, help: { type: 'boolean' } } });
   if (v.help || !positionals.length) { process.stdout.write(help); return; }
   if (positionals.length !== 1) deny('INVALID_ARGUMENTS');
   const command = positionals[0];
-  const permitted = { scope: ['root', 'allow', 'name'], approve: ['scope', 'root', 'yes'], show: ['scope'], review: ['scope', 'name'], import: ['scope', 'input', 'name'], retest: ['scope', 'before', 'after', 'name'], revoke: ['scope'] };
+  const permitted = { scope: ['root', 'allow', 'name'], approve: ['scope', 'root', 'yes'], show: ['scope'], onboarding: ['scope'], summary: ['scope', 'report', 'name'], review: ['scope', 'name'], import: ['scope', 'input', 'name'], retest: ['scope', 'before', 'after', 'name'], revoke: ['scope'] };
   if (!permitted[command] || Object.keys(v).some(k => !permitted[command].includes(k))) deny('INVALID_ARGUMENTS');
   if (command === 'scope') {
     const scope = propose(v.root, v.allow);
@@ -33,6 +35,12 @@ function main() {
     process.stdout.write('Zakres cofnięty.\n'); return;
   }
   authorized(scope);
+  if (command === 'onboarding') { process.stdout.write(`${JSON.stringify(onboarding(scope), null, 2)}\n`); return; }
+  if (command === 'summary') {
+    const summary = modelSummary(scope, store.read('reports', v.report));
+    const output = store.write('reports', v.name, summary);
+    process.stdout.write(`${JSON.stringify({ output, included: summary.included, omitted: summary.omitted, providerCalled: false })}\n`); return;
+  }
   if (command === 'show') { process.stdout.write(`${JSON.stringify({ root: scope.root, files: scope.files, expiresAt: scope.expiresAt, mode: scope.mode }, null, 2)}\n`); return; }
   const report = command === 'review' ? review(scope) : command === 'import' ? importScan(scope, v.input) : retest(scope, store.read('reports', v.before), store.read('reports', v.after));
   store.write('reports', v.name, report);
