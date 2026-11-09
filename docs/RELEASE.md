@@ -1,5 +1,16 @@
 # Unified product release
 
+## Emerald illustrated hero — 9 November 2026
+
+- [PR #6](https://github.com/aievolutionpl/cyber-defense-agent/pull/6) merged the graphite/emerald presentation, original generated artwork, four-stage hero and relocated report. Source merge: `9e9c2ab44c3ce97788cabf98728234d468e6d3e9`.
+- [Node 22 CI 42711732123](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42711732123): Windows, Ubuntu and macOS **success**, including 38 tests, skill contracts, lint, TypeScript, build and synthetic CLI demo.
+- Pages artifact: `c6eaae85c08ca3e3d2072930717bb080f4d27fcf`; [deployment 42712068730](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42712068730) **success**. Canonical EN/PL URLs and previous comparison redirects remain intact.
+- Public Chromium acceptance: **114/114** page checks, **18/18** new hero checks and **10/10** cursor checks. No uncaught browser errors or failed same-origin assets. The production site was inspected at desktop/mobile sizes; keyboard, reduced motion, manual stages, replay, offscreen pause and image loading passed.
+- **12/12** unique page GitHub destinations returned HTTP 200. **54** README/docs relative references resolved locally. Artwork/provenance is public in [EMERALD_HERO.md](EMERALD_HERO.md).
+- A formatter added a trailing semicolon to the browser callback file, which the Playwright CLI expression runner rejected. The callback's trailing semicolon was removed, then all 18 hero checks passed on the public release. No website-runtime change was needed.
+
+Local evidence: `output/release/emerald-public-{ui,hero,cursors}.json`, `emerald-links.json`, desktop/mobile/stage screenshots and a real browser recording in `output/playwright/`. The WebP delivery asset is about 57 KB; no real-time 3D engine, remote model call or video player is needed. The infrastructure picture is conceptual: v0.1 reads approved local files, network scanning remains roadmap work, and remediation remains human-controlled. Full model-host sessions and physical-device performance remain unverified.
+
 ## Command-center iteration — 9 November 2026
 
 Published and checked:
