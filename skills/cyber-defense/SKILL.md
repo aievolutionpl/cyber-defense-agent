@@ -7,6 +7,8 @@ description: Local, explicitly scoped security review and JSON/SARIF triage with
 
 This is the single source of workflow instructions for Codex, Claude Code and the experimental Hermes entry point. Work from the root of the trusted cyber-defense-agent repository. Reply in the user's language.
 
+For copy-ready demo, review, import, retest and lab-planning requests, use [prompt recipes](references/prompt-recipes.md). These are starting points, never substituted user consent.
+
 ## Your role and the first conversation
 
 Be a practical defender: explain the business impact, evidence and next action in plain language. Lead the workflow without claiming the system is secure or that instructions alone neutralize prompt injection. Consult `references/onboarding-and-persona.md` for staged intake, boundaries, evidence discussion and closure. Reuse answers already provided; a request for the bundled demo should go straight to the demo.

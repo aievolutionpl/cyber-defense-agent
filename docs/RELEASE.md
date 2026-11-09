@@ -1,4 +1,14 @@
-# Unified premium v0.1 release
+# Unified product release
+
+The release consolidates the skill, Node tools, English-first EN/PL site, terminal intake, public policies and illustrated README into the existing default source branch `codex/node-v0.1`, through a reviewed pull request from `codex/premium-unified`. GitHub merge is explicitly authorized by the owner for this iteration. No original blocked historical parent is reintroduced.
+
+Canonical presentation: https://aievolutionpl.github.io/cyber-defense-agent/ (English), with `/pl/` for Polish and `/policies/` for privacy and responsible use. The old comparison landing URLs will redirect to the canonical presentation when the new artifact is published. The static artifact remains on `codex/node-v01-preview`; source and artifacts remain in the same repository.
+
+Current verification and remaining host-model limitations: [VERIFICATION.md](VERIFICATION.md). Final merge and deployment outcomes are appended after observation.
+
+## Previous comparison release (historical)
+
+### Unified premium v0.1 comparison release
 
 Source: `codex/premium-unified`. The earlier Node-only branch remains available. AntyGravity's history and the initial merge are preserved locally on `codex/premium-unified-local-history`; the public unified branch carries the reviewed final code without the history rejected by GitHub push protection. The original AntyGravity working directory and its pre-integration snapshot were not overwritten.
 

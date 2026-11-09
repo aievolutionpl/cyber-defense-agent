@@ -359,7 +359,8 @@ video {
 }
 .hero {
   position: relative;
-  overflow: hidden;
+  /* Clip the backdrop without creating a focus-scroll container on resize. */
+  overflow: clip;
   background: #090f0c;
   border-bottom: 1px solid var(--line);
 }

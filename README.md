@@ -32,6 +32,12 @@ One inspectable skill for **Codex** and **Claude Code**, backed by local Node to
 
 The skill is the workflow; the CLI enforces file access and validates reports; the human controls permissions and changes. [Architecture and trust boundaries](docs/ARCHITECTURE.md).
 
+## See it before you run it
+
+[![Actual product presentation: dark interface, audit evidence, scope and retest tabs](docs/assets/product-preview.png)](https://aievolutionpl.github.io/cyber-defense-agent/)
+
+The [interactive presentation](https://aievolutionpl.github.io/cyber-defense-agent/) walks through one synthetic dependency finding, the blocked out-of-scope action, its remediation and a retest. English by default, Polish available, with keyboard navigation, reduced motion and an optional agent-cursor build effect. Website buttons never grant access to your local files.
+
 ## Start in one minute
 
 **Node.js 22+ and Git.** The local CLI has no npm dependencies. No provider account or paid model call is needed for the demo.
@@ -138,6 +144,8 @@ Then ask:
 ```
 
 [Entry point](.claude/skills/cyber-defense/SKILL.md) loads the same canonical instruction. Model access is your separate provider service. An end-to-end authenticated model session is not established by a passing CLI test.
+
+For your next conversation, use the [copy-ready prompts](skills/cyber-defense/references/prompt-recipes.md) for a local review, report import, retest or isolated-lab plan. The agent asks only what is missing, explains the next step and waits at real scope and data-sharing boundaries.
 
 ## Hermes (experimental)
 

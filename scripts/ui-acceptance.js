@@ -91,6 +91,7 @@ async (page) => {
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
       const pause = page.getByRole('button', { name: pl ? 'Wstrzymaj animacje' : 'Pause animations', exact: true });
       if (await pause.count()) await pause.click();
+      assert(await page.locator('.hero-copy').evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), `${locale}: hero is inside viewport at ${width}px`);
       await page.screenshot({ path: `output/playwright/${locale}-${width}-hero.png` });
       if (width === 1440 || width === 390) await page.screenshot({ path: `output/playwright/${locale}-${width}-full.png`, fullPage: true });
       const resume = page.getByRole('button', { name: pl ? 'Wznów animacje' : 'Resume animations', exact: true });
