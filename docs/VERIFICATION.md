@@ -1,5 +1,14 @@
 # Verification record
 
+## Visual report, dashboard and build-from-empty presentation — 10 November 2026
+
+- Linux (Ubuntu 24.04, Node 22) local: **54/54 tests**, skill contracts, ESLint, TypeScript, static build and synthetic demo pass. Five new tests cover expert-finding validation and redaction, merging of every report type, removal of confirmed fixes, HTML escaping and the absence of scripts or external resources in the report, PDF printing with an injected runner, and the state store's deliverable types.
+- `report` produced a **real PDF** here through headless Chromium (five A4 pages for the synthetic sample; page 1 and 2 were rasterised and inspected). The committed `examples/sample-audit-report{,-pl}.pdf` are rebuilt by `node scripts/sample-report.mjs`. PDF printing through **Edge on Windows and Chrome/Edge on macOS was not run**; the browser path list for those systems is untested. Without a browser the command writes HTML only and says so.
+- The dashboard was regenerated after evidence commands and opened as a file; its five-second refresh is a plain meta refresh.
+- Browser acceptance on the static export (Chromium): **114/114** EN/PL, **18/18** hero and **10/10** motion checks pass. The hero reflow check now waits for the settled layout: with reduced motion every style change becomes a near-zero transition, and on this longer page the first frames after a resize still held the previous layout. Settled layouts were also scanned at 15 widths from 320 to 1200 px with no horizontal overflow.
+- Build-from-empty effect: sections below the fold start as an empty frame and are assembled by the agent cursors; a probe confirmed that content on screen at load is never hidden, that a section waiting for busy agents reveals itself after about 1.3 s, and that nothing stays hidden after a fast scroll to the bottom. Without JavaScript, with reduced motion or with the pause control, content is shown immediately.
+- Agent host marks come from LobeHub Icons (MIT); they are third-party trademarks shown for identification only. Full model-host sessions, physical devices, Safari and Firefox remain **unverified**.
+
 ## v0.2 expert skill and sales page — 10 November 2026
 
 - Linux (Ubuntu 24.04, Node 22) local: **49/49 tests**, skill contracts (13 skill documents, all relative links resolve, nine playbooks present), ESLint, TypeScript, static build and synthetic demo pass. Eleven new tests cover the consent gates, fixed-command inventory collectors (Linux, Windows and macOS parsers with injected runners), lockfile parsers, CVSS v3 scoring, OSV/KEV lookup with host allowlisting and alias merging, and the passive website check including redirect bounds and absence of cookie values, query strings and bodies in reports.

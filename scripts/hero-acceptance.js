@@ -88,6 +88,11 @@ async (page) => {
   );
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
+    // Reduced motion turns every style change into a near-zero transition, so the first
+    // frames after a resize still hold the old layout. Assert on the settled layout.
+    await page
+      .waitForFunction(() => document.documentElement.scrollWidth <= innerWidth, null, { timeout: 3000 })
+      .catch(() => {});
     assert(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
