@@ -15,10 +15,42 @@ import { onboarding } from "./onboarding.mjs";
 import { modelSummary } from "./triage.mjs";
 import { welcomeTerminal } from "./welcome.mjs";
 import { reviewUpdates, renderUpdatePlan } from "./updates.mjs";
+import { collectInventory, depsInventory, renderInventory } from "./inventory.mjs";
+import { checkAdvisories, renderAdvisories } from "./advisories.mjs";
+import { checkWebsite, renderWeb } from "./web.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(ROOT);
-const help = `Cyber Defense Agent v0.1 — local only, no project execution\n\nnode tools/cda.mjs start\nnode tools/cda.mjs updates --scope <scope> --input <inventory.json> --name <plan>\nnode tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>\nnode tools/cda.mjs approve --scope <scope> --root <directory> --yes\nnode tools/cda.mjs show --scope <scope>\nnode tools/cda.mjs onboarding --scope <scope>\nnode tools/cda.mjs summary --scope <scope> --report <report> --name <summary>\nnode tools/cda.mjs review --scope <scope> --name <report>\nnode tools/cda.mjs import --scope <scope> --input <relative.json|relative.sarif> --name <report>\nnode tools/cda.mjs retest --scope <scope> --before <report> --after <report> --name <retest>\nnode tools/cda.mjs revoke --scope <scope>\n\nScopes expire after 24 hours. Reports: .cda/reports/<name>.json and .md\nUse only a trusted copy of these tools, outside the reviewed project.\n`;
+const help = `Cyber Defense Agent v0.2 — evidence tools for a defensive agent
+
+Guided start (human terminal)
+  node tools/cda.mjs start
+
+Files you approve (read-only, exact allowlist, 24 h)
+  node tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>
+  node tools/cda.mjs approve --scope <scope> --root <directory> --yes
+  node tools/cda.mjs show --scope <scope>
+  node tools/cda.mjs onboarding --scope <scope>
+  node tools/cda.mjs review --scope <scope> --name <report>
+  node tools/cda.mjs import --scope <scope> --input <relative.json|relative.sarif> --name <report>
+  node tools/cda.mjs deps --scope <scope> --input <lockfile> --name <inventory>
+  node tools/cda.mjs updates --scope <scope> --input <inventory.json> --name <plan>
+  node tools/cda.mjs retest --scope <scope> --before <report> --after <report> --name <retest>
+  node tools/cda.mjs summary --scope <scope> --report <report> --name <summary>
+  node tools/cda.mjs revoke --scope <scope>
+
+This machine (read-only OS queries; needs the user's consent)
+  node tools/cda.mjs inventory --name <inventory> --yes
+
+Known vulnerabilities (sends package names + versions to OSV.dev; needs consent)
+  node tools/cda.mjs advisories --inventory <inventory> --name <report> --share-package-names
+
+A website you own or are authorized to assess (a few passive GET requests)
+  node tools/cda.mjs web --url <https://...> --name <report> --authorized
+
+Reports: .cda/reports/<name>.json and .md. Nothing is installed, changed or executed in a target.
+Use only a trusted copy of these tools, outside the reviewed project.
+`;
 
 async function main() {
   const { positionals, values: v } = parseArgs({
@@ -33,6 +65,10 @@ async function main() {
       before: { type: "string" },
       after: { type: "string" },
       yes: { type: "boolean" },
+      url: { type: "string" },
+      inventory: { type: "string" },
+      authorized: { type: "boolean" },
+      "share-package-names": { type: "boolean" },
       help: { type: "boolean" },
     },
   });
@@ -52,6 +88,10 @@ async function main() {
     review: ["scope", "name"],
     import: ["scope", "input", "name"],
     updates: ["scope", "input", "name"],
+    deps: ["scope", "input", "name"],
+    inventory: ["name", "yes"],
+    advisories: ["inventory", "name", "share-package-names"],
+    web: ["url", "name", "authorized"],
     retest: ["scope", "before", "after", "name"],
     revoke: ["scope"],
   };
@@ -72,11 +112,38 @@ async function main() {
     );
     return;
   }
+  if (command === "inventory") {
+    const report = collectInventory({ consent: v.yes });
+    store.write("reports", v.name, report);
+    const output = store.write("reports", v.name, renderInventory(report), "md");
+    process.stdout.write(
+      `${JSON.stringify({ output, packages: report.total, sources: report.sources, automaticallyCheckable: report.packages.filter((p) => p.ecosystem).length, networkReachablePorts: report.listeners.ports.filter((p) => p.exposure === "network-reachable").map((p) => p.port), network: false })}\n`,
+    );
+    return;
+  }
+  if (command === "advisories") {
+    const report = await checkAdvisories(store.read("reports", v.inventory), { consent: v["share-package-names"] });
+    store.write("reports", v.name, report);
+    const output = store.write("reports", v.name, renderAdvisories(report), "md");
+    process.stdout.write(
+      `${JSON.stringify({ output, checked: report.checked, affectedPackages: report.affectedPackages, counts: report.counts, notChecked: report.manualLookup.total, incomplete: report.incomplete, kev: report.sources.kev })}\n`,
+    );
+    return;
+  }
+  if (command === "web") {
+    const report = await checkWebsite(v.url, { consent: v.authorized });
+    store.write("reports", v.name, report);
+    const output = store.write("reports", v.name, renderWeb(report), "md");
+    process.stdout.write(
+      `${JSON.stringify({ output, counts: report.counts, findings: report.findings.map((f) => f.id), requests: report.policy.requests })}\n`,
+    );
+    return;
+  }
   const scope = store.read("scopes", v.scope);
   if (command === "approve") {
     store.write("scopes", v.scope, approve(scope, v.root, v.yes));
     process.stdout.write(
-      "Read scope approved. Network and target execution are unavailable.\n",
+      "Read scope approved. Target execution is unavailable; these files are never sent anywhere by the CLI.\n",
     );
     return;
   }
@@ -97,6 +164,13 @@ async function main() {
     process.stdout.write(
       `${JSON.stringify({ output, packages: plan.total, updatesReported: plan.updatesReported, stale: plan.stale, network: false, installation: false })}\n`,
     );
+    return;
+  }
+  if (command === "deps") {
+    const report = depsInventory(scope, v.input);
+    store.write("reports", v.name, report);
+    const output = store.write("reports", v.name, renderInventory(report), "md");
+    process.stdout.write(`${JSON.stringify({ output, packages: report.total, ecosystem: report.packages[0]?.ecosystem ?? null, network: false })}\n`);
     return;
   }
   if (command === "onboarding") {

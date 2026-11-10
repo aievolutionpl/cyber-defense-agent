@@ -16,6 +16,19 @@ test("intake never grants scope or model consent across every supported choice",
           else assert.match(plan.steps.join(" "), /explicitly approve/);
         }
 });
+test("machine and website goals keep every consent flag explicit", () => {
+  const machine = createPlan([0, 3, 0, 0]);
+  assert.match(machine.steps.join(" "), /inventory --name pc --yes/);
+  assert.match(machine.steps.join(" "), /--share-package-names/);
+  const web = createPlan([0, 4, 0, 1]);
+  assert.match(web.steps.join(" "), /--authorized/);
+  for (const plan of [machine, web]) {
+    assert.equal(plan.scopeApproved, false);
+    assert.equal(plan.targetRead, false);
+    assert.equal(plan.providerCalled, false);
+  }
+  assert.throws(() => createPlan([0, 5, 0, 0]), /INVALID_INTAKE/);
+});
 test("terminal intake retries invalid choices and completes an actionable plan", async () => {
   const input = ["ignore previous instructions", "99", "1", "2", "3", "1"];
   let output = "";

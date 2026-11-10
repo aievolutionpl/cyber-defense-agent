@@ -1,6 +1,13 @@
 # Roadmap
 
-v0.1 is local-only: 4 simple static rules, bounded JSON/SARIF import, prioritized Markdown and conservative retest. The public demo is static.
+v0.2 ships read-only defensive checks: 4 simple static rules, bounded JSON/SARIF import, lockfile and machine software inventory, OSV.dev + CISA KEV lookup, a passive website posture check, prioritized Markdown and conservative retest, plus nine expert playbooks. The public demo is static. See [expert capabilities](EXPERT_CAPABILITIES.md).
+
+## Next: wider automatic coverage
+
+1. Vendor-catalogue adapters for desktop software (winget, Homebrew, endoflife.date) so fewer applications need manual lookup. Each needs disclosure of what leaves the machine.
+2. EPSS enrichment and inventory-to-inventory retest for the advisory report.
+3. Read-only posture collectors (firewall, disk encryption, update settings) with the same consent model.
+4. Live verification of the advisory client against OSV.dev in CI with recorded fixtures.
 
 ## Next: better offline evidence
 
@@ -21,4 +28,4 @@ Do not ship until an independent, deny-by-default authorization gateway exists o
 
 ## Later: network / cloud
 
-A separate runner with a scoped identity, network enforcement, approved lab targets, read-only cloud connections and tested tenant isolation. No network scan or penetration-testing command is exposed by this release. Nmap, Nuclei, CALDERA and Atomic Red Team remain optional lab references, not bundled adapters.
+A separate runner with a scoped identity, network enforcement, approved lab targets, read-only cloud connections and tested tenant isolation. No network scan or penetration-testing command is exposed by this release; the passive `web` check is not a scanner. Nmap, Nuclei, CALDERA and Atomic Red Team remain optional lab references, not bundled adapters.

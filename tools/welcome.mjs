@@ -15,12 +15,14 @@ export const intake = [
     id: "goal",
     title: "02 / YOUR GOAL",
     explanation:
-      "The shipped tools are local and read-only. Lab guidance does not run a network test.",
+      "The shipped tools are read-only. Each step that looks at this machine, asks the internet or touches a website needs your explicit flag.",
     question: "What are we protecting?",
     options: [
       "Local code and configuration",
       "An existing JSON / SARIF report",
       "An isolated lab architecture",
+      "This computer or server: installed software and known vulnerabilities",
+      "A website I own or administer",
     ],
   },
   {
@@ -39,7 +41,7 @@ export const intake = [
     id: "sharing",
     title: "04 / YOUR DATA",
     explanation:
-      "The CLI makes no network or model calls. Your agent host may send conversation content to its provider. This answer is a preference, not permission to send data.",
+      "The CLI calls no model. Only the advisories and web commands use the network, and only with your explicit flag. Your agent host may send conversation content to its provider. This answer is a preference, not permission to send data.",
     question: "How should the agent handle private output?",
     options: [
       "Keep report content local",
@@ -69,9 +71,22 @@ export function createPlan(answers) {
         ? [
             "Describe the isolated lab and its authorized boundaries in your own words.",
             "Ask the skill for isolation, egress and STOP-condition guidance.",
-            "Active network tests remain unavailable in v0.1.",
+            "Active network tests remain unavailable in this skill; plan them for a separate authorized runner.",
           ]
-        : [
+        : goal === 3
+          ? [
+              "Agree to a read-only listing, then run node tools/cda.mjs inventory --name pc --yes. No hostname or user name is recorded.",
+              "If you accept that package names and versions go to OSV.dev, run node tools/cda.mjs advisories --inventory pc --name pc-vulns --share-package-names.",
+              "Review .cda/reports/pc-vulns.md locally. Software under manual lookup was not checked automatically.",
+              "Apply updates yourself through official channels, collect a fresh inventory and compare.",
+            ]
+          : goal === 4
+            ? [
+                "Confirm that you own or are authorized to assess the exact URL.",
+                "Run node tools/cda.mjs web --url <https://your-site> --name site --authorized. It sends a few passive GET requests only.",
+                "Review .cda/reports/site.md locally, fix the headers or TLS settings in your hosting, then run the check again.",
+              ]
+            : [
             "Supply a canonical directory and exact relative files; do not scan to discover them.",
             goal === 1
               ? "Include the report and every referenced local file in the proposed allowlist."
@@ -95,7 +110,7 @@ export function createPlan(answers) {
 /** Injected I/O makes the real conversation testable without a terminal or model. */
 export async function runWelcome({ ask, write }) {
   write(
-    "\n+-----------------------------------------+\n| CYBER DEFENSE AGENT / OPERATOR INTAKE    |\n| Local tools. Explicit scope. Evidence.  |\n+-----------------------------------------+\nType q at any step to stop. Nothing is approved or scanned here.\n",
+    "\n+-----------------------------------------+\n| CYBER DEFENSE AGENT / OPERATOR INTAKE    |\n| Consent first. Read-only. Evidence.     |\n+-----------------------------------------+\nType q at any step to stop. Nothing is approved or scanned here.\n",
   );
   const answers = [];
   for (const item of intake) {
@@ -108,7 +123,7 @@ export async function runWelcome({ ask, write }) {
         write("\nStopped. No scope approval, target read or model call.\n");
         return null;
       }
-      if (/^[1-3]$/.test(value) && Number(value) <= item.options.length) {
+      if (/^[1-9]$/.test(value) && Number(value) <= item.options.length) {
         answers.push(Number(value) - 1);
         break;
       }
