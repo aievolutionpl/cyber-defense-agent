@@ -97,8 +97,14 @@ export function collect(named) {
     // Same defect reported twice collapses; the same rule in another file or line does not.
     // A location seen in both an after-report and a retest is one finding; keep the richer report entry.
     const key = f.loc ?? `${f.area}\u0000${f.title}\u0000${f.evidence}`;
-    if (f.added && seen.has(key)) continue;
-    if (!f.added && seen.get(key)?.added) seen.delete(key);
+    const prior = seen.get(key);
+    if (f.added && prior) continue;
+    // Two reports about one location: the stronger priority wins, then the newer report.
+    // Argument order and file names never decide, so a weaker import cannot downgrade a finding.
+    if (prior && !prior.added) {
+      const rank = PRIORITIES.indexOf(f.priority) - PRIORITIES.indexOf(prior.priority);
+      if (rank > 0 || (rank === 0 && (f.at ?? 0) <= (prior.at ?? 0))) continue;
+    }
     seen.set(key, f);
   }
   const open = [...seen.values()].sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.area.localeCompare(b.area));

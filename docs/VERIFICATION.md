@@ -2,7 +2,7 @@
 
 ## Report correctness fixes after review — 10 November 2026
 
-An automated review of the visual-report change found six defects; each was reproduced in a test before the fix. **59/59 tests** now pass, with skill contracts, ESLint, TypeScript, build and demo.
+An automated review of the visual-report change found six defects; each was reproduced in a test before the fix. **60/60 tests** now pass, with skill contracts, ESLint, TypeScript, build and demo.
 
 - A confirmed fix closed any finding with the same rule and path, across projects and regardless of time. It now requires the same approved root and a retest newer than the report that raised the finding; retests without scope identity close nothing.
 - Findings newly discovered by a retest (`added`) were dropped from the report. They are now open findings.

@@ -95,6 +95,18 @@ test("a retest addition and its after-report entry are one finding, in either or
   assert.equal(collect([["after", { ...after, findings: [f, { ...f, line: 9 }] }], ["retest", withAdded]]).findings.length, 2);
 });
 
+test("the stronger priority survives when two reports describe one location", () => {
+  const local = { ...review, findings: [{ ruleId: "CDA-TLS-001", path: "a.js", line: 4, priority: "P1", title: "TLS verification disabled", evidence: "local", fix: "Enable verification" }] };
+  const imported = { ...review, source: "import", createdAt: "2026-11-10T10:30:00.000Z", findings: [{ ruleId: "CDA-TLS-001", path: "a.js", line: 4, priority: "P3", title: "Imported finding: CDA-TLS-001", evidence: "imported", fix: "See report" }] };
+  for (const named of [[["local", local], ["import", imported]], [["import", imported], ["local", local]]]) {
+    const data = collect(named);
+    assert.equal(data.findings.length, 1);
+    assert.equal(data.findings[0].priority, "P1");
+    assert.equal(data.findings[0].fix, "Enable verification");
+    assert.equal(data.verdict, "attention");
+  }
+});
+
 test("control characters cannot split a secret pattern in expert input", () => {
   const report = expertFinding(null, { priority: "P1", area: "code", title: "t", fix: "f", evidence: "password\u001b=supersecret123 and api_key\u0007: abcdef123456" });
   const text = JSON.stringify(report);
