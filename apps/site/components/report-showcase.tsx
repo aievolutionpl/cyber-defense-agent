@@ -14,7 +14,7 @@ export function ReportShowcase({ locale }: { locale: Locale }) {
     ? [["P0", "Tabela zamówień czytelna dla każdego"], ["P1", "Podgląd zamówienia ufa ID z adresu"], ["P1", "lodash 4.17.20 · CVE-2021-23337"], ["P2", "Ciasteczko sesji bez HttpOnly"]]
     : [["P0", "Orders table readable by anyone"], ["P1", "Order lookup trusts the ID in the URL"], ["P1", "lodash 4.17.20 · CVE-2021-23337"], ["P2", "Session cookie without HttpOnly"]];
   return (
-    <section className="deliver-section section-shell" id="report" aria-labelledby="deliver-title">
+    <section data-build-section className="deliver-section section-shell" id="report" aria-labelledby="deliver-title">
       <div className="section-heading" data-reveal>
         <div>
           <span className="eyebrow">{pl ? "CO DOSTAJESZ" : "WHAT YOU GET"}</span>

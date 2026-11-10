@@ -87,7 +87,7 @@ export function Missions({ locale }: { locale: Locale }) {
   const pl = locale === "pl";
   const i = pl ? 1 : 0;
   return (
-    <section className="missions-section section-shell" id="missions" aria-labelledby="missions-title">
+    <section data-build-section className="missions-section section-shell" id="missions" aria-labelledby="missions-title">
       <div className="section-heading" data-reveal>
         <div>
           <span className="eyebrow">{pl ? "CO SPRAWDZI TWÓJ AGENT" : "WHAT YOUR AGENT WILL CHECK"}</span>

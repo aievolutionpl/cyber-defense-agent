@@ -158,3 +158,17 @@ Adds a bilingual skill explanation, an original CSS/vector architecture illustra
 The new illustration is static without JavaScript. Its decorative flow and orbit run only when the global motion controller is running, reduced motion is off, the illustration is in view and the document is visible. Native radios provide keyboard selection and the result is a polite live region.
 
 Observed: current public desktop presentation inspected in Chromium; local ESLint, TypeScript and static export passed. The cloud browser could not reach the local export (connection refused). New desktop/mobile screenshots, 320/390/768/1440 reflow, clipboard, interactive keyboard and reduced-motion acceptance remain pending. Source-level motion guards are not browser-test evidence. This source change is a review candidate, not an observed Pages deployment.
+
+## Streamlined motion review (10 November 2026)
+
+Removes the fixed demo dock and duplicate workflow, operations dashboard, live conversation, comparison, protection map, onboarding and second interactive-demo sections. Keeps missions, skill explanation, scan illustration, deliverable preview, operator control, toolkit, installation, host compatibility, policies and a shorter FAQ. All former navigation anchors redirect to retained sections.
+
+The scan illustration advances every 1.5 seconds, highlights a red risk, presents a human-reviewed fix and ends with a green retest. Motion stays off under reduced-motion preference. A header-wide motion toggle and a local slideshow pause replace the dock. New site-specific desktop cursor choreography shares arrival timing with part opacity; no target code or input is executed. Two original six-second GIFs plus compact MP4/poster variants are reproducible with scripts/render-motion-gifs.py (Pillow) and ffmpeg. Media pauses offscreen, in background tabs and on global pause.
+
+Local lint, TypeScript and static export passed before final section tagging. Local Chromium was blocked by socket() EPERM. The new Website motion acceptance CI job verifies EN/PL at 320/390/768/1440 widths, internal anchors, slideshow autoplay/pause, host marquee, reduced motion, keyboard and runtime errors, and uploads screenshots. Remote results are recorded after observation; adding the workflow alone is not a passing browser test.
+
+### Observed final browser and CI outcome
+
+Source `d1e5f28faa9a355fa94f91477dd5b163b240b6f5` passed [Website motion acceptance 42887300281](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300281). Both languages passed 320/390/768/1440 Chromium viewport checks, anchor integrity, automatic stage changes, local pause with readable evidence, left-to-right host motion outside hover, keyboard stage selection, reduced-motion cleanup, cursor movement during construction and completed content restoration. Nine screenshots are attached to that run. Desktop and phone screenshots were visually reviewed; these are Chromium viewport checks, not physical iPhone/Safari tests.
+
+[Cross-platform CI 42887300297](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300297) passed Windows, macOS and Ubuntu. [Defensive PR review 42887300671](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300671) passed. Final refinements keep individual grid cards on the cursor timeline and reveal all text when playback stops. Both downloadable GIFs decode and have a six-second loop. The PR has not deployed a Pages artifact.

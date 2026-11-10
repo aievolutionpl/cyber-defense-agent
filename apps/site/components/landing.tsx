@@ -1,15 +1,12 @@
 import { SkillBlueprint } from "./skill-blueprint";
 import { HostWorkflows } from "./host-workflows";
-import { ProtectionMap } from "./protection-map";
 import {
   ArrowDown,
   ArrowRight,
   ArrowUpRight,
-  Check,
   ChevronDown,
   FileCheck2,
   FileCode2,
-  Fingerprint,
   GitBranch,
   Globe,
   Layers3,
@@ -17,20 +14,15 @@ import {
   Monitor,
   Radar,
   ShieldAlert,
-  ShieldCheck,
   Terminal,
 } from "lucide-react";
 import { Navigation } from "./navigation";
-import { ReportPreview } from "./report-preview";
-import { GuidedDemo } from "./guided-demo";
 import { Installation } from "./installation";
 import { TrustSection } from "./trust-section";
-import { Onboarding } from "./onboarding";
 import { AgentBuildScroll } from "./motion-system";
 import { HeroSignal } from "./hero-signal";
 import { Missions } from "./missions";
-import { LiveSession } from "./live-session";
-import { SkillCompare, ConsentLadder, KnowledgeBase } from "./skill-story";
+import { ConsentLadder, KnowledgeBase } from "./skill-story";
 import { ExpertEffects } from "./expert-effects";
 import { ScanTheater } from "./scan-theater";
 import { ReportShowcase } from "./report-showcase";
@@ -166,7 +158,7 @@ export function Landing({ locale }: { locale: Locale }) {
               </p>
               <div className="hero-ctas">
                 <GitHubLink>{start}</GitHubLink>
-                <a href="#live" className="button button-secondary">
+                <a href="#scan" className="button button-secondary">
                   {pl ? "Zobacz, jak pracuje" : "Watch it work"}
                   <ArrowDown size={16} />
                 </a>
@@ -197,7 +189,7 @@ export function Landing({ locale }: { locale: Locale }) {
           </dl>
           <div className="hero-foot section-shell">
             <span className="mono">V0.2 / OPEN SOURCE</span>
-            <a href="#workflow">
+            <a href="#skill">
               {pl
                 ? "PRZEWIŃ. ZOBACZ, JAK POWSTAJE SYSTEM."
                 : "SCROLL. WATCH THE SYSTEM COME TOGETHER."}
@@ -206,339 +198,19 @@ export function Landing({ locale }: { locale: Locale }) {
             <span className="mono">BUILT FOR EVIDENCE</span>
           </div>
         </section>
-        <HostWorkflows locale={locale} />
+
         <SkillBlueprint locale={locale} />
         <ScanTheater locale={locale} />
         <Missions locale={locale} />
         <ReportShowcase locale={locale} />
-        <LiveSession locale={locale} />
-        <section className="workflow-section section-shell" id="workflow">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">
-                01 / {pl ? "JAK TO DZIAŁA" : "THE WORKFLOW"}
-              </span>
-              <h2>
-                {pl ? (
-                  <>
-                    Od pytania
-                    <br />
-                    do pewniejszej decyzji.
-                  </>
-                ) : (
-                  <>
-                    From an open question
-                    <br />
-                    to a clear next move.
-                  </>
-                )}
-              </h2>
-            </div>
-            <p>
-              {pl
-                ? "Agent prowadzi. Ty zatwierdzasz każdy krok. Każda decyzja ma ślad w dowodach."
-                : "The agent guides. You approve every step. Every decision has an evidence trail."}
-            </p>
-          </div>
-          <div className="evidence-preview">
-            <div className="evidence-intro">
-              <span className="eyebrow">
-                {pl
-                  ? "ZA KAŻDYM SYGNAŁEM — DOWÓD"
-                  : "BEHIND EVERY SIGNAL — EVIDENCE"}
-              </span>
-              <h3>{pl ? "Zajrzyj do raportu." : "Look inside the report."}</h3>
-              <p>
-                {pl
-                  ? "Zakres, ustalenie i retest. Przejdź przez trzy zakładki przykładowego audytu i zobacz, co stoi za każdą decyzją."
-                  : "Scope, finding, retest. Explore the three tabs of a sample audit and see what supports each decision."}
-              </p>
-              <a className="subtle-link" href="#demo">
-                {pl ? "Przejdź przez pełne demo" : "Walk through the full demo"}
-                <ArrowRight size={16} />
-              </a>
-            </div>
-            <ReportPreview locale={locale} />
-          </div>
-          <div className="steps-grid">
-            {(pl
-              ? [
-                  [
-                    "Otwórz swój warsztat.",
-                    "Sklonuj repo i wywołaj skill w Codex lub Claude Code. Powiedz, co chcesz chronić.",
-                  ],
-                  [
-                    "Wyznacz granice.",
-                    "Zatwierdź dokładne pliki, przegląd komputera albo adres strony. Nic nie dzieje się domyślnie.",
-                  ],
-                  [
-                    "Raport, poprawka, retest.",
-                    "Dostajesz raport PDF, zanim cokolwiek naprawisz. Po poprawce retest potwierdza ją albo uczciwie wskazuje brak danych.",
-                  ],
-                ]
-              : [
-                  [
-                    "Open your workspace.",
-                    "Clone the repo and invoke the skill in Codex or Claude Code. Say what you want to protect.",
-                  ],
-                  [
-                    "Draw the boundaries.",
-                    "Approve exact files, a look at the machine or a site address. Nothing happens by default.",
-                  ],
-                  [
-                    "Report. Fix. Verify.",
-                    "You get a PDF report before fixing anything. After the fix, the retest confirms it or honestly shows where data is missing.",
-                  ],
-                ]
-            ).map(([title, text], i) => (
-              <article
-                key={title}
-                data-agent-target={["Scout", "Builder", "Verifier"][i]}
-              >
-                <div className="step-line">
-                  <span>0{i + 1}</span>
-                  {i < 2 ? <ArrowRight size={18} /> : <Check size={18} />}
-                </div>
-                <h3>{title}</h3>
-                <p>{text}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-        <SkillCompare locale={locale} />
-        <ProtectionMap locale={locale} />
-        <section className="operations-section section-shell">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">
-                02 / {pl ? "PANEL OBROŃCY" : "DEFENSE, MADE VISIBLE"}
-              </span>
-              <h2>
-                {pl ? (
-                  <>
-                    Każdy sygnał.
-                    <br />
-                    Pełen kontekst.
-                  </>
-                ) : (
-                  <>
-                    Every signal.
-                    <br />
-                    The full picture.
-                  </>
-                )}
-              </h2>
-            </div>
-            <p>
-              {pl
-                ? "Tak wygląda droga jednego ustalenia. Wszystkie wartości dotyczą wyłącznie scenariusza demo."
-                : "Follow a single finding through the workflow. All values refer only to this demo scenario."}
-            </p>
-          </div>
-          <div
-            className="operations-board"
-            data-agent-target="Verifier"
-            data-agent-label={
-              pl ? "Składanie obrazu ryzyka" : "Connecting the evidence"
-            }
-          >
-            <div className="operations-top">
-              <span>
-                <ShieldCheck size={16} />
-                DEFENSE OVERVIEW
-              </span>
-              <span className="demo-tag">
-                {pl ? "DEMO / DANE STATYCZNE" : "DEMO / STATIC DATA"}
-              </span>
-            </div>
-            <div className="metric-grid">
-              {(pl
-                ? [
-                    ["01", "Wysoki priorytet przed poprawką"],
-                    ["03", "Pliki w zatwierdzonym zakresie"],
-                    ["01", "Potwierdzona poprawka"],
-                    ["1/1", "Powtórzone kontrole demo"],
-                  ]
-                : [
-                    ["01", "High priority before remediation"],
-                    ["03", "Files in approved scope"],
-                    ["01", "Confirmed fix"],
-                    ["1/1", "Demo checks repeated"],
-                  ]
-              ).map(([value, label], i) => (
-                <div key={label} className={`metric metric-${i}`}>
-                  <span className="metric-label">{label}</span>
-                  <strong>{value}</strong>
-                  <span className="metric-detail">
-                    {
-                      [
-                        "P1 / CDA-DEP-001",
-                        "EXPLICIT ALLOWLIST",
-                        "confirmed_fixed",
-                        "LOCAL RULE / DIGEST",
-                      ][i]
-                    }
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="operations-charts">
-              <div className="trend-chart">
-                <div className="chart-title">
-                  <h3>
-                    {pl ? "Od ustalenia do poprawki" : "From finding to fix"}
-                  </h3>
-                  <span className="mono">01 → 00</span>
-                </div>
-                <div className="chart-legend">
-                  <span>
-                    <i />
-                    {pl ? "Otwarte ustalenia" : "Open findings"}
-                  </span>
-                  <span>
-                    <i />
-                    {pl ? "Potwierdzone poprawki" : "Confirmed fixes"}
-                  </span>
-                </div>
-                <svg
-                  viewBox="0 0 640 180"
-                  role="img"
-                  aria-label={
-                    pl
-                      ? "Demo: jedno otwarte ustalenie przed poprawką, zero po lokalnym reteście; jedna potwierdzona poprawka."
-                      : "Demo: one open finding before remediation, zero after a local retest; one confirmed fix."
-                  }
-                >
-                  <defs>
-                    <linearGradient id="chart-fill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stopColor="#b2f1d2" stopOpacity=".13" />
-                      <stop offset="1" stopColor="#b2f1d2" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <g stroke="#ffffff0d" strokeDasharray="3 6">
-                    <path d="M30 30H610M30 90H610M30 150H610" />
-                  </g>
-                  <path
-                    d="M30 150 200 150C280 150 320 30 420 30H610V175H30Z"
-                    fill="url(#chart-fill)"
-                  />
-                  <path
-                    className="chart-line"
-                    d="M30 30H200C280 30 320 150 420 150H610"
-                    stroke="#c3b591"
-                    strokeWidth="2"
-                    fill="none"
-                  />
-                  <path
-                    className="chart-line secondary"
-                    d="M30 150H200C280 150 320 30 420 30H610"
-                    stroke="#a5ebcb"
-                    strokeWidth="2.5"
-                    fill="none"
-                  />
-                  <circle cx="610" cy="30" r="5" fill="#a5ebcb" />
-                  <circle cx="610" cy="150" r="4" fill="#c3b591" />
-                </svg>
-                <div className="chart-axis">
-                  <span>BEFORE</span>
-                  <span>REMEDIATION</span>
-                  <span>RETEST</span>
-                </div>
-              </div>
-              <div className="source-chart">
-                <h3>
-                  {pl
-                    ? "Skąd pochodzi sygnał?"
-                    : "Where did the signal come from?"}
-                </h3>
-                <div className="source-ring">
-                  <div>
-                    <strong>01</strong>
-                    <span>{pl ? "ustalenie" : "finding"}</span>
-                  </div>
-                </div>
-                <div className="source-legend">
-                  <span>
-                    <i />
-                    {pl ? "Lokalna reguła" : "Local rule"}
-                  </span>
-                  <strong>1 / 1</strong>
-                </div>
-                <p>
-                  {pl
-                    ? "Manifest package.json. Import SARIF jest osobnym przykładem i nie zwiększa tej liczby."
-                    : "The package.json manifest. SARIF import is a separate example and does not inflate this count."}
-                </p>
-              </div>
-            </div>
-            <div className="operations-footer mono">
-              <span>
-                <span className="status-dot" />
-                EVIDENCE → PRIORITY → REMEDIATION → RETEST
-              </span>
-              <span>NO TARGET EXECUTION</span>
-            </div>
-          </div>
-        </section>
+
+
+
+
+
         <ConsentLadder locale={locale} />
-        <section className="onboarding-section section-shell">
-          <div className="onboarding-intro">
-            <span className="eyebrow">
-              03 / {pl ? "POZNAJ SWOJEGO AGENTA" : "MEET YOUR DEFENDER"}
-            </span>
-            <h2>
-              {pl ? (
-                <>
-                  Zaczyna od
-                  <br />
-                  dobrych pytań.
-                </>
-              ) : (
-                <>
-                  Good defense
-                  <br />
-                  starts with questions.
-                </>
-              )}
-            </h2>
-            <p>
-              {pl
-                ? "Agent prowadzi rozmowę jak doświadczony specjalista: poznaje cel, proponuje najmniejszy sensowny test, mówi, czego dotknie i co opuści komputer, a potem wyjaśnia wynik."
-                : "Your agent leads like a seasoned specialist: it learns the goal, proposes the smallest useful check, says what it will touch and what leaves the machine, then explains the result."}
-            </p>
-            <div className="guardian-principles">
-              <span>
-                <Check size={15} />
-                {pl
-                  ? "Jedno pytanie na start: co chronimy?"
-                  : "One opening question: what are we protecting?"}
-              </span>
-              <span>
-                <Check size={15} />
-                {pl
-                  ? "Język dopasowany do Ciebie, nie do podręcznika"
-                  : "Language matched to you, not to a textbook"}
-              </span>
-              <span>
-                <Check size={15} />
-                {pl
-                  ? "Zgoda przed każdym krokiem, wynik w trzech punktach"
-                  : "Consent before each step, results in three points"}
-              </span>
-            </div>
-            <a
-              className="subtle-link"
-              href={github(
-                "/blob/main/skills/cyber-defense/references/onboarding-and-persona.md",
-              )}
-            >
-              {pl ? "Poznaj sposób pracy" : "Read the playbook"}
-              <ArrowUpRight size={15} />
-            </a>
-          </div>
-          <Onboarding locale={locale} />
-        </section>
-        <section className="capabilities-section" id="capabilities">
+
+        <section data-build-section className="capabilities-section" id="capabilities">
           <div className="section-shell">
             <div className="section-heading">
               <div>
@@ -630,49 +302,8 @@ export function Landing({ locale }: { locale: Locale }) {
             </div>
           </div>
         </section>
-        <section className="demo-section section-shell" id="demo">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">
-                05 / {pl ? "PRZYKŁADOWY AUDYT" : "THE INTERACTIVE AUDIT"}
-              </span>
-              <h2>
-                {pl ? (
-                  <>
-                    Zobacz sygnał.
-                    <br />
-                    Zrozum decyzję.
-                  </>
-                ) : (
-                  <>
-                    See the signal.
-                    <br />
-                    Understand the decision.
-                  </>
-                )}
-              </h2>
-            </div>
-            <p>
-              {pl
-                ? "Wybierz repo, zatwierdź zakres, otwórz dowód i porównaj wynik retestu."
-                : "Select a repo, approve its scope, inspect the evidence and compare retest outcomes."}
-            </p>
-          </div>
-          <GuidedDemo locale={locale} />
-          <div className="demo-bottom-note">
-            <Fingerprint size={16} />
-            <p>
-              {pl
-                ? "Prezentacja na danych statycznych. Przyciski nie uruchamiają skanu."
-                : "A static-data presentation. Buttons do not start a real scan."}
-            </p>
-            <a href={github("/blob/main/examples/sample-audit.md")}>
-              {pl ? "Raport Markdown" : "Markdown report"}
-              <ArrowUpRight size={14} />
-            </a>
-          </div>
-        </section>
-        <section className="install-section section-shell" id="install">
+
+        <section data-build-section className="install-section section-shell" id="install">
           <div className="install-intro">
             <span className="eyebrow">
               06 / {pl ? "URUCHOM U SIEBIE" : "MAKE IT YOURS"}
@@ -720,6 +351,7 @@ export function Landing({ locale }: { locale: Locale }) {
           </div>
           <Installation locale={locale} />
         </section>
+        <HostWorkflows locale={locale} />
         <TrustSection locale={locale} />
         <section className="faq-section section-shell" id="faq">
           <div>
@@ -745,7 +377,7 @@ export function Landing({ locale }: { locale: Locale }) {
             </a>
           </div>
           <div className="faq-list">
-            {faq.map(([q, a]) => (
+            {faq.filter((_, index) => [0, 1, 3, 5, 7].includes(index)).map(([q, a]) => (
               <details key={q}>
                 <summary>
                   <span>{q}</span>
@@ -794,7 +426,7 @@ export function Landing({ locale }: { locale: Locale }) {
               : "Clone the repository, run the demo and ask your agent: “what should I update?”. You will see a first result within minutes."}
           </p>
           <GitHubLink>{start}</GitHubLink>
-          <a className="final-secondary" href="#demo">
+          <a className="final-secondary" href="#scan">
             {pl ? "Najpierw zobacz demo" : "Explore the demo first"}
             <ArrowRight size={15} />
           </a>

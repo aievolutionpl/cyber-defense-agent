@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { FileText, ScanSearch, ShieldCheck, TriangleAlert, Wrench } from "lucide-react";
+import { Bug, Pause, Play, FileText, ScanSearch, ShieldCheck, TriangleAlert, Wrench } from "lucide-react";
+import { MotionClips } from "./motion-clips";
 import type { Locale } from "@/lib/config";
 
 type Row = { kind: "cmd" | "out" | "p0" | "p1" | "p2" | "ok" | "you"; text: [string, string] };
@@ -72,17 +73,18 @@ export function ScanTheater({ locale }: { locale: Locale }) {
     if (!el) return;
     const query = matchMedia("(prefers-reduced-motion: reduce)");
     let visible = false;
-    const update = () => setAuto(visible && !query.matches && document.documentElement.dataset.motion === "running");
+    const update = () => setAuto(visible && !document.hidden && !query.matches && document.documentElement.dataset.motion === "running");
     const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; update(); }, { threshold: 0.3 });
     observer.observe(el);
     const mutation = new MutationObserver(update);
     mutation.observe(document.documentElement, { attributes: true, attributeFilter: ["data-motion"] });
     query.addEventListener("change", update);
-    return () => { observer.disconnect(); mutation.disconnect(); query.removeEventListener("change", update); };
+    document.addEventListener("visibilitychange", update);
+    return () => { observer.disconnect(); mutation.disconnect(); query.removeEventListener("change", update); document.removeEventListener("visibilitychange", update); };
   }, []);
   useEffect(() => {
     if (!auto || held) return;
-    const id = setTimeout(() => setStage((value) => (value + 1) % stages.length), 4200);
+    const id = setTimeout(() => setStage((value) => (value + 1) % stages.length), 1500);
     return () => clearTimeout(id);
   }, [auto, held, stage]);
 
@@ -104,7 +106,7 @@ export function ScanTheater({ locale }: { locale: Locale }) {
             : "The five steps of every audit. Click a step or watch the sequence run. The data shown is sample data."}
         </p>
       </div>
-      <div className="theater" ref={region} data-stage={current.id} data-agent-target="Scout" data-agent-label={pl ? "Uruchamianie audytu" : "Running the audit"}>
+      <div className="theater" ref={region} data-stage={current.id} data-playing={auto && !held} data-agent-target="Scout" data-agent-label={pl ? "Uruchamianie audytu" : "Running the audit"}>
         <ol className="theater-steps" aria-label={pl ? "Kroki audytu" : "Audit steps"}>
           {stages.map(({ id, icon: Icon, label }, n) => (
             <li key={id}>
@@ -116,9 +118,11 @@ export function ScanTheater({ locale }: { locale: Locale }) {
             </li>
           ))}
         </ol>
+        <div className="theater-playback"><span>{pl ? "POKAZ • DANE PRZYKŁADOWE" : "ILLUSTRATION • SAMPLE DATA"}</span><button type="button" aria-pressed={held} onClick={() => setHeld(value => !value)}>{held ? <Play size={15} /> : <Pause size={15} />}{pl ? (held ? "Wznów" : "Zatrzymaj") : (held ? "Resume" : "Pause")}</button></div>
         <div className="theater-body">
           <div className="scene" aria-hidden="true">
             <span className="demo-tag">{pl ? "WIZUALIZACJA / DEMO" : "VISUALISATION / DEMO"}</span>
+            <div className="scene-status">{[pl ? "Otwieranie i skanowanie" : "Opening and scanning", pl ? "ALARM / wykryto ryzyko" : "ALERT / risk detected", pl ? "Dowód zapisany w raporcie" : "Evidence captured", pl ? "Propozycja poprawki • Twoja decyzja" : "Proposed fix • your decision", pl ? "Retest / poprawka potwierdzona" : "Retest / fix confirmed"][stage]}</div>
             <div className="scene-world">
               {layers.map((label, layer) => (
                 <div className="scene-layer" key={label[0]} style={{ "--z": layer } as React.CSSProperties}>
@@ -131,7 +135,7 @@ export function ScanTheater({ locale }: { locale: Locale }) {
               <div className="scene-beam" />
             </div>
             <div className="scene-shield">
-              <ShieldCheck size={30} strokeWidth={1.4} />
+              {stage === 1 ? <Bug size={30} /> : stage === 3 ? <Wrench size={30} /> : <ShieldCheck size={30} strokeWidth={1.4} />}
             </div>
             <div className="scene-doc">
               <FileText size={18} />
@@ -156,6 +160,7 @@ export function ScanTheater({ locale }: { locale: Locale }) {
           </div>
         </div>
       </div>
+      <MotionClips locale={locale} />
     </section>
   );
 }

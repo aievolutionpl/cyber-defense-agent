@@ -1,0 +1,33 @@
+name: Website motion acceptance
+on:
+  pull_request:
+    paths: ['apps/site/**', 'scripts/site-motion-check.mjs', '.github/workflows/site-motion.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm install --prefix /tmp/cda-browser --no-save --package-lock=false playwright@1.57.0
+      - run: /tmp/cda-browser/node_modules/.bin/playwright install --with-deps chromium
+      - run: npm run build
+      - name: Browser acceptance
+        run: |
+          python3 -m http.server 3107 --directory apps/site/out > /tmp/site-server.log 2>&1 &
+          CDA_PLAYWRIGHT_MODULE=/tmp/cda-browser/node_modules/playwright/index.mjs node scripts/site-motion-check.mjs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: website-motion-screenshots
+          path: output/site-review/
+          retention-days: 7
