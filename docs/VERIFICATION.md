@@ -150,3 +150,11 @@ Prior local host-attempt evidence remains in `output/integrations/`. Repeating a
 Current public URLs, unique-link HTTP checks, remote CI and public-browser results are recorded in [RELEASE.md](RELEASE.md) after deployment. Historical Node-only branch checks remain historical; they are not substituted for unified-release results.
 
 Observed unified release: Node 22/Linux CI **success**, Pages build **success**, public EN/PL acceptance **80/80 PASS**, console 0 errors/warnings and 10/10 unique GitHub destination checks HTTP 200. Source: `ddae6c4`; artifact: `a7aa35d`. The public-browser run used the same committed acceptance script as the production export.
+
+## Website storytelling update (10 November 2026)
+
+Adds a bilingual skill explanation, an original CSS/vector architecture illustration, three selectable synthetic task examples, outcome-led hero copy and petrol/ice/mint/amber surfaces. Existing installation, demo, reports, policy links and routes are preserved. No dependencies, telemetry, scanner calls or model integrations were added.
+
+The new illustration is static without JavaScript. Its decorative flow and orbit run only when the global motion controller is running, reduced motion is off, the illustration is in view and the document is visible. Native radios provide keyboard selection and the result is a polite live region.
+
+Observed: current public desktop presentation inspected in Chromium; local ESLint, TypeScript and static export passed. The cloud browser could not reach the local export (connection refused). New desktop/mobile screenshots, 320/390/768/1440 reflow, clipboard, interactive keyboard and reduced-motion acceptance remain pending. Source-level motion guards are not browser-test evidence. This source change is a review candidate, not an observed Pages deployment.
