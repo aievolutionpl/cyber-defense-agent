@@ -1,3 +1,4 @@
+import { SkillBlueprint } from "./skill-blueprint";
 import { HostWorkflows } from "./host-workflows";
 import { ProtectionMap } from "./protection-map";
 import {
@@ -119,8 +120,8 @@ export function Landing({ locale }: { locale: Locale }) {
     ] as const
   ).map(([icon, title, text, code]) => ({ icon, title: title[pl ? 1 : 0], text: text[pl ? 1 : 0], code }));
   const stats: [number, string][] = pl
-    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [60, "testów bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
-    : [[9, "expert playbooks"], [6, "areas of protection"], [60, "tool security tests"], [0, "changes without your consent"]];
+    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [71, "testów bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
+    : [[9, "expert playbooks"], [6, "areas of protection"], [71, "tool security tests"], [0, "changes without your consent"]];
   return (
     <>
       <a className="skip-link" href="#main">
@@ -148,20 +149,20 @@ export function Landing({ locale }: { locale: Locale }) {
                   <>
                     Twój agent AI
                     <br />
-                    <span>ekspertem od bezpieczeństwa.</span>
+                    <span>z planem na bezpieczeństwo.</span>
                   </>
                 ) : (
                   <>
                     Your AI agent,
                     <br />
-                    <span>now a security expert.</span>
+                    <span>with a plan for security.</span>
                   </>
                 )}
               </h1>
               <p className="hero-description">
                 {pl
-                  ? "Jeden skill uczy Twojego agenta sprawdzać komputer, stronę, kod, bazę danych i sieć. Znajduje luki, tłumaczy je po ludzku, mówi, co zaktualizować, i udowadnia, że poprawka działa. O każdy krok pyta Cię o zgodę."
-                  : "One skill teaches your agent to check your computer, website, code, database and network. It finds the gaps, explains them in plain language, tells you what to update and proves the fix works. It asks before every step."}
+                  ? "Nie wiesz, co zabezpieczyć najpierw? Dodaj do swojego agenta skill, który prowadzi przez przegląd kodu, komputera i strony. Dostajesz priorytety, dowody i plan poprawek. Ty zatwierdzasz zakres i decydujesz o zmianach."
+                  : "Not sure what to secure first? Give your AI agent a skill that guides a review of your code, computer and website. Get priorities, evidence and a fix plan. You approve the scope and decide what changes."}
               </p>
               <div className="hero-ctas">
                 <GitHubLink>{start}</GitHubLink>
@@ -173,8 +174,8 @@ export function Landing({ locale }: { locale: Locale }) {
               <div className="hero-assurance">
                 <LockKeyhole size={14} />
                 {pl
-                  ? "Tylko odczyt. Zgoda przed każdym krokiem. Raport PDF po każdym audycie. 0 zł."
-                  : "Read-only. Consent before every step. A PDF report after every audit. Free."}
+                  ? "Otwarty kod MIT. Narzędzia tylko do odczytu. Raport HTML i opcjonalny PDF."
+                  : "MIT open source. Read-only tools. HTML report and optional PDF."}
               </div>
               <div className="hero-terminal">
                 <span className="terminal-prompt">$</span>
@@ -206,6 +207,7 @@ export function Landing({ locale }: { locale: Locale }) {
           </div>
         </section>
         <HostWorkflows locale={locale} />
+        <SkillBlueprint locale={locale} />
         <ScanTheater locale={locale} />
         <Missions locale={locale} />
         <ReportShowcase locale={locale} />
