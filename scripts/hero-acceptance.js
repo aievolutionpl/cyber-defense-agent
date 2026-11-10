@@ -20,7 +20,7 @@ async (page) => {
   );
   assert(true, "hero sequence advances automatically");
   const controls = story.locator(".story-steps button");
-  for (let index = 0; index < 4; index++) {
+  for (let index = 0; index < 5; index++) {
     await controls.nth(index).focus();
     await controls.nth(index).press("Enter");
     assert(
@@ -29,10 +29,18 @@ async (page) => {
     );
   }
   assert(
+    (await story.locator(".isometric-vector-stage").count()) === 1,
+    "interactive isometric vector stage is rendered",
+  );
+  assert(
+    (await story.locator(".hero-xray-hud").count()) === 1,
+    "live code X-Ray HUD is rendered",
+  );
+  assert(
     (await story.innerText()).includes("Network scanning: roadmap"),
     "network scan is disclosed as roadmap",
   );
-  await controls.nth(2).click();
+  await controls.nth(3).click();
   assert(
     (await story.innerText()).includes("Apply it outside this tool"),
     "human remediation remains explicit",
@@ -50,9 +58,7 @@ async (page) => {
     () => document.querySelector(".defense-story")?.dataset.step === "1",
   );
   assert(true, "replay resumes even while its button has focus");
-  await page
-    .getByRole("button", { name: "Pause animations", exact: true })
-    .click();
+  await page.locator(".nav-actions .motion-toggle").click();
   await page.waitForFunction(
     () => document.querySelector(".defense-story")?.dataset.playing === "false",
   );
@@ -62,10 +68,8 @@ async (page) => {
     (await story.getAttribute("data-step")) === paused,
     "global pause stops phase updates",
   );
-  await page
-    .getByRole("button", { name: "Resume animations", exact: true })
-    .click();
-  await page.locator("#trust").scrollIntoViewIfNeeded();
+  await page.locator(".nav-actions .motion-toggle").click();
+  await page.locator("#control").scrollIntoViewIfNeeded();
   await page.waitForFunction(
     () => document.querySelector(".defense-story")?.dataset.playing === "false",
   );
@@ -81,9 +85,9 @@ async (page) => {
       .evaluate((el) => getComputedStyle(el).display === "none"),
     "reduced motion removes scan beam",
   );
-  await controls.nth(3).click();
+  await controls.nth(4).click();
   assert(
-    (await story.getAttribute("data-step")) === "3",
+    (await story.getAttribute("data-step")) === "4",
     "manual stages work with reduced motion",
   );
   for (const width of [320, 390, 768, 1440]) {
@@ -101,7 +105,7 @@ async (page) => {
     );
   }
   const image = await story
-    .locator("img")
+    .locator('img[data-active="true"]')
     .evaluate((img) => ({
       loaded: img.complete && img.naturalWidth > 0,
       alt: img.alt,

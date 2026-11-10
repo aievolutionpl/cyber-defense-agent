@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
@@ -21,6 +22,40 @@ import { collectInventory, depsInventory, renderInventory } from "./inventory.mj
 import { checkAdvisories, renderAdvisories } from "./advisories.mjs";
 import { checkWebsite, renderWeb } from "./web.mjs";
 import { collect, renderVisual, expertFinding, printPdf } from "./visual.mjs";
+import { markdown } from "./redact.mjs";
+
+function gitStagedFiles(rootDir) {
+  if (typeof rootDir !== "string" || !rootDir) deny("INVALID_ROOT");
+  try {
+    const out = execFileSync(
+      "git",
+      ["-C", rootDir, "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+      { encoding: "utf8", timeout: 5000, stdio: ["ignore", "pipe", "ignore"] },
+    );
+    return out
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  } catch {
+    deny("GIT_STAGED_UNAVAILABLE");
+  }
+}
+
+export function renderPrComment(scope, retestReport) {
+  authorized(scope);
+  if (
+    retestReport?.format !== "cda.retest.v1" ||
+    !Array.isArray(retestReport.results)
+  )
+    deny("INCOMPATIBLE_REPORT");
+  const rows = retestReport.results
+    .map(
+      (r) =>
+        `| \`${markdown(r.ruleId)}\` | \`${markdown(r.path)}:${r.line}\` | **${r.priority}** | \`${markdown(r.status)}\` | ${markdown(r.reason)} |`,
+    )
+    .join("\n");
+  return `### 🛡️ Cyber Defense Agent — Verification Proof\n\n| Rule | Location | Priority | Status | Evidence |\n|---|---|---|---|---|\n${rows || "| — | — | — | `clear` | No prior findings in scope. |"}\n\n- **New findings introduced:** ${retestReport.added?.length ?? 0}\n- **Execution boundary:** Local static verification only; no target code executed.\n`;
+}
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(ROOT);
@@ -91,6 +126,8 @@ async function main() {
       format: { type: "string" },
       before: { type: "string" },
       after: { type: "string" },
+      retest: { type: "string" },
+      "git-staged": { type: "boolean" },
       yes: { type: "boolean" },
       url: { type: "string" },
       from: { type: "string", multiple: true },
@@ -117,7 +154,7 @@ async function main() {
   const command = positionals[0];
   const permitted = {
     start: [],
-    scope: ["root", "allow", "name"],
+    scope: ["root", "allow", "git-staged", "name"],
     approve: ["scope", "root", "yes"],
     show: ["scope"],
     onboarding: ["scope"],
@@ -133,6 +170,7 @@ async function main() {
     report: ["name", "from", "title", "lang", "pdf", "scope"],
     dashboard: ["lang", "scope"],
     retest: ["scope", "before", "after", "name"],
+    "pr-comment": ["scope", "retest"],
     compare: ["scope", "before", "after", "name"],
     sarif: ["scope", "report", "name"],
     revoke: ["scope"],
@@ -147,7 +185,11 @@ async function main() {
     return;
   }
   if (command === "scope") {
-    const scope = propose(v.root, v.allow);
+    const allowed = [
+      ...(v.allow ?? []),
+      ...(v["git-staged"] ? gitStagedFiles(v.root) : []),
+    ];
+    const scope = propose(v.root, allowed);
     store.write("scopes", v.name, scope);
     process.stdout.write(
       `${JSON.stringify(scope, null, 2)}\nAwaiting explicit approval. No file content read.\n`,
@@ -281,6 +323,12 @@ async function main() {
     );
     return;
   }
+  if (command === "pr-comment") {
+    process.stdout.write(
+      renderPrComment(scope, store.read("reports", v.retest)),
+    );
+    return;
+  }
   const report =
     command === "review"
       ? review(scope)
@@ -299,25 +347,47 @@ async function main() {
   );
 }
 
-try {
-  await main();
+if (
+  process.argv[1] &&
+  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
+) {
   try {
-    if (process.argv[2] && !["start", "dashboard", "scope", "approve", "show", "revoke", "onboarding"].includes(process.argv[2]) && !process.exitCode) {
-      refreshDashboard();
-      if (dashboardScope) for (const lang of ["en", "pl"]) refreshDashboard(lang, dashboardScope);
+    await main();
+    try {
+      if (
+        process.argv[2] &&
+        ![
+          "start",
+          "dashboard",
+          "scope",
+          "approve",
+          "show",
+          "revoke",
+          "onboarding",
+          "pr-comment",
+        ].includes(process.argv[2]) &&
+        !process.exitCode
+      ) {
+        refreshDashboard();
+        if (dashboardScope)
+          for (const lang of ["en", "pl"])
+            refreshDashboard(lang, dashboardScope);
+      }
+    } catch {
+      /* derived view only */
     }
-  } catch { /* derived view only */ }
-} catch (error) {
-  const code =
-    error instanceof PolicyError
-      ? error.code
-      : error.message === "INTERACTIVE_TERMINAL_REQUIRED"
-        ? "INTERACTIVE_TERMINAL_REQUIRED"
-        : error.code === "ENOENT"
-          ? "FILE_NOT_FOUND"
-          : "INVALID_INPUT_OR_IO";
-  process.stderr.write(
-    `CDA: ${code}. Operation stopped; do not expand scope automatically.\n`,
-  );
-  process.exitCode = 1;
+  } catch (error) {
+    const code =
+      error instanceof PolicyError
+        ? error.code
+        : error.message === "INTERACTIVE_TERMINAL_REQUIRED"
+          ? "INTERACTIVE_TERMINAL_REQUIRED"
+          : error.code === "ENOENT"
+            ? "FILE_NOT_FOUND"
+            : "INVALID_INPUT_OR_IO";
+    process.stderr.write(
+      `CDA: ${code}. Operation stopped; do not expand scope automatically.\n`,
+    );
+    process.exitCode = 1;
+  }
 }

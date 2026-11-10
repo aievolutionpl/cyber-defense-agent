@@ -7,6 +7,7 @@ import '@/app/command-center.css';
 import '@/app/defense-story.css';
 import '@/app/expert.css';
 import '@/app/blueprint.css';
+import '@/app/cinematic-build.css';
 import { SITE_URL, type Locale } from '@/lib/config';
 
 export function pageMetadata(locale: Locale): Metadata {

@@ -183,3 +183,18 @@ test('malicious project scripts are never executed', () => {
   review(scope);
   assert.equal(fs.existsSync(path.join(root, 'PWNED')), false);
 });
+
+test('v0.2 rules detect hidden Unicode in agent config, permission bypass, client-exposed secrets and XSS sinks', () => {
+  const agentFinding = inspect('AGENTS.md', 'Follow rules \u202E hidden instruction');
+  assert.ok(agentFinding.findings.some(f => f.ruleId === 'CDA-AGENT-001'));
+
+  const bypassFinding = inspect('.mcp.json', '{"autoApprove": ["bash"]}');
+  assert.ok(bypassFinding.findings.some(f => f.ruleId === 'CDA-AGENT-002'));
+
+  const publicSecret = inspect('.env', 'NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY=super_secret_value_12345');
+  assert.ok(publicSecret.findings.some(f => f.ruleId === 'CDA-PUBLIC-001'));
+  assert.ok(!JSON.stringify(publicSecret).includes('super_secret_value_12345'));
+
+  const xssSink = inspect('src/View.tsx', 'return <div dangerouslySetInnerHTML={{ __html: html }} />;');
+  assert.ok(xssSink.findings.some(f => f.ruleId === 'CDA-XSS-001'));
+});
