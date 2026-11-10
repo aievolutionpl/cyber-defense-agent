@@ -1,5 +1,14 @@
 # Verification record
 
+## v0.2 expert skill and sales page — 10 November 2026
+
+- Linux (Ubuntu 24.04, Node 22) local: **49/49 tests**, skill contracts (13 skill documents, all relative links resolve, nine playbooks present), ESLint, TypeScript, static build and synthetic demo pass. Eleven new tests cover the consent gates, fixed-command inventory collectors (Linux, Windows and macOS parsers with injected runners), lockfile parsers, CVSS v3 scoring, OSV/KEV lookup with host allowlisting and alias merging, and the passive website check including redirect bounds and absence of cookie values, query strings and bodies in reports.
+- `inventory --yes` was run for real on the Linux build machine: 837 dpkg packages, no hostname or user name in the output. The Windows and macOS collectors are verified against parser fixtures only; **they were not run on real Windows or macOS machines**.
+- `advisories` and `web` were **not exercised against live services**: the build sandbox blocks outbound traffic to api.osv.dev, www.cisa.gov and arbitrary sites. Request and response shapes were checked against the published OSV API documentation and one real OSV record. Both commands fail closed with a stable error when the network is unavailable. Treat the live integrations as unverified until run with network access.
+- Browser acceptance on the static export (Chromium): **114/114** EN/PL checks, **18/18** hero checks and **10/10** motion checks pass with the new sections. Desktop 1440 px and mobile 390 px full-page captures were inspected. Physical devices, Safari and Firefox remain untested.
+- The playbooks are original summaries of public standards. They were not evaluated against a benchmark of held-out vulnerable systems; a knowledge base does not by itself establish expert performance. Full model-host sessions remain **unverified**.
+- CI for this branch and the public Pages deployment are recorded in RELEASE.md only after they are observed.
+
 ## Emerald illustrated hero — 9 November 2026
 
 - Local `npm run check`: 38 tests, skill contracts, ESLint, TypeScript and production-prefix build pass. No CLI behavior or dependency changed.

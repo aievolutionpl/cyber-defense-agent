@@ -207,8 +207,8 @@ export function HeroSignal({ locale }: { locale: Locale }) {
       </div>
       <p className="story-disclosure">
         {pl
-          ? "Grafika koncepcyjna. v0.1 analizuje lokalne pliki. "
-          : "Concept illustration. v0.1 reviews local files. "}
+          ? "Grafika koncepcyjna. v0.2 pracuje tylko w trybie odczytu. "
+          : "Concept illustration. v0.2 works read-only. "}
         <a href={github("/blob/main/docs/ROADMAP.md")}>
           {pl ? "Skanowanie sieci: roadmapa" : "Network scanning: roadmap"}
           <ArrowUpRight size={10} />
