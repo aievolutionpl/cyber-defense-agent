@@ -75,16 +75,16 @@ export function ConsentLadder({ locale }: { locale: Locale }) {
   return (
     <section className="ladder-section section-shell" id="control" aria-labelledby="ladder-title">
       <div className="ladder-intro" data-reveal>
-        <span className="eyebrow">{pl ? "TY DECYDUJESZ" : "YOU STAY IN CONTROL"}</span>
+        <span className="eyebrow">{pl ? "05 / TWOJA KONTROLA" : "05 / YOU STAY IN CONTROL"}</span>
         <h2 id="ladder-title">
-          {pl ? "Sześć stopni." : "Six steps."}
+          {pl ? "Sześć poziomów." : "Six levels."}
           <br />
-          <span className="gradient-text">{pl ? "Żaden bez Twojej zgody." : "None without your yes."}</span>
+          <span className="gradient-text">{pl ? "Każdy za Twoją zgodą." : "None without your yes."}</span>
         </h2>
         <p>
           {pl
-            ? "Agent wchodzi wyżej tylko wtedy, gdy powiesz „tak” na konkretny krok. Zgoda jest zapisana w poleceniu jako jawna flaga, a nie domysł modelu."
-            : "The agent climbs only when you say yes to that specific step. Consent is an explicit flag in the command, not the model's guess."}
+            ? "Agent wykonuje kolejny krok wyłącznie po Twojej jawnej zgodzie (fladze w CLI). Nigdy nie modyfikuje plików ani systemu na własną rękę."
+            : "The agent advances only when you pass an explicit consent flag in the CLI. It never modifies files or systems on its own."}
         </p>
         <ul className="never-list" aria-label={pl ? "Twarde granice" : "Hard lines"}>
           {never.map((text) => (

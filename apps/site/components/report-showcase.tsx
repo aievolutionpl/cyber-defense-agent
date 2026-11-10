@@ -17,17 +17,17 @@ export function ReportShowcase({ locale }: { locale: Locale }) {
     <section data-build-section className="deliver-section section-shell" id="report" aria-labelledby="deliver-title">
       <div className="section-heading" data-reveal>
         <div>
-          <span className="eyebrow">{pl ? "CO DOSTAJESZ" : "WHAT YOU GET"}</span>
+          <span className="eyebrow">{pl ? "04 / CO DOSTAJESZ" : "04 / WHAT YOU GET"}</span>
           <h2 id="deliver-title">
-            {pl ? "Nie ściana tekstu." : "Not a wall of text."}
+            {pl ? "Zero ściany tekstu." : "Not a wall of text."}
             <br />
-            <span className="gradient-text">{pl ? "Raport PDF i panel na żywo." : "A PDF report and a live dashboard."}</span>
+            <span className="gradient-text">{pl ? "Raport PDF i panel live." : "A PDF report and live dashboard."}</span>
           </h2>
         </div>
         <p>
           {pl
-            ? "Każdy audyt kończy się plikiem, który możesz otworzyć, wydrukować i przekazać dalej. Dostajesz go, zanim zacznie się jakakolwiek naprawa."
-            : "Every audit ends with a file you can open, print and pass on. You get it before any fixing starts."}
+            ? "Każdy audyt kończy się przejrzystym plikiem HTML/PDF oraz panelem na żywo — zanim wdrożysz jakąkolwiek zmianę."
+            : "Every audit produces a clean HTML/PDF report and a live dashboard — before any changes are applied."}
         </p>
       </div>
       <div className="deliver-grid">

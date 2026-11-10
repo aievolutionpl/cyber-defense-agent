@@ -74,7 +74,7 @@ export function Policies({ locale }: { locale: Locale }) {
       ];
   return (
     <main className="policy-page section-shell">
-      <a className="subtle-link" href={asset(pl ? "/pl/" : "/")}>
+      <a className="subtle-link" href={asset(pl ? "/" : "/en/")}>
         <ArrowLeft size={16} />
         {pl ? "Wróć do prezentacji" : "Back to the presentation"}
       </a>

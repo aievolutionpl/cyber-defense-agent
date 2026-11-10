@@ -12,10 +12,10 @@ import { SITE_URL, type Locale } from '@/lib/config';
 
 export function pageMetadata(locale: Locale): Metadata {
   const pl = locale === 'pl';
-  const title = pl ? 'Cyber Defense Agent | Skill AI do przeglądu bezpieczeństwa' : 'Cyber Defense Agent | An AI skill for security reviews';
-  const description = pl ? 'Otwarty skill, który uczy agenta AI sprawdzać komputer, stronę, kod, bazę danych i sieć: znane luki, plan aktualizacji, dowód i retest. Tylko odczyt, zgoda przed każdym krokiem.' : 'An open-source skill that teaches your AI agent to check your computer, website, code, database and network: known vulnerabilities, an update plan, evidence and a retest. Read-only, with consent before every step.';
+  const title = pl ? 'Cyber Defense Agent | Polski skill bezpieczeństwa dla agentów AI — AI Evolution Polska' : 'Cyber Defense Agent | AI Security Skill by AI Evolution Polska';
+  const description = pl ? 'Jeden skill zmienia Twojego agenta AI w eksperta bezpieczeństwa. Sprawdza kod, komputer, stronę WWW, bazę danych i sieć. Tylko odczyt, dowód i raport PDF. Projekt AI Evolution Polska.' : 'One open-source skill turns your AI agent into a security expert. Checks your code, computer, website, database and network. Read-only, with evidence and a PDF report. Created by AI Evolution Polska.';
   return {
-    ...(SITE_URL ? { metadataBase: new URL(SITE_URL), alternates: { canonical: pl ? 'pl/' : './', languages: { en: './', pl: 'pl/' } } } : {}),
+    ...(SITE_URL ? { metadataBase: new URL(SITE_URL), alternates: { canonical: pl ? './' : 'en/', languages: { pl: './', en: 'en/' } } } : {}),
     title, description, robots: { index: true, follow: true },
     openGraph: { title, description, type: 'website', locale: pl ? 'pl_PL' : 'en_GB' },
   };

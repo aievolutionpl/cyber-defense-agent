@@ -36,13 +36,17 @@ async (page) => {
     (await story.locator(".hero-xray-hud").count()) === 1,
     "live code X-Ray HUD is rendered",
   );
+  const storyText = await story.innerText();
   assert(
-    (await story.innerText()).includes("Network scanning: roadmap"),
+    storyText.includes("Network scanning: roadmap") ||
+      storyText.includes("Skanowanie sieci: roadmapa"),
     "network scan is disclosed as roadmap",
   );
   await controls.nth(3).click();
+  const step3Text = await story.innerText();
   assert(
-    (await story.innerText()).includes("Apply it outside this tool"),
+    step3Text.includes("Apply it outside this tool") ||
+      step3Text.includes("Zmianę wykonujesz poza narzędziem"),
     "human remediation remains explicit",
   );
   const held = await story.getAttribute("data-step");
@@ -51,9 +55,7 @@ async (page) => {
     (await story.getAttribute("data-step")) === held,
     "manual selection remains stable",
   );
-  await story
-    .getByRole("button", { name: "Replay the sequence", exact: true })
-    .click();
+  await story.locator(".story-replay").click();
   await page.waitForFunction(
     () => document.querySelector(".defense-story")?.dataset.step === "1",
   );
