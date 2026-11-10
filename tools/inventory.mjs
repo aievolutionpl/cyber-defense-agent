@@ -177,22 +177,338 @@ export function distroEcosystem(source, release) {
   return null;
 }
 
+/**
+ * Curated Windows Vendor Security & Update Catalog.
+ * Maps desktop applications from Windows Uninstall registry to known fixed versions,
+ * security advisories, official vendor download URLs and winget package identifiers.
+ */
+export const WINDOWS_VENDOR_CATALOG = [
+  {
+    id: "7-zip",
+    match: /^7-Zip\b/i,
+    vendor: "Igor Pavlov",
+    fixedIn: "24.09",
+    advisoryId: "CVE-2025-0411",
+    severity: "high",
+    cvss: 7.0,
+    knownExploited: true,
+    summary: "Mark-of-the-Web bypass and Zstandard decompression integer underflow (CVE-2024-11477 / CVE-2025-0411).",
+    updateUrl: "https://www.7-zip.org/download.html",
+    wingetId: "7zip.7zip",
+  },
+  {
+    id: "winrar",
+    match: /^WinRAR\b/i,
+    vendor: "win.rar GmbH",
+    fixedIn: "7.01",
+    advisoryId: "CVE-2023-38831",
+    severity: "high",
+    cvss: 7.8,
+    knownExploited: true,
+    summary: "Arbitrary code execution when opening crafted archive entries (CVE-2023-38831 / CVE-2024-33899).",
+    updateUrl: "https://www.win-rar.com/download.html",
+    wingetId: "RARLab.WinRAR",
+  },
+  {
+    id: "git-for-windows",
+    match: /^Git(?:\s+version|\b)/i,
+    vendor: "The Git Development Community",
+    fixedIn: "2.47.1",
+    advisoryId: "CVE-2024-50349",
+    severity: "high",
+    cvss: 7.5,
+    knownExploited: false,
+    summary: "Credential leakage and recursive clone vulnerabilities in Git CLI (CVE-2024-50349 / CVE-2024-52006).",
+    updateUrl: "https://git-scm.com/download/win",
+    wingetId: "Git.Git",
+  },
+  {
+    id: "google-chrome",
+    match: /^Google Chrome\b/i,
+    vendor: "Google LLC",
+    fixedIn: "133.0.6943.127",
+    advisoryId: "CVE-2025-0444",
+    severity: "high",
+    cvss: 8.8,
+    knownExploited: false,
+    summary: "Use-after-free and V8 memory corruption issues fixed in Chrome 133+.",
+    updateUrl: "https://www.google.com/chrome/",
+    wingetId: "Google.Chrome",
+  },
+  {
+    id: "microsoft-edge",
+    match: /^Microsoft Edge\b(?!.*WebView2)/i,
+    vendor: "Microsoft Corporation",
+    fixedIn: "133.0.3065.82",
+    advisoryId: "CVE-2025-21297",
+    severity: "high",
+    cvss: 8.1,
+    knownExploited: false,
+    summary: "Chromium engine security updates for Microsoft Edge stable channel.",
+    updateUrl: "https://www.microsoft.com/edge/download",
+    wingetId: "Microsoft.Edge",
+  },
+  {
+    id: "mozilla-firefox",
+    match: /^Mozilla Firefox\b/i,
+    vendor: "Mozilla",
+    fixedIn: "135.0.1",
+    advisoryId: "CVE-2025-1016",
+    severity: "high",
+    cvss: 8.1,
+    knownExploited: false,
+    summary: "Memory safety and DOM compartment vulnerabilities addressed in Firefox 135.0.1+.",
+    updateUrl: "https://www.mozilla.org/firefox/new/",
+    wingetId: "Mozilla.Firefox",
+  },
+  {
+    id: "vlc",
+    match: /^VLC media player\b/i,
+    vendor: "VideoLAN",
+    fixedIn: "3.0.21",
+    advisoryId: "CVE-2024-46461",
+    severity: "high",
+    cvss: 7.8,
+    knownExploited: false,
+    summary: "Integer overflow and MMS stream parsing flaws fixed in VLC 3.0.21.",
+    updateUrl: "https://www.videolan.org/vlc/download-windows.html",
+    wingetId: "VideoLAN.VLC",
+  },
+  {
+    id: "putty",
+    match: /^PuTTY\b/i,
+    vendor: "Simon Tatham",
+    fixedIn: "0.81",
+    advisoryId: "CVE-2024-31497",
+    severity: "critical",
+    cvss: 9.8,
+    knownExploited: false,
+    summary: "Biased ECDSA nonce generation allowing full NIST P-521 private key recovery (CVE-2024-31497).",
+    updateUrl: "https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html",
+    wingetId: "PuTTY.PuTTY",
+  },
+  {
+    id: "notepad-plus-plus",
+    match: /^Notepad\+\+/i,
+    vendor: "Notepad++ Team",
+    fixedIn: "8.7.0",
+    advisoryId: "CVE-2023-40031",
+    severity: "high",
+    cvss: 7.8,
+    knownExploited: false,
+    summary: "Buffer overflow in Scintilla / Lexilla encoding conversion routines.",
+    updateUrl: "https://notepad-plus-plus.org/downloads/",
+    wingetId: "Notepad++.Notepad++",
+  },
+  {
+    id: "nodejs",
+    match: /^Node\.js\b/i,
+    vendor: "Node.js Foundation",
+    fixedIn: "20.18.3",
+    advisoryId: "CVE-2025-23083",
+    severity: "high",
+    cvss: 7.5,
+    knownExploited: false,
+    summary: "Diagnostics channel and permission model bypasses in Node.js runtime (CVE-2025-23083).",
+    updateUrl: "https://nodejs.org/en/download",
+    wingetId: "OpenJS.NodeJS.LTS",
+  },
+  {
+    id: "wireshark",
+    match: /^Wireshark\b/i,
+    vendor: "Wireshark Foundation",
+    fixedIn: "4.4.3",
+    advisoryId: "CVE-2025-0396",
+    severity: "medium",
+    cvss: 6.5,
+    knownExploited: false,
+    summary: "Packet dissector denial-of-service and buffer over-read issues.",
+    updateUrl: "https://www.wireshark.org/download.html",
+    wingetId: "WiresharkFoundation.Wireshark",
+  },
+  {
+    id: "vscode",
+    match: /^Microsoft Visual Studio Code\b/i,
+    vendor: "Microsoft Corporation",
+    fixedIn: "1.96.0",
+    advisoryId: "CVE-2024-49050",
+    severity: "high",
+    cvss: 7.8,
+    knownExploited: false,
+    summary: "Remote code execution via untrusted workspace and extension host handling.",
+    updateUrl: "https://code.visualstudio.com/Download",
+    wingetId: "Microsoft.VisualStudioCode",
+  },
+  {
+    id: "python",
+    match: /^Python 3\.\d+/i,
+    vendor: "Python Software Foundation",
+    fixedIn: "3.12.8",
+    advisoryId: "CVE-2024-12254",
+    severity: "high",
+    cvss: 7.5,
+    knownExploited: false,
+    summary: "asyncio and urllib security fixes in Python 3.12.8+ / 3.13.1+.",
+    updateUrl: "https://www.python.org/downloads/windows/",
+    wingetId: "Python.Python.3.12",
+  },
+  {
+    id: "docker-desktop",
+    match: /^Docker Desktop\b/i,
+    vendor: "Docker Inc.",
+    fixedIn: "4.34.2",
+    advisoryId: "CVE-2024-8695",
+    severity: "high",
+    cvss: 7.8,
+    knownExploited: false,
+    summary: "Extension marketplace and privileged service validation flaws.",
+    updateUrl: "https://www.docker.com/products/docker-desktop/",
+    wingetId: "Docker.DockerDesktop",
+  },
+  {
+    id: "keepassxc",
+    match: /^KeePassXC\b/i,
+    vendor: "KeePassXC Team",
+    fixedIn: "2.7.9",
+    advisoryId: "CVE-2023-35866",
+    severity: "medium",
+    cvss: 6.2,
+    knownExploited: false,
+    summary: "Memory handling and browser integration hardening in KeePassXC 2.7.9.",
+    updateUrl: "https://keepassxc.org/download/",
+    wingetId: "KeePassXCTeam.KeePassXC",
+  },
+  {
+    id: "filezilla",
+    match: /^FileZilla(?: Client)?\b/i,
+    vendor: "Tim Kosse",
+    fixedIn: "3.67.0",
+    advisoryId: "CVE-2024-31497",
+    severity: "critical",
+    cvss: 9.8,
+    knownExploited: false,
+    summary: "Embedded PuTTY SFTP component vulnerable to NIST P-521 key recovery prior to 3.67.0.",
+    updateUrl: "https://filezilla-project.org/download.php?type=client",
+    wingetId: "TimKosse.FileZilla.Client",
+  },
+];
+
+/** Compare two dotted version strings numerically. Returns -1, 0, 1, or null when unparseable. */
+export function compareVersions(installed, target) {
+  const extract = (v) => {
+    if (typeof v !== "string" || !v || v === "unknown") return null;
+    const match = /(\d+(?:\.\d+)+)/.exec(v.trim()) || /^v?(\d+)$/.exec(v.trim());
+    if (!match) return null;
+    return match[1].split(".").map((n) => Number.parseInt(n, 10));
+  };
+  const a = extract(installed);
+  const b = extract(target);
+  if (!a || !b) return null;
+  const len = Math.max(a.length, b.length);
+  for (let i = 0; i < len; i++) {
+    const av = a[i] ?? 0;
+    const bv = b[i] ?? 0;
+    if (av < bv) return -1;
+    if (av > bv) return 1;
+  }
+  return 0;
+}
+
+/** Match an installed Windows or desktop package against the curated vendor security catalog. */
+export function matchWindowsVendorCatalog(pkg) {
+  const name = clean(pkg?.name);
+  const version = clean(pkg?.version, 80);
+  const vendor = clean(pkg?.vendor, 80) || null;
+  for (const rule of WINDOWS_VENDOR_CATALOG) {
+    if (rule.match.test(name)) {
+      const cmp = compareVersions(version, rule.fixedIn);
+      return {
+        matched: true,
+        catalogId: rule.id,
+        vendor: vendor || rule.vendor,
+        fixedIn: rule.fixedIn,
+        advisoryId: rule.advisoryId,
+        severity: rule.severity,
+        cvss: rule.cvss,
+        knownExploited: rule.knownExploited,
+        summary: rule.summary,
+        updateUrl: rule.updateUrl,
+        wingetId: rule.wingetId,
+        status: cmp === null ? "version_unparsed" : cmp < 0 ? "update_required" : "up_to_date",
+      };
+    }
+  }
+  return {
+    matched: false,
+    status: "manual_lookup",
+    vendor,
+    updateUrl: null,
+    wingetId: null,
+    fixedIn: null,
+    advisoryId: null,
+  };
+}
+
 function normalize(entries, source, ecosystem) {
   const out = [];
   for (const entry of entries) {
     const name = clean(entry?.name);
     const version = clean(entry?.version, 80);
     if (!name || !version) continue;
-    out.push({
+    const pkg = {
       name,
       version,
       source,
       ecosystem,
       ...(entry.vendor ? { vendor: clean(entry.vendor, 80) } : {}),
       ...(ecosystem && entry.lookupName ? { lookupName: clean(entry.lookupName), lookupVersion: clean(entry.lookupVersion, 80) || version } : {}),
-    });
+    };
+    if (!ecosystem) {
+      const vc = matchWindowsVendorCatalog(pkg);
+      if (vc.matched) {
+        pkg.vendorCatalog = {
+          id: vc.catalogId,
+          status: vc.status,
+          fixedIn: vc.fixedIn,
+          advisoryId: vc.advisoryId,
+          severity: vc.severity,
+          cvss: vc.cvss,
+          knownExploited: vc.knownExploited,
+          updateUrl: vc.updateUrl,
+          wingetId: vc.wingetId,
+        };
+      }
+    }
+    out.push(pkg);
   }
   return out;
+}
+
+export function summarizeInventoryVerification(packages = []) {
+  let verifiedOsv = 0;
+  let verifiedVendorCatalog = 0;
+  let updateRequiredCount = 0;
+  for (const p of packages) {
+    if (p.ecosystem) {
+      verifiedOsv += 1;
+    } else {
+      const vc = p.vendorCatalog ?? matchWindowsVendorCatalog(p);
+      if ((vc.matched || vc.id) && vc.status !== "version_unparsed") {
+        verifiedVendorCatalog += 1;
+        if (vc.status === "update_required") updateRequiredCount += 1;
+      }
+    }
+  }
+  const verifiedTotal = verifiedOsv + verifiedVendorCatalog;
+  const needsManualCheck = Math.max(0, packages.length - verifiedTotal);
+  return {
+    total: packages.length,
+    verifiedTotal,
+    verifiedOsv,
+    verifiedVendorCatalog,
+    updateRequiredCount,
+    needsManualCheck,
+  };
 }
 
 /**
@@ -238,6 +554,7 @@ export function collectInventory({ consent, platform = process.platform, run = d
     } catch { /* try the next fixed command */ }
   }
   packages.sort((a, b) => a.name.localeCompare(b.name) || a.version.localeCompare(b.version));
+  const verification = summarizeInventoryVerification(packages);
   return {
     format: "cda.inventory.v1",
     kind: "host",
@@ -245,6 +562,7 @@ export function collectInventory({ consent, platform = process.platform, run = d
     host: { platform, os: release, arch: process.arch },
     sources,
     total: packages.length,
+    verification,
     truncated: packages.length >= MAX_PACKAGES,
     packages,
     listeners: { status: listenerStatus, ports: listeners },
@@ -351,6 +669,34 @@ export function depsInventory(scope, file, now = Date.now()) {
 
 export function renderInventory(report) {
   const exposed = report.listeners.ports.filter((p) => p.exposure === "network-reachable");
-  const lookup = report.packages.filter((p) => p.ecosystem).length;
-  return `# Cyber Defense Agent — ${report.kind === "host" ? "machine" : "project dependency"} inventory\n\nObserved: ${report.observedAt}\n\n${report.host ? `System: ${markdown(report.host.os.id)} ${markdown(report.host.os.version)} (${report.host.platform}/${report.host.arch}). Hostname and user names are not recorded.\n\n` : ""}Sources: ${report.sources.map((s) => `${markdown(s.id)} — ${s.status} (${s.count})`).join("; ")}\n\nPackages: ${report.total}${report.truncated ? " (truncated)" : ""}. Automatically checkable against OSV.dev: ${lookup}. Needs vendor/NVD lookup: ${report.total - lookup}.\n\n${report.kind === "host" ? `## Listening TCP ports\n\n${report.listeners.status !== "ok" ? "Not available on this system.\n" : exposed.length ? `| Port | Exposure | Typical service |\n|---|---|---|\n${report.listeners.ports.map((p) => `| ${p.port} | ${p.exposure} | ${p.note ?? "—"} |`).join("\n")}\n` : "No network-reachable listener reported. Loopback-only services: " + report.listeners.ports.length + ".\n"}\n` : ""}## Packages\n\n| Name | Version | Source | OSV ecosystem |\n|---|---|---|---|\n${report.packages.slice(0, 1500).map((p) => `| ${markdown(p.name)} | ${markdown(p.version)} | ${markdown(p.source)} | ${p.ecosystem ? markdown(p.ecosystem) : "manual lookup"} |`).join("\n")}\n${report.packages.length > 1500 ? `\n…and ${report.packages.length - 1500} more in the JSON report.\n` : ""}\n## Limits\n\n${report.limitations.map((s) => `- ${s}`).join("\n")}\n`;
+  const ver = report.verification ?? summarizeInventoryVerification(report.packages ?? []);
+  const vendorEntries = (report.packages ?? [])
+    .map((p) => ({ pkg: p, vc: p.vendorCatalog ?? (!p.ecosystem ? matchWindowsVendorCatalog(p) : null) }))
+    .filter((x) => x.vc && (x.vc.matched || x.vc.id));
+  const vendorSection = vendorEntries.length
+    ? `## Windows & Desktop Vendor Verification\n\n| Application | Installed | Verification | Fixed version | Advisory | Update source |\n|---|---|---|---|---|---|\n${vendorEntries
+        .map(({ pkg, vc }) => {
+          const statusLabel =
+            vc.status === "update_required"
+              ? "UPDATE REQUIRED"
+              : vc.status === "up_to_date"
+                ? "Verified current"
+                : "Version unparsed";
+          const sourceInfo = [vc.updateUrl, vc.wingetId ? `winget: ${vc.wingetId}` : null].filter(Boolean).join(" / ") || "—";
+          return `| ${markdown(pkg.name)} | ${markdown(pkg.version)} | ${statusLabel} | >= ${markdown(vc.fixedIn)} | ${markdown(vc.advisoryId)} | ${markdown(sourceInfo)} |`;
+        })
+        .join("\n")}\n\n`
+    : "";
+  return `# Cyber Defense Agent — ${report.kind === "host" ? "machine" : "project dependency"} inventory\n\nObserved: ${report.observedAt}\n\n${report.host ? `System: ${markdown(report.host.os.id)} ${markdown(report.host.os.version)} (${report.host.platform}/${report.host.arch}). Hostname and user names are not recorded.\n\n` : ""}Sources: ${report.sources.map((s) => `${markdown(s.id)} — ${s.status} (${s.count})`).join("; ")}\n\nPackages: ${report.total}${report.truncated ? " (truncated)" : ""}. Verified total: ${ver.verifiedTotal} (Automatically checkable against OSV.dev: ${ver.verifiedOsv}; Windows vendor catalog verified: ${ver.verifiedVendorCatalog}; Updates required: ${ver.updateRequiredCount}). Needs vendor/NVD lookup: ${ver.needsManualCheck}.\n\n${report.kind === "host" ? `## Listening TCP ports\n\n${report.listeners.status !== "ok" ? "Not available on this system.\n" : exposed.length ? `| Port | Exposure | Typical service |\n|---|---|---|\n${report.listeners.ports.map((p) => `| ${p.port} | ${p.exposure} | ${p.note ?? "—"} |`).join("\n")}\n` : "No network-reachable listener reported. Loopback-only services: " + report.listeners.ports.length + ".\n"}\n` : ""}${vendorSection}## Packages\n\n| Name | Version | Source | Verification / OSV ecosystem | Fixed in | Update source |\n|---|---|---|---|---|---|\n${report.packages.slice(0, 1500).map((p) => {
+    const vc = p.vendorCatalog ?? (!p.ecosystem ? matchWindowsVendorCatalog(p) : null);
+    const hasVc = vc && (vc.matched || vc.id) && vc.status !== "version_unparsed";
+    const statusCell = p.ecosystem
+      ? markdown(p.ecosystem)
+      : hasVc
+        ? `vendor catalog (${vc.status})`
+        : "manual lookup";
+    const fixedCell = hasVc && vc.fixedIn ? `>= ${markdown(vc.fixedIn)}` : "—";
+    const updateCell = hasVc && vc.updateUrl ? `${markdown(vc.updateUrl)}${vc.wingetId ? ` (winget: ${markdown(vc.wingetId)})` : ""}` : "—";
+    return `| ${markdown(p.name)} | ${markdown(p.version)} | ${markdown(p.source)} | ${statusCell} | ${fixedCell} | ${updateCell} |`;
+  }).join("\n")}\n${report.packages.length > 1500 ? `\n…and ${report.packages.length - 1500} more in the JSON report.\n` : ""}\n## Limits\n\n${report.limitations.map((s) => `- ${s}`).join("\n")}\n`;
 }

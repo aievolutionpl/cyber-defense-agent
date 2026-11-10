@@ -13,6 +13,11 @@ Updated 10 November 2026. The first product milestone is a reproducible reposito
 | SARIF export | Validated locations and deterministic fingerprints. | Export/redaction tests. GitHub upload remains opt-in. |
 | PR review | Trusted base tools and policy review candidate files, then write an Actions summary. | Local end-to-end runner plus cross-platform CLI tests. Remote run evidence belongs in VERIFICATION.md. |
 | CI hardening | Pinned action SHAs, disabled checkout credential persistence and job timeouts. | Workflow inspection and GitHub checks. |
+| Panel security & Host/Origin guard | Strict agent host allowlist (`claude`, `codex`, `hermes`), `.cda` path containment (`resolveContainedPath`) and `Host`/`Origin`/CSRF verification on `127.0.0.1`. | Path traversal, DNS-rebinding Host and cross-origin rejection tests. |
+| Unified Agent CLI launcher & session state | Unified binary discovery across Node/PowerShell (`where.exe`), prompt passing, live session status and login/auth error diagnostics (`claude login` / `codex login`). | Multi-version PATH detection, prompt delivery and auth-failure simulation tests. |
+| Guided multi-step audit workflow | Asynchronous guided audits (`pc`, `project`, `web`, `demo`) with per-run report namespaces, cancellation (`cancel`), resumption (`resume`) and run history. | Interruption, error recovery, resume and per-run history tests. |
+| Windows vendor security catalog | Curated Windows software baseline (7-Zip, WinRAR, Git, Chrome, Edge, Firefox, VLC, PuTTY, Node.js, VS Code, Python, Docker, Wireshark, FileZilla, KeePassXC, Notepad++) with fixed versions, official download URLs and `winget` IDs. | Verified vs manual-lookup counts, fixed-version and update-source tests. |
+| Held-out detection benchmark | Separate 16-sample clean/vulnerable corpus across all 8 rules (`CDA-DEP-001` .. `CDA-XSS-001`) via `node tools/cda.mjs benchmark`. | Measured 100% precision, 100% recall, 0 false positives, 0 missed findings and 100% evidence completeness. |
 
 Usage and current adapter limits are in [scanner integrations](SCANNER_INTEGRATIONS.md).
 

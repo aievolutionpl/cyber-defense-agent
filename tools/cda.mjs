@@ -23,6 +23,7 @@ import { collectInventory, depsInventory, renderInventory } from "./inventory.mj
 import { checkAdvisories, renderAdvisories } from "./advisories.mjs";
 import { checkWebsite, renderWeb } from "./web.mjs";
 import { collect, renderVisual, expertFinding, printPdf } from "./visual.mjs";
+import { runDetectionBenchmark, renderBenchmarkMarkdown } from "./benchmark.mjs";
 import { markdown } from "./redact.mjs";
 
 function gitStagedFiles(rootDir) {
@@ -163,6 +164,7 @@ async function main() {
     start: ["lang"],
     ui: ["lang", "port"],
     agent: ["host", "mission", "target", "lang"],
+    benchmark: ["name", "lang"],
     scope: ["root", "allow", "git-staged", "name"],
     approve: ["scope", "root", "yes"],
     show: ["scope"],
@@ -278,12 +280,43 @@ async function main() {
     process.stdout.write(`${JSON.stringify({ output: refreshDashboard(v.lang, selected ? sha(selected.root) : undefined) })}\n`);
     return;
   }
+  if (command === "benchmark") {
+    if (v.lang && !["en", "pl"].includes(v.lang)) deny("INVALID_ARGUMENTS");
+    const name = v.name || "detection-benchmark";
+    const report = runDetectionBenchmark();
+    store.write("reports", name, report);
+    const output = store.write("reports", name, renderBenchmarkMarkdown(report, v.lang || "pl"), "md");
+    process.stdout.write(
+      `${JSON.stringify({
+        output,
+        samplesTotal: report.samplesTotal,
+        truePositives: report.truePositives,
+        falsePositives: report.falsePositives,
+        missedFindings: report.missedFindings,
+        precision: report.precision,
+        recall: report.recall,
+        f1: report.f1,
+        evidenceCompleteness: report.evidenceCompleteness,
+      })}\n`,
+    );
+    return;
+  }
   if (command === "inventory") {
     const report = collectInventory({ consent: v.yes });
     store.write("reports", v.name, report);
     const output = store.write("reports", v.name, renderInventory(report), "md");
     process.stdout.write(
-      `${JSON.stringify({ output, packages: report.total, sources: report.sources, automaticallyCheckable: report.packages.filter((p) => p.ecosystem).length, networkReachablePorts: report.listeners.ports.filter((p) => p.exposure === "network-reachable").map((p) => p.port), network: false })}\n`,
+      `${JSON.stringify({
+        output,
+        packages: report.total,
+        sources: report.sources,
+        automaticallyCheckable: report.packages.filter((p) => p.ecosystem).length,
+        vendorCatalogVerified: report.verification?.verifiedVendorCatalog ?? 0,
+        verifiedTotal: report.verification?.verifiedTotal ?? report.packages.filter((p) => p.ecosystem).length,
+        needsManualCheck: report.verification?.needsManualCheck ?? 0,
+        networkReachablePorts: report.listeners.ports.filter((p) => p.exposure === "network-reachable").map((p) => p.port),
+        network: false,
+      })}\n`,
     );
     return;
   }
@@ -292,7 +325,17 @@ async function main() {
     store.write("reports", v.name, report);
     const output = store.write("reports", v.name, renderAdvisories(report), "md");
     process.stdout.write(
-      `${JSON.stringify({ output, checked: report.checked, affectedPackages: report.affectedPackages, counts: report.counts, notChecked: report.manualLookup.total, incomplete: report.incomplete, kev: report.sources.kev })}\n`,
+      `${JSON.stringify({
+        output,
+        checked: report.checked,
+        vendorCatalogChecked: report.vendorCatalogChecked ?? 0,
+        verifiedTotal: report.verifiedTotal ?? report.checked,
+        affectedPackages: report.affectedPackages,
+        counts: report.counts,
+        notChecked: report.manualLookup.total,
+        incomplete: report.incomplete,
+        kev: report.sources.kev,
+      })}\n`,
     );
     return;
   }

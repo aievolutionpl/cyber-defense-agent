@@ -65,11 +65,24 @@ export function collect(named, { rootKey } = {}) {
       for (const f of Array.isArray(r.added) ? r.added : []) add(name, { priority: f.priority, area: "code", title: `New since the baseline: ${f.title ?? f.ruleId}`, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location and fix it, then retest.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${f.line}` : null, added: true, at: time(r) });
     } else if (r.format === "cda.advisories.v1" && Array.isArray(r.findings)) {
       kind = "Known-vulnerability lookup (OSV.dev, CISA KEV)";
-      stats.checked += r.checked ?? 0;
+      stats.checked += (r.checked ?? 0) + (r.vendorCatalogChecked ?? 0);
       stats.notChecked += r.manualLookup?.total ?? 0;
       if (r.incomplete) incomplete.push(name);
       const area = r.inventory?.kind === "project" ? "dependencies" : "software";
-      for (const f of r.findings) add(name, { priority: f.priority, area, title: `${f.package} ${f.installed}: ${f.id}${f.knownExploited ? " - exploited in the wild" : ""}`, impact: f.summary, evidence: `Installed version is inside a published affected range. Severity ${f.severity}${f.cvss != null ? ` (CVSS ${f.cvss})` : ""}. Known exploited: ${f.knownExploited === true ? "yes" : f.knownExploited === false ? "no" : "unknown"}.`, fix: f.fixedIn?.length ? `Update to ${f.fixedIn.join(" or ")} or later through the official channel.` : "Update to the vendor's fixed release; see the advisory.", verify: "Collect a fresh inventory and re-run advisories." });
+      for (const f of r.findings) {
+        const channelHint = f.updateUrl
+          ? ` Download: ${f.updateUrl}${f.wingetId ? ` (or run: winget upgrade --id ${f.wingetId})` : ""}.`
+          : "";
+        add(name, {
+          priority: f.priority,
+          area,
+          title: `${f.package} ${f.installed}: ${f.id}${f.knownExploited ? " - exploited in the wild" : ""}`,
+          impact: f.summary,
+          evidence: `Installed version is inside a published affected range. Severity ${f.severity}${f.cvss != null ? ` (CVSS ${f.cvss})` : ""}. Known exploited: ${f.knownExploited === true ? "yes" : f.knownExploited === false ? "no" : "unknown"}.`,
+          fix: (f.fixedIn?.length ? `Update to ${f.fixedIn.join(" or ")} or later through the official channel.` : "Update to the vendor's fixed release; see the advisory.") + channelHint,
+          verify: "Collect a fresh inventory and re-run advisories.",
+        });
+      }
     } else if (r.format === "cda.web.v1" && Array.isArray(r.findings)) {
       kind = `Website posture check - ${clip(r.finalUrl, 80)}`;
       stats.requests += r.policy?.requests ?? 0;

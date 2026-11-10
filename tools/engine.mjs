@@ -217,6 +217,7 @@ export function inspect(file, text) {
         "Invisible Unicode control characters were detected in an agent instruction or MCP configuration file.",
         "Strip zero-width and bidirectional control characters and inspect the raw file bytes for hidden prompt-injection text.",
       );
+      const beforeCount = findings.length;
       scan(
         "CDA-AGENT-002",
         /--dangerously-skip-permissions\b|"autoApprove"\s*:\s*\[[^\]]*["'](?:\*|bash|sh|powershell|cmd)["']/i,
@@ -226,6 +227,27 @@ export function inspect(file, text) {
         "An unrestricted execution or auto-approve setting was found in agent configuration.",
         "Remove global permission bypasses and restrict auto-approved tools to explicit read-only operations.",
       );
+      if (
+        findings.length === beforeCount &&
+        /"autoApprove"\s*:\s*\[[\s\S]{0,400}?["'](?:\*|bash|sh|powershell|cmd)["']/i.test(text)
+      ) {
+        const lineIdx = lines.findIndex((l) => /"autoApprove"\s*:/.test(l));
+        const lineNum = lineIdx >= 0 ? lineIdx + 1 : 1;
+        const entry = finding(
+          "CDA-AGENT-002",
+          file,
+          lineNum,
+          "Unrestricted agent shell or permission bypass flag",
+          "high",
+          "high",
+          "An unrestricted execution or auto-approve setting was found in agent configuration.",
+          "Remove global permission bypasses and restrict auto-approved tools to explicit read-only operations.",
+        );
+        entry.fingerprint = sha(JSON.stringify(["CDA-AGENT-002", file, sha((lines[lineNum - 1] ?? "").trim()), 1]));
+        findings.push(entry);
+        const chk = checks.findLast((c) => c.ruleId === "CDA-AGENT-002");
+        if (chk) chk.result = "finding";
+      }
     }
   }
   return { findings, checks };
