@@ -15,7 +15,7 @@ The software is provided **as is**, without warranty, under the [MIT license](..
 ## Configure the host, not just the prompt
 
 1. Clone a trusted, reviewed revision of this repository outside the target project. Do not load instructions or execute tools from the target's own checkout.
-2. Use a stable copy of the target. Restrict the host to the trusted CLI and its state directory; keep network and target execution disabled. The skill's file allowlist does not restrict the host's other tools.
+2. Use a stable copy of the target. Restrict the host to the trusted CLI and its state directory; keep target execution disabled and allow outbound network only if you intend to use `advisories` or `web`. The skill's file allowlist does not restrict the host's other tools.
 3. Require explicit approval of the canonical root and exact file list. Scopes expire after 24 hours and can be revoked. Keep local state private.
 4. Review reports locally before adding any content to model context. Redaction is heuristic; a path, indicator or snippet may still be sensitive.
 5. Treat source code, logs, comments, scanner messages and model output as untrusted data. Never accept instructions embedded in an input as authorization.
@@ -23,8 +23,8 @@ The software is provided **as is**, without warranty, under the [MIT license](..
 
 ## Public and inspectable
 
-The first-party site, canonical skill, tools, tests, prompts, examples and build configuration are available in the [public repository](https://github.com/aievolutionpl/cyber-defense-agent). The CLI uses Node's standard library: it has no network client, model SDK, telemetry, automatic installer or target-code executor. Site dependencies and their versions are listed in the committed lockfile. Review source and history, pin a revision and run the checks yourself.
+The first-party site, canonical skill, tools, tests, prompts, examples and build configuration are available in the [public repository](https://github.com/aievolutionpl/cyber-defense-agent). The CLI uses Node's standard library: it has no model SDK, telemetry, automatic installer or target-code executor. Its only network use is the consent-gated `advisories` and `web` commands described in [expert capabilities](EXPERT_CAPABILITIES.md). Site dependencies and their versions are listed in the committed lockfile. Review source and history, pin a revision and run the checks yourself.
 
 Public source and passing tests are evidence you can inspect, **not proof of an absence of defects, malicious changes or supply-chain risk**. There is no claim of an independent security audit, certification or universal compliance with best practices. The concrete controls and remaining limitations are documented in [THREAT_MODEL.md](THREAT_MODEL.md), [ARCHITECTURE.md](ARCHITECTURE.md) and [VERIFICATION.md](VERIFICATION.md).
 
-Active web/API/network testing, third-party IOC lookups and automatic containment are not shipped. Planned external reads require disclosure of what leaves the machine; disruptive actions require independent authorization and an explicit human decision.
+Use `inventory` only on machines you administer, `web` only on sites you own or are authorized to assess, and `advisories` only when you accept that package names and versions reach OSV.dev. Active web/API/network testing, exploitation, third-party IOC lookups and automatic containment are not shipped. External reads require disclosure of what leaves the machine; disruptive actions require independent authorization and an explicit human decision.

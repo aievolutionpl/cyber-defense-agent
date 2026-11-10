@@ -13,12 +13,12 @@ export function TrustSection({ locale }: { locale: Locale }) {
         {
           icon: UserCheck,
           title: "Ty kontrolujesz uprawnienia.",
-          text: "Dla doświadczonych operatorów agentów AI. Używaj tylko danych, które masz prawo analizować, i sprawdzaj proponowane poprawki.",
+          text: "Sprawdzaj tylko to, co należy do Ciebie lub czym administrujesz. Każdy krok wymaga Twojej zgody, a proponowane poprawki wdrażasz samodzielnie.",
         },
         {
           icon: LockKeyhole,
           title: "Jasny przepływ danych.",
-          text: "Lokalny CLI nie wysyła danych. Host agenta może przekazać treść rozmowy dostawcy modelu. Strona nie używa analityki ani cookies aplikacji.",
+          text: "Narzędzia nie wysyłają plików. Sieci używają tylko advisories (nazwy i wersje pakietów do OSV.dev) i web (kilka zapytań do Twojej strony), zawsze po Twojej zgodzie. Host agenta może przekazać treść rozmowy dostawcy modelu. Strona nie używa analityki ani cookies aplikacji.",
         },
       ]
     : [
@@ -30,12 +30,12 @@ export function TrustSection({ locale }: { locale: Locale }) {
         {
           icon: UserCheck,
           title: "You control permissions.",
-          text: "For experienced AI-agent operators. Review only data you are authorized to inspect, and verify proposed changes before applying them.",
+          text: "Check only what you own or administer. Every step needs your consent, and you apply proposed changes yourself.",
         },
         {
           icon: LockKeyhole,
           title: "Know where data goes.",
-          text: "The local CLI sends nothing. Your agent host may share conversation content with its model provider. This site has no analytics or application cookies.",
+          text: "The tools never send files. Only advisories (package names and versions to OSV.dev) and web (a few requests to your own site) use the network, always after your consent. Your agent host may share conversation content with its model provider. This site has no analytics or application cookies.",
         },
       ];
   return (

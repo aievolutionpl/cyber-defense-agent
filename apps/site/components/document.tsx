@@ -5,12 +5,13 @@ import '@fontsource/ibm-plex-mono/500.css';
 import '@/app/globals.css';
 import '@/app/command-center.css';
 import '@/app/defense-story.css';
+import '@/app/expert.css';
 import { SITE_URL, type Locale } from '@/lib/config';
 
 export function pageMetadata(locale: Locale): Metadata {
   const pl = locale === 'pl';
-  const title = pl ? 'Cyber Defense Agent — znajdź ryzyko, sprawdź poprawkę' : 'Cyber Defense Agent — Find the risk. Prove the fix.';
-  const description = pl ? 'Lokalny przegląd kodu, analiza JSON/SARIF i retest. Jeden otwarty skill dla Codex i Claude Code. Poznaj interaktywne demo.' : 'Local code review, JSON/SARIF triage and evidence-based retesting. One open-source skill for Codex and Claude Code. Explore the interactive demo.';
+  const title = pl ? 'Cyber Defense Agent — Twój agent AI ekspertem od bezpieczeństwa' : 'Cyber Defense Agent — Your AI agent, now a security expert';
+  const description = pl ? 'Otwarty skill, który uczy agenta AI sprawdzać komputer, stronę, kod, bazę danych i sieć: znane luki, plan aktualizacji, dowód i retest. Tylko odczyt, zgoda przed każdym krokiem.' : 'An open-source skill that teaches your AI agent to check your computer, website, code, database and network: known vulnerabilities, an update plan, evidence and a retest. Read-only, with consent before every step.';
   return {
     ...(SITE_URL ? { metadataBase: new URL(SITE_URL), alternates: { canonical: pl ? 'pl/' : './', languages: { en: './', pl: 'pl/' } } } : {}),
     title, description, robots: { index: true, follow: true },

@@ -204,15 +204,15 @@ export function ProtectionMap({ locale }: { locale: Locale }) {
           </h3>
           <p>
             {pl
-              ? "Analiza dostarczonego inventory działa lokalnie. Bez automatycznej instalacji, restartów i obietnicy, że jedna lista obejmuje cały system."
-              : "Inventory review runs locally. No automatic installation or restarts, and no claim that one list covers the whole system."}
+              ? "Agent sam zbierze listę programów, gdy się zgodzisz, albo przyjmie wykaz wyeksportowany gdzie indziej. Bez automatycznej instalacji i restartów, bez obietnicy, że jedna lista obejmuje cały system."
+              : "Your agent collects the software list itself once you agree, or accepts an inventory exported elsewhere. No automatic installation or restarts, and no claim that one list covers the whole system."}
           </p>
         </div>
         <a
-          href={github("/blob/main/docs/UPDATE_PLANNING.md")}
+          href={github("/blob/main/skills/cyber-defense/references/knowledge/software-vulnerabilities.md")}
           className="button button-secondary"
         >
-          {pl ? "Zobacz polecenie" : "See the command"}
+          {pl ? "Zobacz playbook" : "Read the playbook"}
           <ArrowUpRight size={16} />
         </a>
       </div>

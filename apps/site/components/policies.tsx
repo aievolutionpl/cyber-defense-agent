@@ -27,7 +27,7 @@ export function Policies({ locale }: { locale: Locale }) {
         ],
         [
           "Lokalne narzędzia i dostawcy AI",
-          "CLI odczytuje zatwierdzone pliki i zapisuje raporty w prywatnym katalogu .cda/. Nie wywołuje modelu ani sieci. Terminalowy onboarding nie zapisuje odpowiedzi. Host agenta może jednak przekazać prompty i wyniki narzędzi dostawcy modelu. Przejrzyj raport lokalnie przed udostępnieniem. Redakcja nie wykrywa wszystkich sekretów; ścieżki też mogą być poufne.",
+          "CLI odczytuje zatwierdzone pliki i zapisuje raporty w prywatnym katalogu .cda/. Nie wywołuje modelu. Trzy polecenia wykraczają poza zatwierdzone pliki i każde wymaga jawnej flagi po Twojej decyzji: inventory wypisuje programy i nasłuchujące porty komputera (bez nazwy komputera, użytkownika i ścieżek); advisories wysyła do OSV.dev nazwy i wersje pakietów oraz pobiera publiczną listę CISA KEV; web wysyła kilka zapytań GET do wskazanej przez Ciebie strony. Lista oprogramowania też może być poufna. Terminalowy onboarding nie zapisuje odpowiedzi. Host agenta może jednak przekazać prompty i wyniki narzędzi dostawcy modelu. Przejrzyj raport lokalnie przed udostępnieniem. Redakcja nie wykrywa wszystkich sekretów; ścieżki też mogą być poufne.",
         ],
         [
           "Retencja i zgłoszenia",
@@ -35,7 +35,7 @@ export function Policies({ locale }: { locale: Locale }) {
         ],
         [
           "Przejrzystość i ograniczenia",
-          "Kod, instrukcje, testy i konfiguracja są publiczne. Nie oznacza to niezależnego audytu ani gwarancji braku błędów. v0.1 ma cztery lokalne reguły, import raportów i ostrożny retest. Aktywne testy sieci, automatyczne naprawy i konektory usług pozostają w roadmapie.",
+          "Kod, instrukcje, testy i konfiguracja są publiczne. Nie oznacza to niezależnego audytu ani gwarancji braku błędów. v0.2 ma cztery lokalne reguły, import raportów, inwentarz oprogramowania, sprawdzanie znanych luk, pasywną kontrolę strony i ostrożny retest. Aktywne testy sieci, automatyczne naprawy i konektory usług pozostają w roadmapie.",
         ],
       ]
     : [
@@ -61,7 +61,7 @@ export function Policies({ locale }: { locale: Locale }) {
         ],
         [
           "Local tools and AI providers",
-          "The CLI reads approved files and writes private .cda/ reports. It makes no network or model calls. Terminal intake answers are not saved. Your agent host may still send prompts and tool output to its model provider. Inspect reports locally before sharing. Redaction cannot detect every secret; paths may also be sensitive.",
+          "The CLI reads approved files and writes private .cda/ reports. It calls no model. Three commands go beyond approved files and each needs an explicit flag after your decision: inventory lists the programs and listening ports of the machine (no computer name, user name or paths); advisories sends package names and versions to OSV.dev and downloads the public CISA KEV list; web sends a few GET requests to the site you name. A software list can itself be sensitive. Terminal intake answers are not saved. Your agent host may still send prompts and tool output to its model provider. Inspect reports locally before sharing. Redaction cannot detect every secret; paths may also be sensitive.",
         ],
         [
           "Retention and reporting",
@@ -69,7 +69,7 @@ export function Policies({ locale }: { locale: Locale }) {
         ],
         [
           "Transparency and limits",
-          "Source, instructions, tests and configuration are public. This does not establish an independent audit or guarantee an absence of defects. v0.1 ships four local rules, report import and conservative retesting. Active network tests, automatic remediation and service connectors remain on the roadmap.",
+          "Source, instructions, tests and configuration are public. This does not establish an independent audit or guarantee an absence of defects. v0.2 ships four local rules, report import, software inventory, known-vulnerability lookup, a passive website check and conservative retesting. Active network tests, automatic remediation and service connectors remain on the roadmap.",
         ],
       ];
   return (

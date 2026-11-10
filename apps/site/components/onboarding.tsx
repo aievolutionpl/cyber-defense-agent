@@ -16,6 +16,8 @@ export function Onboarding({ locale }: { locale: Locale }) {
             "Lokalne repozytorium",
             "Raport JSON / SARIF",
             "Plan izolowanego labu",
+            "Mój komputer lub serwer",
+            "Moja strona WWW",
           ],
         },
         {
@@ -38,6 +40,8 @@ export function Onboarding({ locale }: { locale: Locale }) {
             "A local repository",
             "A JSON / SARIF report",
             "An isolated lab plan",
+            "My computer or server",
+            "My website",
           ],
         },
         {
@@ -53,6 +57,15 @@ export function Onboarding({ locale }: { locale: Locale }) {
           options: ["Only package.json", "Manifest and SARIF report"],
         },
       ];
+  // Machine and website goals replace the file question with the real consent decision.
+  if (answers[0] === 3)
+    questions[2] = pl
+      ? { q: "Co może opuścić komputer?", options: ["Nic. Tylko lokalna lista", "Nazwy i wersje pakietów do OSV.dev"] }
+      : { q: "What may leave the machine?", options: ["Nothing. A local list only", "Package names and versions to OSV.dev"] };
+  if (answers[0] === 4)
+    questions[2] = pl
+      ? { q: "Czyja to strona?", options: ["Moja lub przeze mnie administrowana", "Cudza"] }
+      : { q: "Whose site is it?", options: ["Mine, or I administer it", "Someone else's"] };
   const choose = (option: number) => {
     setAnswers([...answers, option]);
     requestAnimationFrame(() => output.current?.focus());
@@ -82,8 +95,8 @@ export function Onboarding({ locale }: { locale: Locale }) {
           <span className="mono">AGENT / 00</span>
           <p>
             {pl
-              ? "Najpierw cel, potem zakres. Trzy krótkie pytania i przygotuję plan obrony."
-              : "First the goal. Then the boundaries. Three quick questions and I’ll prepare a defense plan."}
+              ? "Co chcesz chronić? Trzy krótkie pytania i przygotuję plan: co sprawdzę, czego dotknę i o co zapytam Cię o zgodę."
+              : "What do you want to protect? Three quick questions and I’ll prepare a plan: what I check, what I touch and where I ask for your consent."}
           </p>
         </div>
         {answers.map((answer, i) => (

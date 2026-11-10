@@ -1,6 +1,8 @@
 # Architecture: evidence first, authority outside the model
 
-## Working v0.1 pipeline
+## Working pipeline (file review)
+
+v0.2 adds three consent-gated evidence sources beside this pipeline - machine inventory, OSV.dev/KEV advisory lookup and a passive website check. Their boundaries are in [expert capabilities](EXPERT_CAPABILITIES.md).
 
 ```mermaid
 flowchart LR

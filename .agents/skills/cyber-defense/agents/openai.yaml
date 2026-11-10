@@ -1,6 +1,6 @@
 interface:
   display_name: "Cyber Defense Agent"
-  short_description: "Lokalny audyt, raport i retest z zakresem"
-  default_prompt: "Use $cyber-defense to run the bundled demo and explain the report."
+  short_description: "Defensive security expert: PC, website, code, database, network"
+  default_prompt: "Use $cyber-defense to check what I want to protect; start with the bundled demo if I am new."
 policy:
   allow_implicit_invocation: false

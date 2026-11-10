@@ -1,6 +1,6 @@
 # Privacy and cookies
 
-Effective: 9 November 2026. Applies to this repository's static site and first-party local tools. External providers have their own policies.
+Effective: 10 November 2026. Applies to this repository's static site and first-party local tools. External providers have their own policies.
 
 ## Public website
 
@@ -14,13 +14,15 @@ GitHub Pages receives normal web requests, including IP address and browser/requ
 
 ## Local tools
 
-The CLI reads only the explicitly approved files for review/import. It writes scope, report and summary state into `.cda/` in the trusted tools repository. That state can include absolute paths, locations and redacted evidence. It is excluded from Git. Tools do not transmit it, collect telemetry or call a model. The terminal intake does not persist answers. The demo creates a synthetic temporary project which remains available for inspection; its location is printed in the demo output.
+The CLI reads only the explicitly approved files for review/import. It writes scope, report and summary state into `.cda/` in the trusted tools repository. That state can include absolute paths, locations and redacted evidence. It is excluded from Git. Tools do not transmit it, collect telemetry or call a model.
+
+Three commands go beyond approved files, each only with an explicit flag you supply after deciding. `inventory --yes` lists installed software and listening TCP ports of the machine it runs on; it stores names, versions and port numbers, and does not record the hostname, user names, paths or process names. `advisories --share-package-names` sends package names, versions and ecosystem labels to OSV.dev (operated by Google) and downloads the public CISA Known Exploited Vulnerabilities list; those services receive your IP address and the submitted package list under their own policies. `web --authorized` sends a few ordinary GET requests and one TLS handshake to the site you name and to hosts it redirects to; response bodies, cookie values and query strings are not stored. A software list can itself be sensitive: review reports before sharing them. The terminal intake does not persist answers. The demo creates a synthetic temporary project which remains available for inspection; its location is printed in the demo output.
 
 You control local retention. Revocation disables a scope; it does not erase existing reports. Remove your local `.cda/` state and identified synthetic scratch directory when no longer needed, after verifying their paths. Do not publish private findings in an issue or pull request.
 
 ## AI agent hosts
 
-Codex, Claude Code and other hosts may send prompts, tool output and conversation attachments to their model providers, depending on your account and configuration. Running the CLI through a host can expose its output to that host even when the CLI itself has no network code. Keep sensitive reports out of chat, review redaction locally, and use the bounded model summary only after deciding what may be shared. This project cannot override a provider's processing, retention or training settings. No provider integration is configured by the website.
+Codex, Claude Code and other hosts may send prompts, tool output and conversation attachments to their model providers, depending on your account and configuration. Running the CLI through a host can expose its output to that host even when a command itself sends nothing. Keep sensitive reports out of chat, review redaction locally, and use the bounded model summary only after deciding what may be shared. This project cannot override a provider's processing, retention or training settings. No provider integration is configured by the website.
 
 ## Questions or vulnerabilities
 

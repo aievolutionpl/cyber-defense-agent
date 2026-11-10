@@ -1,6 +1,6 @@
 # Lab and network defense planning
 
-Adapted from AntyGravity's sandbox guide. This is guidance, not a network executor. v0.1 sends no traffic, installs no scanner and executes no target code. It accepts only the offline formats described in `docs/FORMATS.md`; a product name does not guarantee compatible SARIF export.
+Adapted from AntyGravity's sandbox guide. This is guidance, not a network executor. The skill installs no scanner, executes no target code and performs no active testing. Its only network actions are the consent-gated `advisories` lookup and the passive `web` posture check described in SKILL.md. Scanner reports are accepted only in the offline formats described in `docs/FORMATS.md`; a product name does not guarantee compatible SARIF export.
 
 For an authorized lab plan, discuss:
 

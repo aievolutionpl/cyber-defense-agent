@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">Cyber Defense Agent</h1>
-<p align="center"><strong>Give your AI agent a disciplined security workflow.</strong><br/>Find the risk. Understand the evidence. Verify the fix.</p>
+<p align="center"><strong>Turn your AI agent into a defensive security expert.</strong><br/>Your PC, your website, your code, your database, your network. Find the risk. Understand it. Verify the fix.</p>
 
 <p align="center">
   <a href="https://aievolutionpl.github.io/cyber-defense-agent/"><img src="docs/assets/explore.svg" alt="Explore the interactive presentation — open the website and try the demo" width="640" /></a>
@@ -16,9 +16,28 @@
   <a href="https://aievolutionpl.github.io/cyber-defense-agent/pl/">Polski</a>
 </p>
 
-One inspectable skill for **Codex** and **Claude Code**, backed by local Node tools. It gives your coding agent a repeatable defensive process: ask the right questions, approve exact files, review evidence, explain the fix and retest conservatively. The website includes a guided, static-data presentation; it does not scan your machine.
+One inspectable skill for **Codex**, **Claude Code** and other skill-aware agents, backed by local Node tools and nine expert playbooks. Your agent learns to check what is installed on a computer and which of it has known vulnerabilities, review a website's security posture, find vulnerable dependencies and risky code, assess a database and a home or office network, and guide first response when something looks wrong. It asks before every step, explains findings in plain language, and proves each fix. The website includes a guided, static-data presentation; it does not scan your machine.
 
 > **For experienced AI-agent operators.** Use only resources you are authorized to assess. You control host permissions, data disclosure and applied changes. Provided as is, without warranty; not a security certification or a replacement for professional judgment. Read [responsible use](docs/RESPONSIBLE_USE.md) and [privacy & cookies](PRIVACY.md).
+
+## What your agent can do with it
+
+| You say | The agent does | Evidence |
+|---|---|---|
+| "Check my computer - what should I update?" | Lists installed software and listening ports, checks known vulnerabilities and exploited-in-the-wild flaws, researches the riskiest desktop apps, builds an ordered update plan | `inventory` -> `advisories` -> report with P0-P3 and fixed versions |
+| "Is my website OK?" | Passive check of HTTPS, HSTS, CSP, cookies, CORS, disclosure and certificate; then the code behind it | `web` report with plain-language fixes |
+| "Review my project before release" | Vulnerable dependencies from the lockfile, secrets, risky configuration, triage of Semgrep/Trivy/Gitleaks output, optional deep code review | `deps`, `review`, `import`, `retest` |
+| "Check my database" | Exposure, logins, privileges, row-level security (Supabase/Firebase), backups - with read-only queries | playbook-guided, read-only |
+| "Check my network" | What this machine exposes, router and Wi-Fi checklist, device review | `inventory` listeners + guided checklist |
+| "I think I've been hacked" | Containment steps in the right order, evidence to keep, who to call | incident first-response playbook |
+
+Every step sits on a **consent ladder**: reading files, looking at the machine, sending package names to a vulnerability database and contacting a website each need your explicit yes. The agent never exploits, never tests what you do not own and never changes anything for you. [What v0.2 adds and where its boundaries are](docs/EXPERT_CAPABILITIES.md) · [knowledge base](skills/cyber-defense/references/knowledge/).
+
+```sh
+node tools/cda.mjs inventory --name pc --yes                                   # read-only, nothing leaves the machine
+node tools/cda.mjs advisories --inventory pc --name pc-vulns --share-package-names   # names + versions -> OSV.dev
+node tools/cda.mjs web --url https://your-site.example --name site --authorized      # a few passive GET requests
+```
 
 ## How it works
 
@@ -59,10 +78,10 @@ node tools/cda.mjs start
 ```text
 +-----------------------------------------+
 | CYBER DEFENSE AGENT / OPERATOR INTAKE    |
-| Local tools. Explicit scope. Evidence.  |
+| Consent first. Read-only. Evidence.     |
 +-----------------------------------------+
 01 / YOUR WORKSPACE  → experience & authorization
-02 / YOUR GOAL       → files, report or lab planning
+02 / YOUR GOAL       → files, report, lab, this machine or a website
 03 / YOUR OUTCOME    → review, prioritise or retest
 04 / YOUR DATA       → local-only or ask before sharing
                        ↓
@@ -94,8 +113,12 @@ The `.agents/skills` entry is compatible with the documented skill format in Cod
 
 ## What works
 
+- Nine expert playbooks: triage, software vulnerabilities, endpoint hardening, web applications, code review, databases, network, incident first response and sources.
+- Machine inventory (Windows, macOS, Linux) through fixed read-only OS queries, and dependency inventories from npm, PyPI, Cargo, Go, Composer and RubyGems lockfiles.
+- Known-vulnerability lookup against OSV.dev with CISA KEV, CVSS v3 scoring, merged aliases, fixed versions and an explicit not-checked list.
+- Passive website posture check: HTTPS, HSTS, CSP, framing, cookies, CORS, disclosure, TLS certificate.
 - Exact file allowlist, separate approval, 24-hour expiry and revocation.
-- Canonical directory and file/link guards; no project code execution, dependency installation or network calls.
+- Canonical directory and file/link guards; no project code execution or dependency installation. Network use only in `advisories` and `web`, each behind an explicit flag.
 - Four small local rules: pinned affected lodash, disabled TLS verification, possible quoted secrets and `eval`. This is not a full SAST engine or live advisory feed.
 - `cda.scan.v1` JSON and a bounded subset of SARIF 2.1.0; validated local locations, deduplication and no imported free-form instructions in generated reports.
 - Markdown findings with location, redacted evidence, priority, confidence and suggested fix.
@@ -103,7 +126,7 @@ The `.agents/skills` entry is compatible with the documented skill format in Cod
 - Filename-based onboarding from the approved file list and a bounded, data-only `cda.model-input.v1` summary (no model API).
 - Dark EN/PL site with synthetic report, defense overview, onboarding, full audit demo and an original reusable agent-cursor scroll effect.
 
-Active web/API/network audits, IOC enrichment, model routing, MCP connectors, incident graphs and automatic response are [planned](docs/ROADMAP.md), not shipped capabilities. The current [architecture](docs/ARCHITECTURE.md) separates working controls from future adapters.
+Exploitation, crawling or authenticated web scans, port scanning, IOC enrichment, model routing, MCP connectors, incident graphs and automatic response are [planned or out of scope](docs/ROADMAP.md), not shipped capabilities. The current [architecture](docs/ARCHITECTURE.md) separates working controls from future adapters.
 
 ## Inspect the demo outputs
 
@@ -155,7 +178,7 @@ Then ask:
 
 [Entry point](.claude/skills/cyber-defense/SKILL.md) loads the same canonical instruction. Model access is your separate provider service. An end-to-end authenticated model session is not established by a passing CLI test.
 
-For your next conversation, use the [copy-ready prompts](skills/cyber-defense/references/prompt-recipes.md) for a local review, report import, retest or isolated-lab plan. The agent asks only what is missing, explains the next step and waits at real scope and data-sharing boundaries.
+For your next conversation, use the [copy-ready prompts](skills/cyber-defense/references/prompt-recipes.md): check my computer, check my website, review my project, check my database, check my network, something is wrong, verify a fix. The agent asks only what is missing, explains the next step and waits at real scope and data-sharing boundaries.
 
 ## Hermes (experimental)
 
@@ -201,7 +224,10 @@ A denied read or unsupported format does not authorize another reader or an expa
 
 | Layer | Data processed | Provider/network exposure |
 |---|---|---|
-| Local CLI | Approved files and private `.cda/` state | No network, LLM SDK or telemetry |
+| Local CLI (files) | Approved files and private `.cda/` state | No network, LLM SDK or telemetry |
+| `inventory` | Installed package names, versions, listening port numbers | None; no hostname, user or path recorded |
+| `advisories` | Package names, versions, ecosystem labels | Sent to api.osv.dev; public KEV list downloaded from cisa.gov |
+| `web` | Response headers, cookie flags, TLS details of the site you name | A few GET requests to that site; bodies and cookie values not stored |
 | Importer | JSON/SARIF and scoped locations | Does not fetch URLs; omits imported free text, snippets and fixes |
 | Model summary | Up to 100 facts, validated enums, opaque file/rule references | Local JSON only; no provider call |
 | Codex / Claude / Hermes host | Prompt, tool output and content included in chat | May reach the host's model provider according to its settings |
@@ -231,10 +257,10 @@ Browser acceptance uses `scripts/ui-acceptance.js` with the existing Playwright 
 
 ```text
 apps/site/                      EN/PL site, static interactive demos
-skills/cyber-defense/           canonical defense workflow + references
+skills/cyber-defense/           canonical defense workflow + expert knowledge base
 skills/agent-build-scroll/      reusable original motion workflow + assets
 .agents/ .claude/ .hermes/      thin host entry points
-tools/                          local Node CLI, guards, parsers, summary
+tools/                          local Node CLI: guards, parsers, inventory, advisories, web check
 schemas/                        model input contract
 examples/                       synthetic source, SARIF and sample audit
 tests/                          scope, import, retest and triage checks
@@ -246,7 +272,7 @@ First-party code: [MIT](LICENSE). Research includes [curated external repositori
 
 ## Trust, maintenance and contribution
 
-All first-party tools, prompts, examples, site source and tests are public. There is no network client, model SDK, telemetry or target-code executor in the audit CLI. Dependencies for the site are pinned in the lockfile. Inspect source and history; public code does not guarantee the absence of defects or supply-chain risk. [Security policy](SECURITY.md) · [Threat model](docs/THREAT_MODEL.md) · [Responsible use](docs/RESPONSIBLE_USE.md).
+All first-party tools, prompts, examples, site source and tests are public. There is no model SDK, telemetry or target-code executor in the CLI, and network use is confined to two consent-gated commands. Dependencies for the site are pinned in the lockfile. Inspect source and history; public code does not guarantee the absence of defects or supply-chain risk. [Security policy](SECURITY.md) · [Threat model](docs/THREAT_MODEL.md) · [Responsible use](docs/RESPONSIBLE_USE.md).
 
 To contribute, use a branch and pull request, keep target reads behind `ScopedReader`, add meaningful regression tests for changed trust boundaries, and run `npm run check` plus `npm run demo`. Never attach private `.cda/` state or real secrets. Skill changes belong in the canonical folder; entry points remain thin. See [AGENTS.md](AGENTS.md) for engineering guidance and [CLAUDE.md](CLAUDE.md) for the Claude entry.
 

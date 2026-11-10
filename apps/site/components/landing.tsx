@@ -10,9 +10,12 @@ import {
   FileCode2,
   Fingerprint,
   GitBranch,
+  Globe,
   Layers3,
   LockKeyhole,
+  Monitor,
   Radar,
+  ShieldAlert,
   ShieldCheck,
   Terminal,
 } from "lucide-react";
@@ -24,6 +27,10 @@ import { TrustSection } from "./trust-section";
 import { Onboarding } from "./onboarding";
 import { AgentBuildScroll } from "./motion-system";
 import { HeroSignal } from "./hero-signal";
+import { Missions } from "./missions";
+import { LiveSession } from "./live-session";
+import { SkillCompare, ConsentLadder, KnowledgeBase } from "./skill-story";
+import { ExpertEffects } from "./expert-effects";
 import { GitHubLink, Mark } from "./ui";
 import { asset, github, type Locale } from "@/lib/config";
 
@@ -33,115 +40,77 @@ export function Landing({ locale }: { locale: Locale }) {
   const faq = pl
     ? [
         [
-          "Co działa w v0.1?",
-          "Lokalny przegląd wskazanych plików czterema regułami (lodash, TLS, możliwy sekret, eval), onboarding z zatwierdzonej listy, import cda.scan.v1 JSON i ograniczonego SARIF 2.1.0, Markdown, retest i plan aktualizacji na podstawie dostarczonego wykazu offline. To wąskie, jawne kontrole, a nie pełny SAST lub aktualizowana baza CVE.",
+          "Co dokładnie potrafi agent z tym skillem?",
+          "Sprawdza komputer lub serwer (zainstalowane programy, znane luki, otwarte porty, plan aktualizacji), stronę WWW (HTTPS, nagłówki, ciasteczka, CORS, certyfikat), projekt (podatne zależności, sekrety, ryzykowny kod, raporty skanerów), bazę danych i sieć według playbooków, a przy podejrzeniu włamania prowadzi przez pierwsze kroki. Wszystko w trybie odczytu, z dowodem i retestem.",
         ],
         [
-          "Czy kod opuszcza mój komputer?",
-          "Narzędzia CLI działają lokalnie bez sieci, SDK modeli i telemetrii. Host agenta może wysłać dostawcy modelu prompt, wynik narzędzia i fragmenty raportu dodane do czatu. Najpierw przejrzyj zredagowany Markdown lokalnie. Redakcja wzorców nie wykryje każdego sekretu; nazwy plików też mogą być poufne.",
+          "Czy muszę znać się na bezpieczeństwie?",
+          "Nie. Agent dopasowuje język do Ciebie: najpierw mówi, co może się stać i co zrobić, a identyfikatory (CVE, CWE) podaje na końcu. Jeśli jesteś specjalistą, dostaniesz zwięzłą wersję z pokryciem i założeniami.",
         ],
         [
-          "Czy agent uruchamia albo zmienia mój projekt?",
-          "Nie. Zatwierdzona lista plików wygasa po 24 godzinach. CLI blokuje wyjście poza zakres oraz dowiązania, nie instaluje zależności ani nie uruchamia kodu projektu. Demo zmienia tylko własną tymczasową kopię danych. Kontrola CLI nie zastępuje izolacji systemowej ani ograniczeń innych narzędzi hosta.",
+          "Co opuszcza mój komputer?",
+          "Domyślnie nic. Polecenie advisories wysyła do OSV.dev wyłącznie nazwy i wersje pakietów oraz pobiera publiczną listę CISA KEV. Polecenie web wysyła kilka zwykłych zapytań GET do strony, którą wskażesz. Oba wymagają jawnej flagi po Twojej zgodzie. Host agenta (Codex, Claude Code) może przekazać dostawcy modelu treść rozmowy, więc raporty najpierw przeglądasz lokalnie.",
         ],
         [
-          "Czy zniknięcie ustalenia potwierdza poprawkę?",
-          "Nie. confirmed_fixed wymaga tej samej lokalnej reguły, bieżącego pliku, zgodnego odcisku i powtórnej kontroli. Niepełny import daje insufficient_data. Wynik jednej reguły nie potwierdza bezpieczeństwa całego systemu.",
+          "Czy agent coś zmienia albo instaluje?",
+          "Nie. Narzędzia tylko czytają. Agent przygotowuje dokładną poprawkę, sposób jej cofnięcia i test, a zmianę wdrażasz Ty. Nie uruchamia kodu Twojego projektu, nie instaluje aktualizacji i nie restartuje usług.",
         ],
         [
-          "Czy mogę skanować web, API i sieć?",
-          "W v0.1 dostępne jest doradztwo metodyczne dotyczące labu i analiza obsługiwanych lokalnych artefaktów. Aktywne testy web/API i sieci są w roadmapie do czasu wdrożenia niezależnej kontroli uprawnień i ruchu. Agent nie wysyła ruchu do celu.",
+          "Czy to zastąpi pentest albo antywirusa?",
+          "Nie. To pasywne, defensywne kontrole i wiedza ekspercka, a nie test penetracyjny, EDR czy certyfikat. Automatyczne sprawdzanie luk obejmuje pakiety systemowe Linuksa i zależności projektów; aplikacje desktopowe Windows i macOS agent bada w źródłach producenta. Brak ustaleń nie oznacza, że system jest bezpieczny.",
         ],
         [
-          "Czy Codex, Claude Code i Hermes są przetestowane?",
-          "Lokalne CLI i kontrakt wspólnych instrukcji są przetestowane. Pełna sesja modelowa w Codex jest niezweryfikowana z powodu błędu uruchomienia powłoki; w Claude Code z powodu limitu konta (HTTP 429). Punkt wejścia Hermes jest eksperymentalny i niezweryfikowany.",
+          "Czy mogę sprawdzić cudzą stronę albo sieć?",
+          "Nie. Skill działa tylko na zasobach, które należą do Ciebie lub którymi administrujesz. Nie atakuje, nie zgaduje haseł, nie skanuje portów i nie ukrywa swoich działań. Aktywne testy pozostają w roadmapie i wymagają osobnego, autoryzowanego środowiska.",
         ],
         [
-          "Ile to kosztuje?",
-          "Kod własny jest dostępny na licencji MIT. Demo CLI wymaga Node.js 22+ i Git, bez konta i płatnych wywołań. Dostęp do modelu w wybranym środowisku rozliczasz osobno według warunków dostawcy.",
+          "Z jakimi agentami działa i ile kosztuje?",
+          "Skill ma punkty wejścia dla Codex i Claude Code, zgodny format dla Cursor i Antigravity oraz eksperymentalny dla Hermes. Narzędzia i kontrakt instrukcji są przetestowane; pełne sesje z modelami pozostają niezweryfikowane. Kod jest na licencji MIT: wymaga Node.js 22+ i Git, bez konta i opłat. Dostęp do modelu rozliczasz osobno u dostawcy.",
         ],
       ]
     : [
         [
-          "What actually works in v0.1?",
-          "Local review of explicit files with four rules (lodash, TLS, possible secrets, eval), onboarding from the approved list, cda.scan.v1 JSON and limited SARIF 2.1.0 import, Markdown reports, conservative retesting and offline update-inventory planning. These are narrow, transparent checks, not a complete SAST engine or a live CVE database.",
+          "What exactly can my agent do with this skill?",
+          "Check a computer or server (installed software, known vulnerabilities, open ports, an update plan), a website (HTTPS, headers, cookies, CORS, certificate), a project (vulnerable dependencies, secrets, risky code, scanner reports), a database and a network by playbook, and guide the first steps when a break-in is suspected. All read-only, with evidence and a retest.",
         ],
         [
-          "Does my code leave my machine?",
-          "The CLI tools are local, with no network, model SDK or telemetry. Your agent host may send prompts, tool output and report excerpts included in chat to its model provider. Review the redacted Markdown locally first. Pattern redaction cannot catch every secret; filenames can also be sensitive.",
+          "Do I need to know security?",
+          "No. The agent matches your level: it leads with what could happen and what to do, and puts identifiers (CVE, CWE) last. If you are a specialist you get the terse version with coverage and assumptions.",
         ],
         [
-          "Will the agent run or change my project?",
-          "No. The exact approved file list expires after 24 hours. The CLI rejects out-of-scope paths and links, and never installs dependencies or runs target code. The demo changes only its own temporary copy. CLI guards do not replace OS isolation or restrictions on the host’s other tools.",
+          "What leaves my machine?",
+          "Nothing by default. The advisories command sends only package names and versions to OSV.dev and downloads the public CISA KEV list. The web command sends a few ordinary GET requests to the site you name. Both need an explicit flag after you agree. Your agent host (Codex, Claude Code) may share conversation content with its model provider, so you review reports locally first.",
         ],
         [
-          "Does a missing finding prove a fix?",
-          "No. confirmed_fixed requires the same local rule, the current file, a matching digest and a repeated check. An incomplete import yields insufficient_data. A clean result from one rule is not proof that the system is secure.",
+          "Will the agent change or install anything?",
+          "No. The tools only read. The agent prepares the exact fix, its rollback and the test; you apply the change. It never runs your project's code, installs updates or restarts services.",
         ],
         [
-          "Can it scan websites, APIs and networks?",
-          "v0.1 offers lab planning guidance and analysis of supported local artifacts. Active web/API and network testing stays on the roadmap until independent authorization and traffic controls exist. The agent tools send no traffic to the target.",
+          "Does this replace a pentest or antivirus?",
+          "No. These are passive, defensive checks and expert knowledge, not a penetration test, EDR or certification. Automatic vulnerability lookup covers Linux system packages and project dependencies; Windows and macOS desktop apps are researched at the vendor's sources. No findings does not mean a system is secure.",
         ],
         [
-          "Are Codex, Claude Code and Hermes verified?",
-          "The local CLI and shared instruction contract are tested. A full model session in Codex remains unverified due to a shell launch error; Claude Code due to an account limit (HTTP 429). The Hermes entry point is experimental and unverified.",
+          "Can I check someone else's website or network?",
+          "No. The skill works only on assets you own or administer. It does not attack, guess passwords, scan ports or hide what it does. Active testing stays on the roadmap and needs a separate, authorized environment.",
         ],
         [
-          "What does it cost?",
-          "Our code is MIT licensed. The CLI demo requires Node.js 22+ and Git, with no account or paid calls. Model access in your chosen environment is a separate service billed under your provider’s terms.",
+          "Which agents does it work with, and what does it cost?",
+          "The skill ships entry points for Codex and Claude Code, a compatible format for Cursor and Antigravity, and an experimental one for Hermes. The tools and the instruction contract are tested; full model sessions remain unverified. The code is MIT licensed: Node.js 22+ and Git, no account, no fee. Model access is billed separately by your provider.",
         ],
       ];
-  const capabilities = pl
-    ? [
-        {
-          icon: FileCode2,
-          title: "Kod. Konfiguracja. Konkret.",
-          text: "Cztery jawne reguły. Lokalizacja, zredagowany dowód, priorytet i sugerowana poprawka.",
-          code: [
-            "CDA-DEP-001  lodash",
-            "CDA-TLS-001  TLS verification",
-            "CDA-SECRET-001  secrets",
-            "CDA-EVAL-001 eval",
-          ],
-        },
-        {
-          icon: Layers3,
-          title: "Z raportów zrób decyzje.",
-          text: "JSON cda.scan.v1 i SARIF 2.1.0 w jednym, spójnym raporcie Markdown. Deduplikacja, priorytety, bez surowej treści importu.",
-          code: ["JSON / SARIF", "↓ normalize + redact", "audit.md"],
-        },
-        {
-          icon: FileCheck2,
-          title: "Poprawka potrzebuje dowodu.",
-          text: "Porównanie przed i po. Potwierdzona poprawka, nadal obecny sygnał lub brak danych. Zero zgadywania.",
-          code: ["confirmed_fixed", "still_present", "insufficient_data"],
-        },
-      ]
-    : [
-        {
-          icon: FileCode2,
-          title: "Code. Configuration. Clarity.",
-          text: "Four transparent rules. A location, redacted evidence, priority and a suggested fix for every finding.",
-          code: [
-            "CDA-DEP-001  lodash",
-            "CDA-TLS-001  TLS verification",
-            "CDA-SECRET-001  secrets",
-            "CDA-EVAL-001 eval",
-          ],
-        },
-        {
-          icon: Layers3,
-          title: "Turn reports into decisions.",
-          text: "cda.scan.v1 JSON and SARIF 2.1.0 in one consistent Markdown report. Deduplicated and prioritised, without raw import text.",
-          code: ["JSON / SARIF", "↓ normalize + redact", "audit.md"],
-        },
-        {
-          icon: FileCheck2,
-          title: "Every fix needs evidence.",
-          text: "Compare before and after. A confirmed fix, a remaining signal or insufficient data. No guessing.",
-          code: ["confirmed_fixed", "still_present", "insufficient_data"],
-        },
-      ];
+  const capabilities = (
+    [
+      [Monitor, ["Knows what is installed.", "Wie, co masz zainstalowane."], ["Programs and listening ports on Windows, macOS and Linux, through fixed read-only system queries. No computer name, no user name.", "Programy i nasłuchujące porty na Windows, macOS i Linuksie, stałymi zapytaniami tylko do odczytu. Bez nazwy komputera i użytkownika."], ["inventory --name pc --yes", "packages: 1412", "ports: 22, 5432"]],
+      [ShieldAlert, ["Knows what is vulnerable.", "Wie, co jest dziurawe."], ["OSV.dev plus the CISA list of flaws exploited in the wild. CVSS scores, fixed versions, and an honest list of what was not checked.", "OSV.dev i lista CISA luk wykorzystywanych w atakach. Ocena CVSS, wersje z poprawką i uczciwa lista tego, czego nie sprawdzono."], ["advisories --share-package-names", "P0 · exploited in the wild", "fixed in: 4.17.21"]],
+      [Globe, ["Checks a site like a browser.", "Sprawdza stronę jak przeglądarka."], ["Three ordinary requests and one TLS handshake. HSTS, CSP, cookies, CORS, disclosure, certificate. No crawling, no payloads.", "Trzy zwykłe zapytania i jedno połączenie TLS. HSTS, CSP, ciasteczka, CORS, ujawnione wersje, certyfikat. Bez crawlowania i ładunków."], ["web --url … --authorized", "WEB-CSP-001 · P2", "requests: 3"]],
+      [FileCode2, ["Code. Configuration. Clarity.", "Kod. Konfiguracja. Konkret."], ["Dependencies from six lockfile formats, four transparent local rules, and the location, redacted evidence and fix for every finding.", "Zależności z sześciu formatów lockfile, cztery jawne reguły lokalne oraz lokalizacja, zredagowany dowód i poprawka dla każdego ustalenia."], ["deps --input package-lock.json", "CDA-SECRET-001  secrets", "CDA-TLS-001  TLS verification"]],
+      [Layers3, ["Turns reports into decisions.", "Z raportów robi decyzje."], ["Semgrep, Trivy or Gitleaks output as SARIF 2.1.0 or JSON becomes one deduplicated, prioritised Markdown report, without raw scanner text.", "Wynik Semgrep, Trivy lub Gitleaks w SARIF 2.1.0 albo JSON staje się jednym raportem Markdown: bez duplikatów, z priorytetami, bez surowej treści skanera."], ["JSON / SARIF", "↓ normalize + redact", "audit.md"]],
+      [FileCheck2, ["Every fix needs evidence.", "Poprawka potrzebuje dowodu."], ["Compare before and after. A confirmed fix, a remaining signal or insufficient data. No guessing.", "Porównanie przed i po. Potwierdzona poprawka, nadal obecny sygnał albo brak danych. Zero zgadywania."], ["confirmed_fixed", "still_present", "insufficient_data"]],
+    ] as const
+  ).map(([icon, title, text, code]) => ({ icon, title: title[pl ? 1 : 0], text: text[pl ? 1 : 0], code }));
+  const stats: [number, string][] = pl
+    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [49, "testów bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
+    : [[9, "expert playbooks"], [6, "areas of protection"], [49, "tool security tests"], [0, "changes without your consent"]];
   return (
     <>
       <a className="skip-link" href="#main">
@@ -161,41 +130,41 @@ export function Landing({ locale }: { locale: Locale }) {
               <div className="eyebrow hero-eyebrow">
                 <span className="status-dot" />
                 {pl
-                  ? "TWÓJ LOKALNY AGENT BEZPIECZEŃSTWA"
-                  : "YOUR LOCAL SECURITY COPILOT"}
+                  ? "SKILL DLA AGENTÓW AI · V0.2 · OPEN SOURCE"
+                  : "A SKILL FOR AI AGENTS · V0.2 · OPEN SOURCE"}
               </div>
               <h1 id="hero-title">
                 {pl ? (
                   <>
-                    Twój agent tworzy.
+                    Twój agent AI
                     <br />
-                    <span>Naucz go chronić.</span>
+                    <span>ekspertem od bezpieczeństwa.</span>
                   </>
                 ) : (
                   <>
-                    Your agent builds.
+                    Your AI agent,
                     <br />
-                    <span>Teach it to defend.</span>
+                    <span>now a security expert.</span>
                   </>
                 )}
               </h1>
               <p className="hero-description">
                 {pl
-                  ? "Zamień pośpiech przed wdrożeniem w uporządkowany przegląd. Sprawdź kod, konfigurację i listy aktualizacji. Zobacz dowód, ustal priorytet i zweryfikuj poprawkę."
-                  : "Turn the pre-release rush into a repeatable security review. Inspect code, configuration and update inventories. See the evidence, prioritise the change and verify the fix."}
+                  ? "Jeden skill uczy Twojego agenta sprawdzać komputer, stronę, kod, bazę danych i sieć. Znajduje luki, tłumaczy je po ludzku, mówi, co zaktualizować, i udowadnia, że poprawka działa. O każdy krok pyta Cię o zgodę."
+                  : "One skill teaches your agent to check your computer, website, code, database and network. It finds the gaps, explains them in plain language, tells you what to update and proves the fix works. It asks before every step."}
               </p>
               <div className="hero-ctas">
                 <GitHubLink>{start}</GitHubLink>
-                <a href="#demo" className="button button-secondary">
-                  {pl ? "Zobacz przykładowy audyt" : "Explore the audit"}
+                <a href="#live" className="button button-secondary">
+                  {pl ? "Zobacz, jak pracuje" : "Watch it work"}
                   <ArrowDown size={16} />
                 </a>
               </div>
               <div className="hero-assurance">
                 <LockKeyhole size={14} />
                 {pl
-                  ? "Lokalne narzędzia. Jawny zakres. Otwarty kod."
-                  : "Local tools. Explicit scope. Open source."}
+                  ? "Tylko odczyt. Zgoda przed każdym krokiem. Otwarty kod, 0 zł."
+                  : "Read-only. Consent before every step. Open source, free."}
               </div>
               <div className="hero-terminal">
                 <span className="terminal-prompt">$</span>
@@ -207,8 +176,16 @@ export function Landing({ locale }: { locale: Locale }) {
               <HeroSignal locale={locale} />
             </div>
           </div>
+          <dl className="hero-stats section-shell">
+            {stats.map(([value, label]) => (
+              <div key={label}>
+                <dt>{label}</dt>
+                <dd data-count={value}>{value}</dd>
+              </div>
+            ))}
+          </dl>
           <div className="hero-foot section-shell">
-            <span className="mono">V0.1 / OPEN SOURCE</span>
+            <span className="mono">V0.2 / OPEN SOURCE</span>
             <a href="#workflow">
               {pl
                 ? "PRZEWIŃ. ZOBACZ, JAK POWSTAJE SYSTEM."
@@ -219,6 +196,8 @@ export function Landing({ locale }: { locale: Locale }) {
           </div>
         </section>
         <HostWorkflows locale={locale} />
+        <Missions locale={locale} />
+        <LiveSession locale={locale} />
         <section className="workflow-section section-shell" id="workflow">
           <div className="section-heading">
             <div>
@@ -243,8 +222,8 @@ export function Landing({ locale }: { locale: Locale }) {
             </div>
             <p>
               {pl
-                ? "Agent prowadzi. Ty zatwierdzasz zakres. Każda decyzja ma ślad w dowodach."
-                : "The agent guides. You approve the boundaries. Every decision has an evidence trail."}
+                ? "Agent prowadzi. Ty zatwierdzasz każdy krok. Każda decyzja ma ślad w dowodach."
+                : "The agent guides. You approve every step. Every decision has an evidence trail."}
             </p>
           </div>
           <div className="evidence-preview">
@@ -272,11 +251,11 @@ export function Landing({ locale }: { locale: Locale }) {
               ? [
                   [
                     "Otwórz swój warsztat.",
-                    "Sklonuj repo i wywołaj skill w Codex lub Claude Code. Zacznij od gotowego demo.",
+                    "Sklonuj repo i wywołaj skill w Codex lub Claude Code. Powiedz, co chcesz chronić.",
                   ],
                   [
                     "Wyznacz granice.",
-                    "Zatwierdź katalog i dokładną listę plików. Domyślnie nie ma zgody na odczyt całego repo.",
+                    "Zatwierdź dokładne pliki, przegląd komputera albo adres strony. Nic nie dzieje się domyślnie.",
                   ],
                   [
                     "Sprawdź, potem napraw.",
@@ -286,11 +265,11 @@ export function Landing({ locale }: { locale: Locale }) {
               : [
                   [
                     "Open your workspace.",
-                    "Clone the repo and invoke the skill in Codex or Claude Code. Start with the bundled demo.",
+                    "Clone the repo and invoke the skill in Codex or Claude Code. Say what you want to protect.",
                   ],
                   [
                     "Draw the boundaries.",
-                    "Approve a directory and an exact list of files. No implicit permission to read the entire repo.",
+                    "Approve exact files, a look at the machine or a site address. Nothing happens by default.",
                   ],
                   [
                     "Inspect. Fix. Verify.",
@@ -312,6 +291,7 @@ export function Landing({ locale }: { locale: Locale }) {
             ))}
           </div>
         </section>
+        <SkillCompare locale={locale} />
         <ProtectionMap locale={locale} />
         <section className="operations-section section-shell">
           <div className="section-heading">
@@ -486,6 +466,7 @@ export function Landing({ locale }: { locale: Locale }) {
             </div>
           </div>
         </section>
+        <ConsentLadder locale={locale} />
         <section className="onboarding-section section-shell">
           <div className="onboarding-intro">
             <span className="eyebrow">
@@ -508,27 +489,27 @@ export function Landing({ locale }: { locale: Locale }) {
             </h2>
             <p>
               {pl
-                ? "Bez ściany niezrozumiałych alertów. Agent poznaje cel, proponuje plan i wyjaśnia następny krok."
-                : "No wall of unexplained alerts. Your agent understands the goal, proposes a plan and explains the next step."}
+                ? "Agent prowadzi rozmowę jak doświadczony specjalista: poznaje cel, proponuje najmniejszy sensowny test, mówi, czego dotknie i co opuści komputer, a potem wyjaśnia wynik."
+                : "Your agent leads like a seasoned specialist: it learns the goal, proposes the smallest useful check, says what it will touch and what leaves the machine, then explains the result."}
             </p>
             <div className="guardian-principles">
               <span>
                 <Check size={15} />
                 {pl
-                  ? "Trzy pytania na start"
-                  : "Three questions to get started"}
+                  ? "Jedno pytanie na start: co chronimy?"
+                  : "One opening question: what are we protecting?"}
               </span>
               <span>
                 <Check size={15} />
                 {pl
-                  ? "Plan dopasowany do celu"
-                  : "A plan shaped around your goal"}
+                  ? "Język dopasowany do Ciebie, nie do podręcznika"
+                  : "Language matched to you, not to a textbook"}
               </span>
               <span>
                 <Check size={15} />
                 {pl
-                  ? "Zatwierdzenie przed odczytem"
-                  : "Approval before reading files"}
+                  ? "Zgoda przed każdym krokiem, wynik w trzech punktach"
+                  : "Consent before each step, results in three points"}
               </span>
             </div>
             <a
@@ -568,28 +549,27 @@ export function Landing({ locale }: { locale: Locale }) {
               </div>
               <p>
                 {pl
-                  ? "Mały, przejrzysty zestaw narzędzi. Dokładnie wiesz, co zostało sprawdzone."
-                  : "A focused, inspectable set of tools. You know exactly what was checked."}
+                  ? "Sześć narzędzi, które dają agentowi fakty zamiast domysłów. Każde do wglądu, każde przetestowane."
+                  : "Six tools that give your agent facts instead of guesses. Each one inspectable, each one tested."}
               </p>
             </div>
             <div className="capabilities-grid">
               {capabilities.map(({ icon: Icon, title, text, code }, i) => (
-                <article key={title} data-agent-target="Builder">
+                <article key={title} data-agent-target="Builder" data-spot>
                   <div className="capability-top">
                     <Icon size={23} strokeWidth={1.4} />
                     <span className="available-label">
-                      {pl ? "DZIAŁA W V0.1" : "AVAILABLE IN V0.1"}
+                      {pl ? "DZIAŁA W V0.2" : "AVAILABLE IN V0.2"}
                     </span>
                   </div>
                   <div
-                    className={`capability-visual visual-${i}`}
+                    className={`capability-visual visual-${i % 3}`}
                     aria-hidden="true"
                   >
                     {code.map((line, n) => (
                       <div key={line}>
                         <span>{String(n + 1).padStart(2, "0")}</span>
                         <code>{line}</code>
-                        {i === 0 && <Check size={12} />}
                       </div>
                     ))}
                   </div>
@@ -598,6 +578,7 @@ export function Landing({ locale }: { locale: Locale }) {
                 </article>
               ))}
             </div>
+            <KnowledgeBase locale={locale} />
             <div className="capability-boundaries">
               <div>
                 <Radar size={23} />
@@ -610,8 +591,8 @@ export function Landing({ locale }: { locale: Locale }) {
                   </h3>
                   <p>
                     {pl
-                      ? "Izolacja, role API, porty, TLS i kontrola ruchu. Instrukcje i analiza lokalnych artefaktów."
-                      : "Isolation, API roles, ports, TLS and traffic controls. Planning and local artifact analysis."}
+                      ? "Izolacja, role API, porty, TLS i kontrola ruchu. Plan i lista kontrolna dla autoryzowanych testów."
+                      : "Isolation, API roles, ports, TLS and traffic controls. A plan and checklist for authorized testing."}
                   </p>
                 </div>
               </div>
@@ -619,13 +600,13 @@ export function Landing({ locale }: { locale: Locale }) {
                 <span className="eyebrow">ROADMAP</span>
                 <h3>
                   {pl
-                    ? "Aktywne testy web / API / sieci"
-                    : "Active web / API / network tests"}
+                    ? "Aktywne testy i automatyczne poprawki"
+                    : "Active testing and automatic fixes"}
                 </h3>
                 <p>
                   {pl
-                    ? "Po wdrożeniu niezależnej kontroli uprawnień i ruchu."
-                    : "After independent authorization and traffic controls are implemented."}
+                    ? "Dopiero po wdrożeniu niezależnej kontroli uprawnień i ruchu. Dziś agent tylko czyta."
+                    : "Only after independent authorization and traffic controls exist. Today the agent only reads."}
                 </p>
                 <a href={github("/blob/main/docs/ROADMAP.md")}>
                   {pl ? "Zobacz plan" : "View the roadmap"}
@@ -699,8 +680,8 @@ export function Landing({ locale }: { locale: Locale }) {
             </h2>
             <p>
               {pl
-                ? "Jeden klon. Wspólna instrukcja skilla. Pierwszy audyt na danych demonstracyjnych."
-                : "One clone. One shared skill instruction. A first audit on synthetic demo data."}
+                ? "Jeden klon, zero zależności do instalowania. Zacznij od demo na danych przykładowych, potem powiedz agentowi, co chcesz chronić."
+                : "One clone, zero dependencies to install. Start with the demo on sample data, then tell your agent what to protect."}
             </p>
             <div className="install-principle">
               <LockKeyhole size={20} />
@@ -710,8 +691,8 @@ export function Landing({ locale }: { locale: Locale }) {
                 </strong>
                 <p>
                   {pl
-                    ? "CLI nie wysyła plików. Host agenta może przekazać dostawcy modelu treść dodaną do rozmowy."
-                    : "The CLI sends no files. Your agent host may share content included in the conversation with its model provider."}
+                    ? "Narzędzia nie wysyłają Twoich plików. Sieci używają tylko dwa polecenia i tylko po Twojej zgodzie. Host agenta może przekazać dostawcy modelu treść rozmowy."
+                    : "The tools never send your files. Only two commands use the network, and only after your consent. Your agent host may share conversation content with its model provider."}
                 </p>
               </div>
             </div>
@@ -775,8 +756,8 @@ export function Landing({ locale }: { locale: Locale }) {
           </div>
           <span className="eyebrow">
             {pl
-              ? "ZACZNIJ OD ZAKRESU. DOJDŹ DO DOWODU."
-              : "START WITH SCOPE. FINISH WITH EVIDENCE."}
+              ? "MIT · 0 ZŁ · BEZ KONTA · NODE.JS 22+"
+              : "MIT · FREE · NO ACCOUNT · NODE.JS 22+"}
           </span>
           <h2>
             {pl ? (
@@ -795,8 +776,8 @@ export function Landing({ locale }: { locale: Locale }) {
           </h2>
           <p>
             {pl
-              ? "Zrób pierwszy krok z Cyber Defense Agent."
-              : "Take the first step with Cyber Defense Agent."}
+              ? "Sklonuj repozytorium, uruchom demo i zapytaj agenta: „co powinienem zaktualizować?”. Pierwszy wynik zobaczysz po kilku minutach."
+              : "Clone the repository, run the demo and ask your agent: “what should I update?”. You will see a first result within minutes."}
           </p>
           <GitHubLink>{start}</GitHubLink>
           <a className="final-secondary" href="#demo">
@@ -812,7 +793,7 @@ export function Landing({ locale }: { locale: Locale }) {
             cyber<span className="brand-light">defense</span>
           </span>
         </a>
-        <span className="footer-license">MIT · v0.1 · © 2026</span>
+        <span className="footer-license">MIT · v0.2 · © 2026</span>
         <nav aria-label={pl ? "Linki w stopce" : "Footer links"}>
           <a href={asset(pl ? "/pl/policies/" : "/policies/")}>
             {pl ? "Prywatność i cookies" : "Privacy & cookies"}
@@ -834,6 +815,7 @@ export function Landing({ locale }: { locale: Locale }) {
         </nav>
       </footer>
       <AgentBuildScroll locale={locale} />
+      <ExpertEffects />
     </>
   );
 }

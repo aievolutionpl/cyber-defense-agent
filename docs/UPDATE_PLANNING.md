@@ -1,5 +1,7 @@
 # PC and server update planning
 
+> Since v0.2 the agent can also collect a live inventory of the machine it runs on (`inventory`) and check it against OSV.dev and CISA KEV (`advisories`) - see [expert capabilities](EXPERT_CAPABILITIES.md). The `updates` command below remains the offline path for inventories exported elsewhere.
+
 The `updates` command reviews an **operator-supplied inventory**, prioritises reported updates and writes an actionable Markdown plan. It supports inventories labelled Windows (`winget`, `windows-update`), Linux (`apt`, `dnf`, `zypper`) and macOS (`softwareupdate`, `brew`). These are input labels, not executable adapters. The CLI does not query those package managers, access another machine, install packages, restart services or contact update catalogs.
 
 ## Collect, approve, review
