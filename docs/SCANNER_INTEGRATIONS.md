@@ -48,7 +48,7 @@ node tools/cda.mjs dashboard --scope project --lang pl
 
 Local line rules have content-based fingerprints that survive insertion of preceding lines. Repeated identical lines have occurrence identifiers. Older reports fall back to rule, path and line. Package findings from adapters include package coordinates in their identity. A changed package version can therefore appear as a new observation. Moving a file also changes identity.
 
-`dashboard --scope` creates a separate `dashboard-<root hash>.html`. Subsequent commands for that scope rebuild this view. The scope filter includes file reports and retests with that root identity. Host inventories, website checks and legacy reports without identity are excluded from this view. The global dashboard continues to include all report types.
+`dashboard --scope` creates a separate `dashboard-<root hash>-<language>.html`. Subsequent commands for that scope rebuild both language views, preserving the language of an already opened dashboard. The scope filter includes file reports and retests with that root identity. Host inventories, website checks and legacy reports without identity are excluded from this view. The global dashboard continues to include all report types.
 
 The report retains the latest retest status. A later observation after a verified fix is labelled **Problem returned / Problem powrócił**, and the old fix is excluded from the current confirmed-fix total. Undated and unscoped legacy retests cannot close a finding. Incomplete local checks and unverified imported coverage are displayed explicitly.
 

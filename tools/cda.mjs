@@ -74,7 +74,7 @@ function refreshDashboard(lang = "en", rootKey) {
   for (const name of store.list("reports")) {
     try { named.push([name, store.read("reports", name)]); } catch { /* skip unreadable state */ }
   }
-  const name = rootKey ? `dashboard-${rootKey.slice(0, 16)}` : "dashboard";
+  const name = rootKey ? `dashboard-${rootKey.slice(0, 16)}-${lang}` : "dashboard";
   return store.write("reports", name, renderVisual(collect(named, { rootKey }), { lang, mode: "dashboard" }), "html");
 }
 
@@ -304,7 +304,7 @@ try {
   try {
     if (process.argv[2] && !["start", "dashboard", "scope", "approve", "show", "revoke", "onboarding"].includes(process.argv[2]) && !process.exitCode) {
       refreshDashboard();
-      if (dashboardScope) refreshDashboard("en", dashboardScope);
+      if (dashboardScope) for (const lang of ["en", "pl"]) refreshDashboard(lang, dashboardScope);
     }
   } catch { /* derived view only */ }
 } catch (error) {

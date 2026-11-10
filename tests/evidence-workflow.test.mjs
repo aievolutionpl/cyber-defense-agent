@@ -215,6 +215,8 @@ test("normal CLI entry points import, compare, export SARIF and isolate dashboar
   const exported = JSON.parse(cli("sarif", "--scope", "project", "--report", "secrets", "--name", "export"));
   assert.equal(JSON.parse(fs.readFileSync(path.join(trusted.root, exported.output), "utf8")).version, "2.1.0");
   const dashboard = JSON.parse(cli("dashboard", "--scope", "project", "--lang", "pl"));
-  assert.match(dashboard.output, /dashboard-[a-f0-9]+\.html$/);
+  assert.match(dashboard.output, /dashboard-[a-f0-9]+-pl\.html$/);
   assert.ok(fs.existsSync(path.join(trusted.root, dashboard.output)));
+  cli("review", "--scope", "project", "--name", "refreshed");
+  assert.match(fs.readFileSync(path.join(trusted.root, dashboard.output), "utf8"), /<html lang="pl">/);
 });
