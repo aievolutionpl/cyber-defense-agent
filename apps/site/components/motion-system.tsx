@@ -44,7 +44,9 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
       if (!enabled() || !desktop.matches || built.has(target)) return;
       built.add(target); current = target;
       delete target.dataset.buildPending;
-      parts = Array.from(target.children).filter((el): el is HTMLElement => el instanceof HTMLElement);
+      const containers = Array.from(target.children).flatMap(child => child.classList.contains("section-shell") ? Array.from(child.children) : [child]);
+      parts = containers.flatMap(child => child.matches(".missions-grid, .capabilities-grid, .blueprint-composition") ? Array.from(child.children) : [child])
+        .filter((el): el is HTMLElement => el instanceof HTMLElement);
       parts.forEach(p => { p.style.opacity = "0"; });
       overlay.dataset.active = "true"; overlay.style.opacity = "1";
       const start = performance.now();
