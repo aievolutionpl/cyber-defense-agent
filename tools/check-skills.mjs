@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 const canonical = 'skills/cyber-defense/SKILL.md';
 assert.ok(fs.readFileSync(canonical, 'utf8').includes('single source'));
 const skill = fs.readFileSync(canonical, 'utf8');
-for (const marker of ['consent ladder', 'Hard lines', 'inventory --name', '--share-package-names', '--authorized']) assert.ok(skill.includes(marker), `Canonical skill must keep: ${marker}`);
+for (const marker of ['consent ladder', 'Hard lines', 'inventory --name', '--share-package-names', '--authorized', 'cda.mjs report --name', 'cda.mjs finding --name', 'dashboard.html']) assert.ok(skill.includes(marker), `Canonical skill must keep: ${marker}`);
 // Every relative Markdown link in the skill and its references must resolve.
 const docs = ['skills/cyber-defense/SKILL.md', ...fs.readdirSync('skills/cyber-defense/references', { recursive: true }).filter(f => String(f).endsWith('.md')).map(f => path.posix.join('skills/cyber-defense/references', String(f).replaceAll('\\', '/')))];
 for (const doc of docs) for (const [, link] of fs.readFileSync(doc, 'utf8').matchAll(/\]\((\.{0,2}\/?[^)#\s]+\.md)\)/g)) {

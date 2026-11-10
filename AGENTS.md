@@ -15,6 +15,7 @@ Use Node.js >=22. The site is in apps/site. Local tools use only the Node standa
 - `tools/advisories.mjs`: OSV.dev and CISA KEV lookup behind explicit data-sharing consent. Host allowlist, no redirects, advisory text treated as data.
 - `tools/web.mjs`: passive posture check of one operator-authorized URL. GET only; no crawling, payloads, logins or port scans.
 - `skills/cyber-defense/references/knowledge/`: expert playbooks. Keep them accurate, sourced and defensive; verify facts against primary sources when editing.
+- `tools/visual.mjs`: the deliverable. Normalises every report type, renders the dark self-contained HTML report and dashboard (no scripts, no external resources, all strings escaped) and prints to PDF with a locally installed Chromium-based browser. Expert findings recorded here are always labelled model judgment.
 - `tools/updates.mjs`: bounded offline inventory validation and update plans; no OS collectors, installs or live catalog queries.
 - `tools/triage.mjs`: bounded model-input facts; no automatic transmission.
 - `tools/welcome.mjs`: deterministic terminal intake; no target access, persistence or consent side effects.
