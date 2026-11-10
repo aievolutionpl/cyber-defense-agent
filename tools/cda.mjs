@@ -9,8 +9,10 @@ import {
   approve,
   authorized,
   deny,
+  sha,
 } from "./scope.mjs";
-import { review, importScan, retest, render } from "./engine.mjs";
+import { review, importScan, retest, render, validateReport } from "./engine.mjs";
+import { compareReports, renderComparison, toSarif } from "./comparison.mjs";
 import { onboarding } from "./onboarding.mjs";
 import { modelSummary } from "./triage.mjs";
 import { welcomeTerminal } from "./welcome.mjs";
@@ -22,6 +24,7 @@ import { collect, renderVisual, expertFinding, printPdf } from "./visual.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(ROOT);
+let dashboardScope;
 const help = `Cyber Defense Agent v0.2 — evidence tools for a defensive agent
 
 Guided start (human terminal)
@@ -33,10 +36,12 @@ Files you approve (read-only, exact allowlist, 24 h)
   node tools/cda.mjs show --scope <scope>
   node tools/cda.mjs onboarding --scope <scope>
   node tools/cda.mjs review --scope <scope> --name <report>
-  node tools/cda.mjs import --scope <scope> --input <relative.json|relative.sarif> --name <report>
+  node tools/cda.mjs import --scope <scope> --input <relative.json|relative.sarif> --name <report> [--format gitleaks|trivy|osv]
   node tools/cda.mjs deps --scope <scope> --input <lockfile> --name <inventory>
   node tools/cda.mjs updates --scope <scope> --input <inventory.json> --name <plan>
   node tools/cda.mjs retest --scope <scope> --before <report> --after <report> --name <retest>
+  node tools/cda.mjs compare --scope <scope> --before <report> --after <report> --name <comparison>
+  node tools/cda.mjs sarif --scope <scope> --report <report> --name <export>
   node tools/cda.mjs summary --scope <scope> --report <report> --name <summary>
   node tools/cda.mjs revoke --scope <scope>
 
@@ -52,7 +57,8 @@ A website you own or are authorized to assess (a few passive GET requests)
 Deliverables (local files only)
   node tools/cda.mjs finding --name <expert-report> --priority <P0|P1|P2|P3|IDEA> --area <area> --title <text> --fix <text> [--impact <text>] [--evidence <text>] [--verify <text>]
   node tools/cda.mjs report --name <audit-report> --from <report> [--from <report>] [--title <text>] [--lang en|pl] [--pdf]
-  node tools/cda.mjs dashboard [--lang en|pl]
+  node tools/cda.mjs dashboard [--lang en|pl] [--scope <scope>]
+  Add --scope <scope> to report or dashboard to show only that project's file reports.
 
 The report is a dark, print-ready HTML file. With --pdf (after the user agrees) it also starts a locally
 installed Chromium-based browser in headless mode to print that one file to PDF.
@@ -63,12 +69,13 @@ Use only a trusted copy of these tools, outside the reviewed project.
 `;
 
 /** The dashboard is derived state: every stored report, re-rendered. Failure never blocks a command. */
-function refreshDashboard(lang = "en") {
+function refreshDashboard(lang = "en", rootKey) {
   const named = [];
   for (const name of store.list("reports")) {
     try { named.push([name, store.read("reports", name)]); } catch { /* skip unreadable state */ }
   }
-  return store.write("reports", "dashboard", renderVisual(collect(named), { lang, mode: "dashboard" }), "html");
+  const name = rootKey ? `dashboard-${rootKey.slice(0, 16)}-${lang}` : "dashboard";
+  return store.write("reports", name, renderVisual(collect(named, { rootKey }), { lang, mode: "dashboard" }), "html");
 }
 
 async function main() {
@@ -81,6 +88,7 @@ async function main() {
       scope: { type: "string" },
       report: { type: "string" },
       input: { type: "string" },
+      format: { type: "string" },
       before: { type: "string" },
       after: { type: "string" },
       yes: { type: "boolean" },
@@ -115,16 +123,18 @@ async function main() {
     onboarding: ["scope"],
     summary: ["scope", "report", "name"],
     review: ["scope", "name"],
-    import: ["scope", "input", "name"],
+    import: ["scope", "input", "name", "format"],
     updates: ["scope", "input", "name"],
     deps: ["scope", "input", "name"],
     inventory: ["name", "yes"],
     advisories: ["inventory", "name", "share-package-names"],
     web: ["url", "name", "authorized"],
     finding: ["name", "priority", "area", "title", "impact", "evidence", "fix", "verify"],
-    report: ["name", "from", "title", "lang", "pdf"],
-    dashboard: ["lang"],
+    report: ["name", "from", "title", "lang", "pdf", "scope"],
+    dashboard: ["lang", "scope"],
     retest: ["scope", "before", "after", "name"],
+    compare: ["scope", "before", "after", "name"],
+    sarif: ["scope", "report", "name"],
     revoke: ["scope"],
   };
   if (
@@ -154,7 +164,10 @@ async function main() {
   }
   if (command === "report") {
     if (!v.from?.length || v.from.length > 20 || (v.lang && !["en", "pl"].includes(v.lang))) deny("INVALID_ARGUMENTS");
-    const data = collect(v.from.map((name) => [name, store.read("reports", name)]));
+    const selected = v.scope ? store.read("scopes", v.scope) : null;
+    if (selected) authorized(selected);
+    if (selected) dashboardScope = sha(selected.root);
+    const data = collect(v.from.map((name) => [name, store.read("reports", name)]), { rootKey: selected ? sha(selected.root) : undefined });
     if (!data.sources.length) deny("NO_SUPPORTED_REPORTS");
     const html = store.write("reports", v.name, renderVisual(data, { title: v.title?.slice(0, 120), lang: v.lang ?? "en" }), "html");
     const pdfPath = store.file("reports", v.name, "pdf", true);
@@ -165,7 +178,9 @@ async function main() {
   }
   if (command === "dashboard") {
     if (v.lang && !["en", "pl"].includes(v.lang)) deny("INVALID_ARGUMENTS");
-    process.stdout.write(`${JSON.stringify({ output: refreshDashboard(v.lang) })}\n`);
+    const selected = v.scope ? store.read("scopes", v.scope) : null;
+    if (selected) authorized(selected);
+    process.stdout.write(`${JSON.stringify({ output: refreshDashboard(v.lang, selected ? sha(selected.root) : undefined) })}\n`);
     return;
   }
   if (command === "inventory") {
@@ -213,6 +228,25 @@ async function main() {
     return;
   }
   authorized(scope);
+  dashboardScope = sha(scope.root);
+  if (command === "compare") {
+    const before = store.read("reports", v.before);
+    const after = store.read("reports", v.after);
+    validateReport(before, scope);
+    validateReport(after, scope);
+    const report = compareReports(before, after);
+    store.write("reports", v.name, report);
+    const output = store.write("reports", v.name, renderComparison(report), "md");
+    process.stdout.write(`${JSON.stringify({ output, added: report.added.length, existing: report.existing.length, noLongerObserved: report.noLongerObserved.length, incomplete: report.incomplete })}\n`);
+    return;
+  }
+  if (command === "sarif") {
+    const report = store.read("reports", v.report);
+    validateReport(report, scope);
+    const output = store.write("reports", v.name, toSarif(report), "sarif");
+    process.stdout.write(`${JSON.stringify({ output, findings: report.findings.length })}\n`);
+    return;
+  }
   if (command === "updates") {
     const plan = reviewUpdates(scope, v.input);
     store.write("reports", v.name, plan);
@@ -251,7 +285,7 @@ async function main() {
     command === "review"
       ? review(scope)
       : command === "import"
-        ? importScan(scope, v.input)
+        ? importScan(scope, v.input, { format: v.format })
         : retest(
             scope,
             store.read("reports", v.before),
@@ -267,7 +301,12 @@ async function main() {
 
 try {
   await main();
-  try { if (process.argv[2] && !["start", "dashboard", "scope", "approve", "show", "revoke", "onboarding"].includes(process.argv[2]) && !process.exitCode) refreshDashboard(); } catch { /* derived view only */ }
+  try {
+    if (process.argv[2] && !["start", "dashboard", "scope", "approve", "show", "revoke", "onboarding"].includes(process.argv[2]) && !process.exitCode) {
+      refreshDashboard();
+      if (dashboardScope) for (const lang of ["en", "pl"]) refreshDashboard(lang, dashboardScope);
+    }
+  } catch { /* derived view only */ }
 } catch (error) {
   const code =
     error instanceof PolicyError

@@ -1,5 +1,15 @@
 # Verification record
 
+## Evidence adapters, comparison and PR review — 10 November 2026
+
+- Based on `e4bc7a4`, including the preceding report-correctness fixes from PR #11.
+- Local Linux, Node 24.22.1. **71/71 tests**, zero skipped. Skill contracts, ESLint, TypeScript and static build pass. The existing synthetic demo passes. Tests exercise the normal CLI for import, comparison, SARIF and scoped dashboards.
+- Regression coverage includes later uncertainty overriding an old fix, returning findings, standalone still-present retests, missing dates, separate roots, changed scopes, legacy fingerprints, importer-controlled identity, empty reports and path/bounds rejection.
+- The PR runner was exercised against this repository's 12-file policy. It completed 36 local checks and reported zero new and two existing signals when comparing the checkout to itself. This is a functional check of the four-rule pipeline, not a security verdict for the repository.
+- Gitleaks **8.30.1** ran on a synthetic directory with a custom fixture rule and `--redact=100`. One finding imported successfully without the raw test value. Release archive SHA-256 matched the publisher's checksum, `551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb`. The recorded JSON fixture normalizes File to `config.js`; remaining fields are the redacted exporter output. Trivy and OSV adapters were checked against documented source fields and synthetic fixtures. Their binaries were not run in this iteration.
+- HTML content and escaping are tested in EN/PL. A fresh Chromium visual run was attempted but the process exited because this executor denies `socket()` with EPERM. Responsive screenshots and PDF rendering were therefore not revalidated here. The report's CSS and page layout were preserved.
+- The PR workflow starts with an explicit adoption message while its runner is absent from the base branch. It becomes operational after the reviewed runner and file policy reach that branch. Remote CI evidence is recorded with the pull request. Live OSV/KEV calls, authenticated model-host sessions and end-to-end scanner installation remain unverified in this iteration.
+
 ## Report correctness fixes after review — 10 November 2026
 
 An automated review of the visual-report change found six defects; each was reproduced in a test before the fix. **60/60 tests** now pass, with skill contracts, ESLint, TypeScript, build and demo.

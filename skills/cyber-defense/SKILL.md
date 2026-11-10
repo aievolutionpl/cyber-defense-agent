@@ -84,6 +84,12 @@ Run from this repository's root. The CLI calls no model and sends nothing unless
 
 On any `CDA:` error, give the code and stop. Never work around a denied read with another reader.
 
+### Scanner evidence and changes
+
+For Gitleaks, Trivy or OSV-Scanner JSON, read [scanner integrations](../../docs/SCANNER_INTEGRATIONS.md) and add the matching `--format gitleaks|trivy|osv` to `import`. Reuse the exact approved file scope. Keep scanner installation and execution as separate operator decisions. Treat imported coverage as unverified even when the report contains zero findings.
+
+Use `compare --scope <scope> --before <report> --after <report> --name <comparison>` to explain new, existing and no-longer-observed findings. Use the separate live `retest` to establish a fix. Export through `sarif --scope <scope> --report <report> --name <export>` only when requested. A later observation can reopen a previously fixed issue. For multiple projects, add `--scope <scope>` to `dashboard` or `report` and explain that this view includes only file reports and retests with matching identity. Preserve the global view for host and website evidence.
+
 ### Deep review with host tools (L1, opt-in lane)
 
 The four local rules are deliberately narrow. When the user wants an expert code review and explicitly allows you to read the workspace with the host's own tools, follow [code review](references/knowledge/code-review.md). Rules for this lane: read only what the review needs; never run the project, its scripts, hooks or installers; do not open `.env`, key or credential files (note their presence and whether Git tracks them); label every finding `expert review - model judgment`; never describe this lane as a completed scan. Deterministic CLI evidence outranks it.

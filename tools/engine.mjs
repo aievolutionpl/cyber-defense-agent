@@ -1,6 +1,7 @@
 import path from "node:path";
 import { authorized, deny, relativeFile, sha } from "./scope.mjs";
 import { markdown } from "./redact.mjs";
+import { adaptScanner, SCANNER_FORMATS } from "./scanner-adapters.mjs";
 
 export const VERSION = "0.1.0";
 export const RULES = [
@@ -75,10 +76,13 @@ export function inspect(file, text) {
     });
   const scan = (ruleId, regex, title, severity, confidence, evidence, fix) => {
     let count = 0;
+    const occurrences = new Map();
     lines.forEach((line, i) => {
       if (regex.test(line)) {
-        findings.push(
-          finding(
+        const digest = sha(line.trim());
+        const occurrence = (occurrences.get(digest) ?? 0) + 1;
+        occurrences.set(digest, occurrence);
+        const entry = finding(
             ruleId,
             file,
             i + 1,
@@ -87,8 +91,9 @@ export function inspect(file, text) {
             confidence,
             evidence,
             fix,
-          ),
-        );
+          );
+        entry.fingerprint = sha(JSON.stringify([ruleId, file, digest, occurrence]));
+        findings.push(entry);
         count++;
       }
     });
@@ -229,11 +234,17 @@ function importedFinding(reader, data, requireFile = true) {
   );
   // No imported title, message, snippet, URL, fix or secret enters the agent-facing report.
   f.evidenceDigest = sha(JSON.stringify(data));
+  if (data.fingerprint !== undefined) {
+    if (!/^[a-f0-9]{64}$/.test(data.fingerprint)) deny("INVALID_FINDING");
+    f.fingerprint = data.fingerprint;
+  }
+  if (data.severityKnown === false) f.severityKnown = false;
   return f;
 }
 
 /** Supports cda.scan.v1 JSON and SARIF 2.1.0. Imported coverage is never trusted as a retest. */
-export function importScan(scope, input) {
+export function importScan(scope, input, { format = "auto" } = {}) {
+  if (!["auto", ...SCANNER_FORMATS].includes(format)) deny("UNSUPPORTED_FORMAT");
   const reader = authorized(scope);
   const raw = reader.read(input);
   let scan;
@@ -245,7 +256,13 @@ export function importScan(scope, input) {
   const report = base(scope, "import");
   report.input = { path: relativeFile(input), digest: sha(raw) };
   const entries = [];
-  if (scan?.format === "cda.scan.v1") {
+  if (SCANNER_FORMATS.includes(format)) {
+    const adapted = adaptScanner(scan, format, scope.root);
+    entries.push(...adapted.entries);
+    report.scanner = adapted.scanner;
+    report.incomplete = adapted.incomplete;
+    report.limitations.push(...adapted.limitations);
+  } else if (scan?.format === "cda.scan.v1") {
     if (!Array.isArray(scan.findings) || scan.findings.length > 2000)
       deny("INVALID_SCAN");
     entries.push(...scan.findings);
@@ -257,10 +274,12 @@ export function importScan(scope, input) {
     for (const run of scan.runs) {
       if (!Array.isArray(run.results) || run.results.length > 2000)
         deny("INVALID_SARIF");
-      if (run.invocations?.some((i) => i.executionSuccessful === false))
+      if (run.invocations?.some((i) => i.executionSuccessful === false)) {
+        report.incomplete = true;
         report.limitations.push(
           "The scanner reported an execution error; results are incomplete.",
         );
+      }
       for (const result of run.results) {
         const loc = result.locations?.[0]?.physicalLocation;
         const artifact = loc?.artifactLocation;
@@ -290,8 +309,12 @@ export function importScan(scope, input) {
   if (entries.length > 2000) deny("TOO_MANY_FINDINGS");
   const unique = new Map();
   for (const entry of entries) {
-    const f = importedFinding(reader, entry);
-    unique.set(`${key(f)}:${f.line}`, f);
+    // Only our adapter generates identities. Generic input cannot choose a fingerprint that
+    // collapses unrelated locations or impersonates another report's finding.
+    const f = importedFinding(reader, report.scanner ? entry : { ...entry, fingerprint: undefined });
+    const identity = f.fingerprint ?? `${key(f)}:${f.line}`;
+    const prior = unique.get(identity);
+    if (!prior || SEVERITIES.indexOf(f.severity) < SEVERITIES.indexOf(prior.severity)) unique.set(identity, f);
   }
   report.findings = [...unique.values()];
   report.limitations.push(

@@ -20,6 +20,19 @@ One inspectable skill for **Codex**, **Claude Code** and other skill-aware agent
 
 > **For experienced AI-agent operators.** Use only resources you are authorized to assess. You control host permissions, data disclosure and applied changes. Provided as is, without warranty; not a security certification or a replacement for professional judgment. Read [responsible use](docs/RESPONSIBLE_USE.md) and [privacy & cookies](PRIVACY.md).
 
+## Evidence and CI update
+
+The latest tools add **Gitleaks, Trivy and OSV-Scanner JSON import**, before/after comparison, SARIF export and a GitHub PR review workflow. The dashboard labels returning problems and separates file reports by project. Missing coverage is visible in the report.
+
+```sh
+node tools/cda.mjs import --scope project --input reports/gitleaks.json --format gitleaks --name secrets
+node tools/cda.mjs compare --scope project --before before --after after --name changes
+node tools/cda.mjs sarif --scope project --report after --name code-scanning
+node tools/cda.mjs dashboard --scope project --lang pl
+```
+
+These commands use an already approved scope. Scanner binaries are operator-managed, and imported coverage remains unverified. [Integration guide](docs/SCANNER_INTEGRATIONS.md) · [Development path and acceptance criteria](docs/ROADMAP.md).
+
 ## What your agent can do with it
 
 | You say | The agent does | Evidence |

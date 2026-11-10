@@ -1,0 +1,22 @@
+[
+  {
+    "RuleID": "cda-synthetic-secret",
+    "Description": "Synthetic fixture only",
+    "StartLine": 1,
+    "EndLine": 1,
+    "StartColumn": 18,
+    "EndColumn": 49,
+    "Match": "REDACTED",
+    "Secret": "REDACTED",
+    "File": "config.js",
+    "SymlinkFile": "",
+    "Commit": "",
+    "Entropy": 4.1167293,
+    "Author": "",
+    "Email": "",
+    "Date": "",
+    "Message": "",
+    "Tags": [],
+    "Fingerprint": "/tmp/cda-exporter-check/fixture/config.js:cda-synthetic-secret:1"
+  }
+]

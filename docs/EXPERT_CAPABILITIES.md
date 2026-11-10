@@ -51,3 +51,9 @@ Exploitation, credential testing, crawling or authenticated web scans, port or n
 ## Verification status
 
 Unit tests cover consent gates, parsers, host allowlisting, alias merging, CVSS scoring, redirect bounds and that secrets (cookie values, query strings, response bodies) never enter reports - all with injected command runners and network doubles. See [VERIFICATION.md](VERIFICATION.md) for what was and was not exercised against live services.
+
+## Scanner and CI evidence update
+
+The CLI now imports native Gitleaks, Trivy and OSV-Scanner JSON within the existing approved file scope. It compares stored snapshots and exports bounded SARIF locally. Project dashboards show current retest state and label returning findings. These commands make no outbound requests and start no scanners.
+
+The separate PR runner uses an explicitly authorized base-branch policy to read two checkouts and writes JSON, Markdown, HTML and SARIF. The shipped GitHub workflow installs Node and checks out repository content using pinned actions. It publishes an Actions summary, uses read-only contents permission and runs no candidate scripts. See [formats, coverage and limits](SCANNER_INTEGRATIONS.md).
