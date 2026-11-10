@@ -119,8 +119,8 @@ export function Landing({ locale }: { locale: Locale }) {
     ] as const
   ).map(([icon, title, text, code]) => ({ icon, title: title[pl ? 1 : 0], text: text[pl ? 1 : 0], code }));
   const stats: [number, string][] = pl
-    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [57, "testów bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
-    : [[9, "expert playbooks"], [6, "areas of protection"], [57, "tool security tests"], [0, "changes without your consent"]];
+    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [59, "testów bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
+    : [[9, "expert playbooks"], [6, "areas of protection"], [59, "tool security tests"], [0, "changes without your consent"]];
   return (
     <>
       <a className="skip-link" href="#main">

@@ -82,6 +82,25 @@ test("expert input is redacted before it is clipped", () => {
   assert.match(report.findings[0].evidence, /REDACTED KEY/);
 });
 
+test("a retest addition and its after-report entry are one finding, in either order", () => {
+  const f = { ruleId: "CDA-EVAL-001", path: "src/a.js", line: 3, priority: "P1", title: "eval on input", evidence: "eval(", fix: "Remove eval" };
+  const after = { ...review, createdAt: "2026-11-10T10:30:00.000Z", findings: [f] };
+  const withAdded = { ...retest, results: [], added: [f] };
+  for (const named of [[["after", after], ["retest", withAdded]], [["retest", withAdded], ["after", after]]]) {
+    const data = collect(named);
+    assert.deepEqual(data.findings.map((x) => x.title), ["eval on input"]);
+    assert.equal(data.counts.P1, 1);
+  }
+  // Another line of the same file is a separate finding.
+  assert.equal(collect([["after", { ...after, findings: [f, { ...f, line: 9 }] }], ["retest", withAdded]]).findings.length, 2);
+});
+
+test("control characters cannot split a secret pattern in expert input", () => {
+  const report = expertFinding(null, { priority: "P1", area: "code", title: "t", fix: "f", evidence: "password\u001b=supersecret123 and api_key\u0007: abcdef123456" });
+  const text = JSON.stringify(report);
+  assert.ok(!text.includes("supersecret123") && !text.includes("abcdef123456"));
+});
+
 test("visual report is self-contained, escaped and honest in both languages", () => {
   const data = collect([["vulns", advisories], ["site", web], ["x", expertFinding(null, { priority: "IDEA", area: "code", title: "Add `CI` <b>check</b>", fix: "Run a scanner" })]]);
   for (const lang of ["en", "pl"]) {

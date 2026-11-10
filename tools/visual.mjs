@@ -10,8 +10,9 @@ export const AREAS = ["code", "dependencies", "software", "website", "database",
 const esc = (value) => redact(value ?? "").replace(/[&<>"'`]/g, (c) => `&#${c.charCodeAt(0)};`);
 const clip = (value, max) => String(value ?? "").replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, max);
 // Redact the whole input first: clipping can cut off the closing marker a secret pattern needs.
+// Control characters are normalised before matching so they cannot split a pattern either.
 // An unterminated private-key block is still a key, so everything from its opening marker goes.
-const safe = (value, max) => clip(redact(String(value ?? "").slice(0, 64_000)).replace(/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*/g, "[REDACTED KEY]"), max);
+const safe = (value, max) => clip(redact(String(value ?? "").slice(0, 64_000).replace(/[\u0000-\u0008\u000b-\u001f\u007f]+/g, " ")).replace(/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*/g, "[REDACTED KEY]"), max);
 
 /** One expert-review finding recorded by the agent. Bounded, redacted, always labelled model judgment. */
 export function expertFinding(existing, input, now = Date.now()) {
@@ -51,13 +52,13 @@ export function collect(named) {
       kind = r.source === "local-review" ? "Local file review" : "Imported scanner report";
       stats.files += r.scope?.files?.length ?? 0;
       const root = r.scope?.rootKey ?? "";
-      for (const f of r.findings) add(name, { priority: f.priority, area: "code", title: f.title ?? f.ruleId, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location in the original scanner report.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, at: time(r) });
+      for (const f of r.findings) add(name, { priority: f.priority, area: "code", title: f.title ?? f.ruleId, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location in the original scanner report.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${f.line}` : null, at: time(r) });
     } else if (r.format === "cda.retest.v1" && Array.isArray(r.results)) {
       kind = "Retest";
       const root = r.scope?.rootKey ?? "";
       for (const x of r.results) verified.push({ ref: root ? `${root}:${x.ruleId}:${x.path}` : null, label: `${x.ruleId} - ${x.path}`, status: x.status, source: name, at: time(r) });
       // A retest can also discover something new. It is an open finding, not a footnote.
-      for (const f of Array.isArray(r.added) ? r.added : []) add(name, { priority: f.priority, area: "code", title: `New since the baseline: ${f.title ?? f.ruleId}`, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location and fix it, then retest.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, at: time(r) });
+      for (const f of Array.isArray(r.added) ? r.added : []) add(name, { priority: f.priority, area: "code", title: `New since the baseline: ${f.title ?? f.ruleId}`, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location and fix it, then retest.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${f.line}` : null, added: true, at: time(r) });
     } else if (r.format === "cda.advisories.v1" && Array.isArray(r.findings)) {
       kind = "Known-vulnerability lookup (OSV.dev, CISA KEV)";
       stats.checked += r.checked ?? 0;
@@ -94,7 +95,11 @@ export function collect(named) {
     if (!AREAS.includes(f.area)) f.area = "other";
     if (f.ref && fixedAt.has(f.ref) && fixedAt.get(f.ref) > (f.at ?? 0)) continue;
     // Same defect reported twice collapses; the same rule in another file or line does not.
-    seen.set(`${f.area}\u0000${f.title}\u0000${f.evidence}`, f);
+    // A location seen in both an after-report and a retest is one finding; keep the richer report entry.
+    const key = f.loc ?? `${f.area}\u0000${f.title}\u0000${f.evidence}`;
+    if (f.added && seen.has(key)) continue;
+    if (!f.added && seen.get(key)?.added) seen.delete(key);
+    seen.set(key, f);
   }
   const open = [...seen.values()].sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.area.localeCompare(b.area));
   const counts = Object.fromEntries(PRIORITIES.map((p) => [p, open.filter((f) => f.priority === p).length]));
