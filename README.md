@@ -31,6 +31,13 @@ One inspectable skill for **Codex**, **Claude Code** and other skill-aware agent
 | "Check my network" | What this machine exposes, router and Wi-Fi checklist, device review | `inventory` listeners + guided checklist |
 | "I think I've been hacked" | Containment steps in the right order, evidence to keep, who to call | incident first-response playbook |
 
+**Every audit ends with a report you can hand to someone.** A dark, visual HTML and PDF report with the verdict, a priority chart, the three things to start with, every finding with impact, evidence, fix and verification, plus ideas worth improving. A live dashboard rebuilds itself while the agent works. [Sample PDF](examples/sample-audit-report.pdf) · [Polish sample](examples/sample-audit-report-pl.pdf)
+
+```sh
+node tools/cda.mjs report --name audit-report --from deps-vulns --from site --from expert --lang pl   # HTML + PDF
+open .cda/reports/dashboard.html                                                              # live dashboard
+```
+
 Every step sits on a **consent ladder**: reading files, looking at the machine, sending package names to a vulnerability database and contacting a website each need your explicit yes. The agent never exploits, never tests what you do not own and never changes anything for you. [What v0.2 adds and where its boundaries are](docs/EXPERT_CAPABILITIES.md) · [knowledge base](skills/cyber-defense/references/knowledge/).
 
 ```sh
@@ -116,6 +123,7 @@ The `.agents/skills` entry is compatible with the documented skill format in Cod
 - Nine expert playbooks: triage, software vulnerabilities, endpoint hardening, web applications, code review, databases, network, incident first response and sources.
 - Machine inventory (Windows, macOS, Linux) through fixed read-only OS queries, and dependency inventories from npm, PyPI, Cargo, Go, Composer and RubyGems lockfiles.
 - Known-vulnerability lookup against OSV.dev with CISA KEV, CVSS v3 scoring, merged aliases, fixed versions and an explicit not-checked list.
+- Visual deliverables: `finding` (agent-recorded expert findings and ideas), `report` (dark HTML + PDF) and a self-refreshing `dashboard`. PDF needs a locally installed Edge, Chrome, Chromium or Brave; otherwise print the HTML.
 - Passive website posture check: HTTPS, HSTS, CSP, framing, cookies, CORS, disclosure, TLS certificate.
 - Exact file allowlist, separate approval, 24-hour expiry and revocation.
 - Canonical directory and file/link guards; no project code execution or dependency installation. Network use only in `advisories` and `web`, each behind an explicit flag.

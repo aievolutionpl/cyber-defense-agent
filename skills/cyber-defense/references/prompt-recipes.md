@@ -18,6 +18,10 @@ Invoke the skill explicitly in the host: `$cyber-defense` in Codex or `/cyber-de
 
 > Review this project before release. Start with dependencies that have known vulnerabilities, then secrets and risky configuration. Propose the exact file scope first. Keep private report content out of the chat until I have reviewed it locally.
 
+## Full project audit with a PDF report
+
+> Audit this project and give me a PDF report before we fix anything. Check dependencies for known vulnerabilities, secrets and risky configuration, review authentication and authorization, and include ideas for what is worth improving. Ask for each consent you need. Write the report in Polish.
+
 ## Deep code review
 
 > You may read the source files in this workspace (not .env or key files) and must not run the project. Review authentication, authorization and every place user input reaches a database, a shell, a file path or HTML. Give me findings with file and line, your confidence, and a minimal fix as a diff.

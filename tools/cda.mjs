@@ -18,6 +18,7 @@ import { reviewUpdates, renderUpdatePlan } from "./updates.mjs";
 import { collectInventory, depsInventory, renderInventory } from "./inventory.mjs";
 import { checkAdvisories, renderAdvisories } from "./advisories.mjs";
 import { checkWebsite, renderWeb } from "./web.mjs";
+import { collect, renderVisual, expertFinding, printPdf } from "./visual.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(ROOT);
@@ -48,9 +49,26 @@ Known vulnerabilities (sends package names + versions to OSV.dev; needs consent)
 A website you own or are authorized to assess (a few passive GET requests)
   node tools/cda.mjs web --url <https://...> --name <report> --authorized
 
+Deliverables (local files only)
+  node tools/cda.mjs finding --name <expert-report> --priority <P0|P1|P2|P3|IDEA> --area <area> --title <text> --fix <text> [--impact <text>] [--evidence <text>] [--verify <text>]
+  node tools/cda.mjs report --name <audit-report> --from <report> [--from <report>] [--title <text>] [--lang en|pl] [--html-only]
+  node tools/cda.mjs dashboard [--lang en|pl]
+
+The report is a dark, print-ready HTML file and, when a Chromium-based browser is installed, a PDF.
+The dashboard (.cda/reports/dashboard.html) rebuilds itself after every command and refreshes in the browser.
+
 Reports: .cda/reports/<name>.json and .md. Nothing is installed, changed or executed in a target.
 Use only a trusted copy of these tools, outside the reviewed project.
 `;
+
+/** The dashboard is derived state: every stored report, re-rendered. Failure never blocks a command. */
+function refreshDashboard(lang = "en") {
+  const named = [];
+  for (const name of store.list("reports")) {
+    try { named.push([name, store.read("reports", name)]); } catch { /* skip unreadable state */ }
+  }
+  return store.write("reports", "dashboard", renderVisual(collect(named), { lang, mode: "dashboard" }), "html");
+}
 
 async function main() {
   const { positionals, values: v } = parseArgs({
@@ -66,6 +84,16 @@ async function main() {
       after: { type: "string" },
       yes: { type: "boolean" },
       url: { type: "string" },
+      from: { type: "string", multiple: true },
+      title: { type: "string" },
+      lang: { type: "string" },
+      priority: { type: "string" },
+      area: { type: "string" },
+      impact: { type: "string" },
+      evidence: { type: "string" },
+      fix: { type: "string" },
+      verify: { type: "string" },
+      "html-only": { type: "boolean" },
       inventory: { type: "string" },
       authorized: { type: "boolean" },
       "share-package-names": { type: "boolean" },
@@ -92,6 +120,9 @@ async function main() {
     inventory: ["name", "yes"],
     advisories: ["inventory", "name", "share-package-names"],
     web: ["url", "name", "authorized"],
+    finding: ["name", "priority", "area", "title", "impact", "evidence", "fix", "verify"],
+    report: ["name", "from", "title", "lang", "html-only"],
+    dashboard: ["lang"],
     retest: ["scope", "before", "after", "name"],
     revoke: ["scope"],
   };
@@ -110,6 +141,29 @@ async function main() {
     process.stdout.write(
       `${JSON.stringify(scope, null, 2)}\nAwaiting explicit approval. No file content read.\n`,
     );
+    return;
+  }
+  if (command === "finding") {
+    let existing = null;
+    try { existing = store.read("reports", v.name); } catch (error) { if (error.code !== "ENOENT") throw error; }
+    const report = expertFinding(existing, v);
+    const output = store.write("reports", v.name, report);
+    process.stdout.write(`${JSON.stringify({ output, findings: report.findings.length, basis: "expert review - model judgment" })}\n`);
+    return;
+  }
+  if (command === "report") {
+    if (!v.from?.length || v.from.length > 20 || (v.lang && !["en", "pl"].includes(v.lang))) deny("INVALID_ARGUMENTS");
+    const data = collect(v.from.map((name) => [name, store.read("reports", name)]));
+    if (!data.sources.length) deny("NO_SUPPORTED_REPORTS");
+    const html = store.write("reports", v.name, renderVisual(data, { title: v.title?.slice(0, 120), lang: v.lang ?? "en" }), "html");
+    const pdfPath = store.file("reports", v.name, "pdf", true);
+    const printed = v["html-only"] ? { pdf: false, reason: "HTML_ONLY_REQUESTED" } : printPdf(path.join(ROOT, html), pdfPath);
+    process.stdout.write(`${JSON.stringify({ html, pdf: printed.pdf ? path.relative(ROOT, pdfPath).replaceAll("\\", "/") : null, pdfNote: printed.pdf ? null : `${printed.reason}: open the HTML in a browser and use Print > Save as PDF`, verdict: data.verdict, counts: data.counts, sources: data.sources.length })}\n`);
+    return;
+  }
+  if (command === "dashboard") {
+    if (v.lang && !["en", "pl"].includes(v.lang)) deny("INVALID_ARGUMENTS");
+    process.stdout.write(`${JSON.stringify({ output: refreshDashboard(v.lang) })}\n`);
     return;
   }
   if (command === "inventory") {
@@ -211,6 +265,7 @@ async function main() {
 
 try {
   await main();
+  try { if (process.argv[2] && !["start", "dashboard", "scope", "approve", "show", "revoke", "onboarding"].includes(process.argv[2]) && !process.exitCode) refreshDashboard(); } catch { /* derived view only */ }
 } catch (error) {
   const code =
     error instanceof PolicyError

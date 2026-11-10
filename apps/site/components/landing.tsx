@@ -31,6 +31,8 @@ import { Missions } from "./missions";
 import { LiveSession } from "./live-session";
 import { SkillCompare, ConsentLadder, KnowledgeBase } from "./skill-story";
 import { ExpertEffects } from "./expert-effects";
+import { ScanTheater } from "./scan-theater";
+import { ReportShowcase } from "./report-showcase";
 import { GitHubLink, Mark } from "./ui";
 import { asset, github, type Locale } from "@/lib/config";
 
@@ -42,6 +44,10 @@ export function Landing({ locale }: { locale: Locale }) {
         [
           "Co dokładnie potrafi agent z tym skillem?",
           "Sprawdza komputer lub serwer (zainstalowane programy, znane luki, otwarte porty, plan aktualizacji), stronę WWW (HTTPS, nagłówki, ciasteczka, CORS, certyfikat), projekt (podatne zależności, sekrety, ryzykowny kod, raporty skanerów), bazę danych i sieć według playbooków, a przy podejrzeniu włamania prowadzi przez pierwsze kroki. Wszystko w trybie odczytu, z dowodem i retestem.",
+        ],
+        [
+          "Co dostaję po audycie?",
+          "Ciemny, wizualny raport w HTML i PDF: werdykt, wykres priorytetów, trzy rzeczy na start, każde ustalenie z dowodem, poprawką i sposobem sprawdzenia oraz pomysły, co warto dopracować. Dostajesz go, zanim zacznie się naprawianie. PDF powstaje lokalnie przez zainstalowaną przeglądarkę Edge, Chrome lub Chromium; bez niej dostajesz HTML do wydrukowania. Do tego panel dashboard.html, który odświeża się sam, gdy agent pracuje.",
         ],
         [
           "Czy muszę znać się na bezpieczeństwie?",
@@ -72,6 +78,10 @@ export function Landing({ locale }: { locale: Locale }) {
         [
           "What exactly can my agent do with this skill?",
           "Check a computer or server (installed software, known vulnerabilities, open ports, an update plan), a website (HTTPS, headers, cookies, CORS, certificate), a project (vulnerable dependencies, secrets, risky code, scanner reports), a database and a network by playbook, and guide the first steps when a break-in is suspected. All read-only, with evidence and a retest.",
+        ],
+        [
+          "What do I get after an audit?",
+          "A dark, visual report in HTML and PDF: the verdict, a priority chart, the three things to start with, every finding with evidence, fix and verification, and ideas worth improving. You get it before any fixing starts. The PDF is produced locally by an installed Edge, Chrome or Chromium; without one you get the HTML to print. Plus a dashboard.html that refreshes itself while the agent works.",
         ],
         [
           "Do I need to know security?",
@@ -109,8 +119,8 @@ export function Landing({ locale }: { locale: Locale }) {
     ] as const
   ).map(([icon, title, text, code]) => ({ icon, title: title[pl ? 1 : 0], text: text[pl ? 1 : 0], code }));
   const stats: [number, string][] = pl
-    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [49, "testów bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
-    : [[9, "expert playbooks"], [6, "areas of protection"], [49, "tool security tests"], [0, "changes without your consent"]];
+    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [54, "testy bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
+    : [[9, "expert playbooks"], [6, "areas of protection"], [54, "tool security tests"], [0, "changes without your consent"]];
   return (
     <>
       <a className="skip-link" href="#main">
@@ -163,8 +173,8 @@ export function Landing({ locale }: { locale: Locale }) {
               <div className="hero-assurance">
                 <LockKeyhole size={14} />
                 {pl
-                  ? "Tylko odczyt. Zgoda przed każdym krokiem. Otwarty kod, 0 zł."
-                  : "Read-only. Consent before every step. Open source, free."}
+                  ? "Tylko odczyt. Zgoda przed każdym krokiem. Raport PDF po każdym audycie. 0 zł."
+                  : "Read-only. Consent before every step. A PDF report after every audit. Free."}
               </div>
               <div className="hero-terminal">
                 <span className="terminal-prompt">$</span>
@@ -196,7 +206,9 @@ export function Landing({ locale }: { locale: Locale }) {
           </div>
         </section>
         <HostWorkflows locale={locale} />
+        <ScanTheater locale={locale} />
         <Missions locale={locale} />
+        <ReportShowcase locale={locale} />
         <LiveSession locale={locale} />
         <section className="workflow-section section-shell" id="workflow">
           <div className="section-heading">
@@ -258,8 +270,8 @@ export function Landing({ locale }: { locale: Locale }) {
                     "Zatwierdź dokładne pliki, przegląd komputera albo adres strony. Nic nie dzieje się domyślnie.",
                   ],
                   [
-                    "Sprawdź, potem napraw.",
-                    "Przeczytaj dowód i poprawkę. Retest pokaże potwierdzenie albo wskaże brak danych.",
+                    "Raport, poprawka, retest.",
+                    "Dostajesz raport PDF, zanim cokolwiek naprawisz. Po poprawce retest potwierdza ją albo uczciwie wskazuje brak danych.",
                   ],
                 ]
               : [
@@ -272,8 +284,8 @@ export function Landing({ locale }: { locale: Locale }) {
                     "Approve exact files, a look at the machine or a site address. Nothing happens by default.",
                   ],
                   [
-                    "Inspect. Fix. Verify.",
-                    "Read the evidence and remediation. The retest confirms a fix or shows where data is missing.",
+                    "Report. Fix. Verify.",
+                    "You get a PDF report before fixing anything. After the fix, the retest confirms it or honestly shows where data is missing.",
                   ],
                 ]
             ).map(([title, text], i) => (

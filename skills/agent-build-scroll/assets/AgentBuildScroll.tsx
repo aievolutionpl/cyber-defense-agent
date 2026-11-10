@@ -56,6 +56,24 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
     const regions = Array.from(
       document.querySelectorAll<HTMLElement>("[data-motion-region]"),
     );
+    // Sections still below the fold start as an empty frame; agents then assemble them.
+    // Content already on screen is never hidden, so nothing flickers on load.
+    targets.forEach((target) => {
+      if (target.getBoundingClientRect().top > innerHeight * 0.92)
+        target.dataset.buildPending = "true";
+    });
+    const reveal = (target: HTMLElement) => {
+      if (target.dataset.buildPending !== "true") return;
+      delete target.dataset.buildPending;
+      target.dataset.buildStage = "assembled";
+      Array.from(target.children).forEach((child, index) =>
+        (child as HTMLElement).animate?.(
+          [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }],
+          { duration: 520, delay: Math.min(index, 8) * 60, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" },
+        ),
+      );
+    };
+    const waiting = new Map<HTMLElement, number>();
     const active = new Set<HTMLElement>();
     const builtAt = new WeakMap<HTMLElement, number>();
     let raf = 0,
@@ -72,8 +90,13 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
       if (current) current.dataset.buildStage = "assembled";
     };
     const build = (target: HTMLElement) => {
-      if (document.hidden || target.contains(document.activeElement)) return;
+      if (document.hidden || target.contains(document.activeElement)) {
+        reveal(target);
+        return;
+      }
       stop();
+      window.clearTimeout(waiting.get(target));
+      delete target.dataset.buildPending;
       current = target;
       const compact =
         window.matchMedia("(pointer: coarse)").matches || innerWidth < 700;
@@ -90,22 +113,24 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
             el instanceof HTMLElement &&
             !["SCRIPT", "STYLE"].includes(el.tagName),
         )
-        .slice(0, 6);
-      // All content is readable by default. Effects are temporary and cancelled on focus/pause.
-      if (!compact)
-        animations = parts.map((part, index) =>
-          part.animate(
-            [
-              { opacity: 0.35, transform: "translateY(9px)" },
-              { opacity: 1, transform: "translateY(0)" },
-            ],
-            {
-              duration: 680,
-              delay: 120 + index * 100,
-              easing: "cubic-bezier(.2,.8,.2,1)",
-            },
-          ),
-        );
+        .slice(0, 12);
+      // Empty frame first, then the agents place each part. Effects are temporary:
+      // focus, pause, resize or reduced motion cancel them and show the content at once.
+      const hold = duration * 0.3;
+      animations = parts.map((part, index) =>
+        part.animate(
+          [
+            { opacity: 0, transform: "translateY(14px) scale(.985)", filter: "blur(5px)" },
+            { opacity: 1, transform: "translateY(0) scale(1)", filter: "blur(0)" },
+          ],
+          {
+            duration: compact ? 420 : 640,
+            delay: hold + index * (compact ? 55 : 95),
+            easing: "cubic-bezier(.2,.8,.2,1)",
+            fill: "backwards",
+          },
+        ),
+      );
       const paths = cursors.map((_, i) => {
         const start = { x: between(0.06, 0.94), y: between(0.05, 0.95) };
         const end = { x: between(0.12, 0.88), y: between(0.16, 0.84) };
@@ -217,8 +242,12 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
       (entries) => {
         for (const entry of entries) {
           const target = entry.target as HTMLElement;
-          if (entry.isIntersecting) active.add(target);
-          else active.delete(target);
+          if (entry.isIntersecting) {
+            active.add(target);
+            // Never leave a section empty because the agents are busy elsewhere.
+            if (target.dataset.buildPending === "true" && !waiting.has(target))
+              waiting.set(target, window.setTimeout(() => { if (current !== target || !raf) reveal(target); }, 1300));
+          } else active.delete(target);
         }
         const target = [...active].find((t) => !builtAt.has(t));
         if (target && !raf) build(target);
@@ -259,6 +288,8 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
     };
     const onFocus = () => {
       if (current?.contains(document.activeElement)) stop();
+      const pending = (document.activeElement as HTMLElement | null)?.closest?.<HTMLElement>('[data-build-pending="true"]');
+      if (pending) reveal(pending);
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", stop, { passive: true });
@@ -269,6 +300,8 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
       observer.disconnect();
       regionObserver.disconnect();
       regions.forEach((r) => delete r.dataset.inView);
+      waiting.forEach((id) => window.clearTimeout(id));
+      targets.forEach((t) => delete t.dataset.buildPending);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", stop);
       document.removeEventListener("visibilitychange", onVisibility);

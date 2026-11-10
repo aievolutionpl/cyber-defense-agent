@@ -103,9 +103,9 @@ export function Missions({ locale }: { locale: Locale }) {
             : "Say what you want to protect in plain words. Your agent knows where to start, what to ask and how to check it."}
         </p>
       </div>
-      <div className="missions-grid">
+      <div className="missions-grid" data-agent-target="Architect" data-agent-label={pl ? "Mapowanie obszarów ochrony" : "Mapping protection areas"}>
         {missions.map(({ icon: Icon, doc, tool, kind, title, say, points }, n) => (
-          <article key={doc} className="mission-card" data-spot data-reveal style={{ "--reveal-delay": `${(n % 3) * 90}ms` } as React.CSSProperties}>
+          <article key={doc} className="mission-card" data-area={doc.split("-")[0].replace(".md", "")} data-spot data-reveal style={{ "--reveal-delay": `${(n % 3) * 90}ms` } as React.CSSProperties}>
             <div className="mission-top">
               <span className="mission-icon">
                 <Icon size={22} strokeWidth={1.5} aria-hidden="true" />

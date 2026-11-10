@@ -1,0 +1,79 @@
+{
+ "format": "cda.advisories.v1",
+ "createdAt": "2026-11-10T09:12:00.000Z",
+ "inventory": {
+  "kind": "project",
+  "observedAt": "2026-11-10T09:10:00.000Z",
+  "total": 842
+ },
+ "sources": {
+  "osv": "api.osv.dev",
+  "kev": "cisa.gov KEV catalog"
+ },
+ "checked": 842,
+ "affectedPackages": 3,
+ "counts": {
+  "P0": 0,
+  "P1": 1,
+  "P2": 2,
+  "P3": 0
+ },
+ "incomplete": false,
+ "findings": [
+  {
+   "package": "lodash",
+   "installed": "4.17.20",
+   "ecosystem": "npm",
+   "id": "CVE-2021-23337",
+   "aliases": [
+    "GHSA-35jh-r3h4-6jhm"
+   ],
+   "severity": "high",
+   "cvss": 7.2,
+   "knownExploited": false,
+   "priority": "P1",
+   "fixedIn": [
+    "4.17.21"
+   ],
+   "summary": "Command injection through the template function."
+  },
+  {
+   "package": "example-http-client",
+   "installed": "1.2.0",
+   "ecosystem": "npm",
+   "id": "SYNTHETIC-2026-0001",
+   "aliases": [],
+   "severity": "medium",
+   "cvss": 5.3,
+   "knownExploited": false,
+   "priority": "P2",
+   "fixedIn": [
+    "1.2.4"
+   ],
+   "summary": "Synthetic example: a redirect can leak an authorization header to another host."
+  },
+  {
+   "package": "example-yaml-parser",
+   "installed": "3.0.1",
+   "ecosystem": "npm",
+   "id": "SYNTHETIC-2026-0002",
+   "aliases": [],
+   "severity": "medium",
+   "cvss": 5.9,
+   "knownExploited": false,
+   "priority": "P2",
+   "fixedIn": [
+    "3.0.5"
+   ],
+   "summary": "Synthetic example: deeply nested input can exhaust memory."
+  }
+ ],
+ "manualLookup": {
+  "total": 0,
+  "packages": []
+ },
+ "limitations": [
+  "A match means the installed version string falls in a published affected range. It does not prove the vulnerable code is reachable or exploitable here.",
+  "No match is not proof of safety: databases lag and distributions backport fixes."
+ ]
+}

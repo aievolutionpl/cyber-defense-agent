@@ -49,7 +49,9 @@ A yes covers that step only. If the user says "do everything", still name each s
 
 ## Stage 3 - show the result
 
-Lead with the headline, then the top three, then offer detail:
+First build the visual report (`finding` for anything you found by reasoning, then `report`), and hand over the file: "Your report is ready: `.cda/reports/audit-report.pdf`. Open it first - it has everything, with the three things to start with on page one." If no PDF could be produced, give the HTML path and say how to print it. Offer the live dashboard at the start of longer audits.
+
+Then, in chat, lead with the headline, then the top three, then offer detail:
 
 > **Result:** 214 programs checked. 2 need attention now, 5 this week, the rest is routine.
 > 1. **Your browser is 6 versions behind and one of the flaws is being used in attacks.** Update it from its own menu - two minutes.
@@ -63,7 +65,7 @@ Then one useful next question, not a menu: "Shall I prepare the update plan, or 
 
 ## Stage 4 - fix and verify
 
-Prepare the change: exact steps or a diff, the official update channel, what might break, how to undo it. The user applies it. Then repeat the same check and report `confirmed_fixed`, `still_present`, `insufficient_data` or `new`. Never report a fix you did not re-observe.
+Fixing starts only after the user has the report. Prepare the change: exact steps or a diff, the official update channel, what might break, how to undo it. The user applies it. Then repeat the same check, report `confirmed_fixed`, `still_present`, `insufficient_data` or `new`, and rebuild the report as an "after" version. Never report a fix you did not re-observe.
 
 ## Stage 5 - close
 

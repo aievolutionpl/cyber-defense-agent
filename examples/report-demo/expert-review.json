@@ -1,0 +1,47 @@
+{
+ "format": "cda.expert.v1",
+ "createdAt": "2026-11-10T09:40:00.000Z",
+ "updatedAt": "2026-11-10T09:55:00.000Z",
+ "findings": [
+  {
+   "priority": "P0",
+   "area": "database",
+   "title": "Table public.orders is readable by anyone: row-level security is off",
+   "impact": "Anyone who opens the shop can download every customer's orders and addresses with the public key shipped in the page.",
+   "evidence": "pg_tables.rowsecurity = false for public.orders; role anon holds SELECT.",
+   "fix": "ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY; add a policy USING (auth.uid() = customer_id). Rollback: DISABLE ROW LEVEL SECURITY.",
+   "verify": "Re-run the pg_tables query, then request the table with the public key: it must return only the caller's rows.",
+   "basis": "expert review - model judgment"
+  },
+  {
+   "priority": "P1",
+   "area": "code",
+   "title": "Order lookup trusts the ID in the URL (missing ownership check)",
+   "impact": "A logged-in customer can read another customer's order by changing the number in the address bar.",
+   "evidence": "src/routes/orders.ts:42 loads the order by req.params.id without comparing it to the session user.",
+   "fix": "Filter the query by the session's customer id and return 404 when it does not match.",
+   "verify": "Request another account's order id: expect 404. Add a regression test.",
+   "basis": "expert review - model judgment"
+  },
+  {
+   "priority": "IDEA",
+   "area": "dependencies",
+   "title": "Check dependencies automatically on every pull request",
+   "impact": "",
+   "evidence": "No dependency scan in the CI workflow.",
+   "fix": "Add a lockfile scan (for example osv-scanner) to CI and fail the build on new high-severity advisories.",
+   "verify": "",
+   "basis": "expert review - model judgment"
+  },
+  {
+   "priority": "IDEA",
+   "area": "website",
+   "title": "Add rate limiting to login and password reset",
+   "impact": "",
+   "evidence": "No rate limit observed in the gateway configuration.",
+   "fix": "Limit attempts per account and per address, and alert on bursts.",
+   "verify": "",
+   "basis": "expert review - model judgment"
+  }
+ ]
+}

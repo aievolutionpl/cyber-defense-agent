@@ -28,7 +28,7 @@ export function SkillCompare({ locale }: { locale: Locale }) {
             : "A language model knows a lot about security. The skill adds what it lacks: a method, live sources, boundaries and proof."}
         </p>
       </div>
-      <div className="compare-grid">
+      <div className="compare-grid" data-agent-target="Verifier" data-agent-label={pl ? "Porównanie" : "Comparing"}>
         <article className="compare-card compare-without" data-reveal>
           <span className="compare-label">{pl ? "AGENT BEZ SKILLA" : "AGENT WITHOUT THE SKILL"}</span>
           <ul>
@@ -92,7 +92,7 @@ export function ConsentLadder({ locale }: { locale: Locale }) {
           ))}
         </ul>
       </div>
-      <ol className="ladder">
+      <ol className="ladder" data-agent-target="Builder" data-agent-label={pl ? "Budowanie drabiny zgód" : "Building the consent ladder"}>
         {steps.map(([level, title, text, gate], n) => (
           <li key={level} data-reveal style={{ "--reveal-delay": `${n * 70}ms`, "--step": n } as React.CSSProperties}>
             <span className="ladder-level">{level}</span>
@@ -144,7 +144,7 @@ export function KnowledgeBase({ locale }: { locale: Locale }) {
             : "Distilled from OWASP Top 10:2025, ASVS, CWE, CIS, NIST and CISA KEV, plus established open repositories. Read every one on GitHub."}
         </p>
       </div>
-      <ul className="knowledge-grid">
+      <ul className="knowledge-grid" data-agent-target="Scout" data-agent-label={pl ? "Układanie bazy wiedzy" : "Indexing the knowledge base"}>
         {books.map(([file, title, text], n) => (
           <li key={file} data-reveal style={{ "--reveal-delay": `${(n % 3) * 70}ms` } as React.CSSProperties}>
             <a href={github(`${K}${file}`)} data-spot>

@@ -28,7 +28,13 @@ The flags are consent records enforced in code. They are not authentication and 
 | `advisories --inventory <n> --name <r> --share-package-names` | Queries OSV.dev (`/v1/querybatch`, `/v1/vulns/<id>`) for packages with a supported ecosystem and downloads the CISA Known Exploited Vulnerabilities feed. Merges aliases, computes CVSS v3 base scores, lists fixed versions and assigns P0-P3. Software without a machine-readable feed is listed as **manual lookup - not checked**. | package names, versions and ecosystem labels to `api.osv.dev`; a plain download from `www.cisa.gov` |
 | `web --url <u> --name <r> --authorized` | Sends up to about three GET requests (the page with a bounded redirect chain, the plain-HTTP redirect, `/.well-known/security.txt`) and one TLS handshake. Reports HTTPS, HSTS, CSP, framing, nosniff, referrer and permissions policy, cookie flags (names only), version disclosure, CORS reflection, certificate validity and protocol. | ordinary web requests to the named site (and hosts it redirects to) |
 
+| `finding --name <n> --priority ... --area ... --title ... --fix ...` | Records one expert-review finding or improvement idea from the agent (bounded, redacted, labelled `expert review - model judgment`) so that reasoning-based results reach the report. | none |
+| `report --name <n> --from <report> [...]` | Merges evidence reports into one dark, self-contained HTML report (no scripts, no external resources, strict CSP, every string escaped) and prints it to PDF with a locally installed Chromium-based browser when one is found. Without one it writes HTML only and says so. | none; the browser opens only the generated local file |
+| `dashboard` | Re-renders `.cda/reports/dashboard.html` from every stored report. Also runs automatically after each evidence command; the page refreshes itself every five seconds. | none |
+
 Network access is limited in code to the hosts above for `advisories` (redirects refused) and to the operator-named site for `web`. No other command uses the network. No command calls a model.
+
+PDF printing starts a child process: the first existing browser from a fixed path list (or `CDA_BROWSER`), with fixed headless arguments and the `file://` URL of the report this tool just wrote. On Linux as root it adds `--no-sandbox`, which is acceptable only because the page is our own script-free HTML. The verdict line in the report ("Act today", "Needs attention", "Routine", "No findings in the checked scope") is derived from priority counts; it is a reading aid, not a score or a certification.
 
 ## What these results do and do not prove
 

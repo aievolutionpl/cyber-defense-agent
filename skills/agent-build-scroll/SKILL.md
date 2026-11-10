@@ -35,3 +35,7 @@ Use the same surface palette and typography as the target page. Place the dock a
 Report implementation location, preview, controls and tested limitations. Do not claim a live multi-agent system or guaranteed frame rate.
 
 The new choreography also observes `[data-motion-region]` and sets `data-in-view` for optional diagram and marquee animations. Pause offscreen regions. Focus entering an active target cancels its construction effect immediately; resize and backgrounding cancel it too. Do not hide the page by default.
+
+## Empty-frame construction
+
+Sections that are still below the fold when the effect starts are marked `data-build-pending` and shown as an empty dashed frame. When one scrolls into view the cursors arrive first, then its direct children fade in one by one. Content already on screen at load is never hidden. If the cursors are busy elsewhere the section reveals itself after about 1.3 seconds; focus inside a section, the pause control, a resize or reduced motion show its content immediately. Without JavaScript nothing is hidden.
