@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "files": [
+    "package.json",
+    "apps/site/package.json",
+    "tools/cda.mjs",
+    "tools/engine.mjs",
+    "tools/scope.mjs",
+    "tools/visual.mjs",
+    "tools/comparison.mjs",
+    "tools/scanner-adapters.mjs",
+    "tools/pr-review.mjs",
+    "tools/advisories.mjs",
+    "tools/web.mjs",
+    "tools/inventory.mjs"
+  ]
+}

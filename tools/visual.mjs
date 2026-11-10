@@ -4,6 +4,7 @@ import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { deny } from "./scope.mjs";
 import { redact } from "./redact.mjs";
+import { coverageOf } from "./comparison.mjs";
 
 export const PRIORITIES = ["P0", "P1", "P2", "P3", "IDEA"];
 export const AREAS = ["code", "dependencies", "software", "website", "database", "network", "host", "other"];
@@ -36,7 +37,7 @@ export function expertFinding(existing, input, now = Date.now()) {
 const PORT_FIX = "If only this machine uses the service, bind it to localhost; otherwise restrict it with the firewall and confirm it is not forwarded from the internet.";
 
 /** Turns every supported report into one flat, comparable list. Unknown formats are ignored. */
-export function collect(named) {
+export function collect(named, { rootKey } = {}) {
   const findings = [];
   const sources = [];
   const verified = [];
@@ -44,19 +45,22 @@ export function collect(named) {
   const stats = { packages: 0, checked: 0, notChecked: 0, requests: 0, files: 0 };
   const incomplete = [];
   const add = (source, f) => findings.push({ impact: "", evidence: "", fix: "", verify: "", basis: "tool evidence", ...f, source });
-  const time = (r) => Date.parse(r.createdAt ?? r.observedAt ?? r.updatedAt ?? "") || 0;
+  const time = (r) => Date.parse(r.updatedAt ?? r.createdAt ?? r.observedAt ?? "") || 0;
   for (const [name, r] of named) {
     if (!r || typeof r !== "object") continue;
+    if (rootKey && r.scope?.rootKey !== rootKey) continue;
     let kind = null;
     if (r.format === "cda.report.v1" && Array.isArray(r.findings)) {
       kind = r.source === "local-review" ? "Local file review" : "Imported scanner report";
       stats.files += r.scope?.files?.length ?? 0;
+      if (coverageOf(r).status === "incomplete") incomplete.push(name);
       const root = r.scope?.rootKey ?? "";
-      for (const f of r.findings) add(name, { priority: f.priority, area: "code", title: f.title ?? f.ruleId, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location in the original scanner report.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${f.line}` : null, at: time(r) });
+      for (const f of r.findings) add(name, { priority: f.priority, area: "code", title: f.title ?? f.ruleId, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location in the original scanner report.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${r.scanner ? f.fingerprint ?? f.line : f.line}` : null, at: time(r) });
     } else if (r.format === "cda.retest.v1" && Array.isArray(r.results)) {
       kind = "Retest";
       const root = r.scope?.rootKey ?? "";
       for (const x of r.results) verified.push({ ref: root ? `${root}:${x.ruleId}:${x.path}` : null, label: `${x.ruleId} - ${x.path}`, status: x.status, source: name, at: time(r) });
+      for (const f of r.results.filter((x) => x.status === "still_present")) add(name, { priority: f.priority, area: "code", title: `Still present: ${f.ruleId}`, evidence: `${f.path}:${f.line ?? 1}`, fix: "Review the finding and repeat the local check after remediation.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${f.line ?? 1}` : null, added: true, at: time(r) });
       // A retest can also discover something new. It is an open finding, not a footnote.
       for (const f of Array.isArray(r.added) ? r.added : []) add(name, { priority: f.priority, area: "code", title: `New since the baseline: ${f.title ?? f.ruleId}`, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location and fix it, then retest.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${f.line}` : null, added: true, at: time(r) });
     } else if (r.format === "cda.advisories.v1" && Array.isArray(r.findings)) {
@@ -82,21 +86,30 @@ export function collect(named) {
       for (const f of r.findings) add(name, { ...f });
     }
     if (!kind) continue;
-    sources.push({ name, kind, createdAt: r.createdAt ?? r.observedAt ?? r.updatedAt ?? "" });
+    sources.push({ name, kind, rootKey: r.scope?.rootKey ?? null, createdAt: r.updatedAt ?? r.createdAt ?? r.observedAt ?? "" });
     for (const text of r.limitations ?? []) limitations.add(clip(text, 300));
   }
   // A confirmed fix closes a finding only for the same approved root, rule and file, and only when the
   // retest is newer than the report that raised it. Anything else stays open.
+  const latest = new Map();
   const fixedAt = new Map();
-  for (const v of verified) if (v.status === "confirmed_fixed" && v.ref) fixedAt.set(v.ref, Math.max(fixedAt.get(v.ref) ?? 0, v.at));
+  const statusRank = { confirmed_fixed: 0, insufficient_data: 1, still_present: 2 };
+  for (const v of verified) {
+    if (!v.ref || !v.at) continue;
+    const prior = latest.get(v.ref);
+    if (!prior || v.at > prior.at || (v.at === prior.at && (statusRank[v.status] ?? 1) > (statusRank[prior.status] ?? 1))) latest.set(v.ref, v);
+    if (v.status === "confirmed_fixed") fixedAt.set(v.ref, Math.max(fixedAt.get(v.ref) ?? 0, v.at));
+  }
   const seen = new Map();
   for (const f of findings) {
     if (!PRIORITIES.includes(f.priority)) f.priority = "P3";
     if (!AREAS.includes(f.area)) f.area = "other";
-    if (f.ref && fixedAt.has(f.ref) && fixedAt.get(f.ref) > (f.at ?? 0)) continue;
+    const verification = latest.get(f.ref);
+    if (f.at && verification?.status === "confirmed_fixed" && verification.at > f.at) continue;
+    f.status = f.ref && f.at > (fixedAt.get(f.ref) ?? Infinity) ? "reopened" : "open";
     // Same defect reported twice collapses; the same rule in another file or line does not.
     // A location seen in both an after-report and a retest is one finding; keep the richer report entry.
-    const key = f.loc ?? `${f.area}\u0000${f.title}\u0000${f.evidence}`;
+    const key = f.loc ?? `${f.source}\u0000${f.area}\u0000${f.title}\u0000${f.evidence}`;
     const prior = seen.get(key);
     if (f.added && prior) continue;
     // Two reports about one location: the stronger priority wins, then the newer report.
@@ -108,19 +121,26 @@ export function collect(named) {
     seen.set(key, f);
   }
   const open = [...seen.values()].sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.area.localeCompare(b.area));
+  const currentVerification = [...latest.values()].map((v) => {
+    const observations = open.filter((f) => f.ref === v.ref && f.at >= v.at);
+    return observations.length ? { ...v, status: v.status === "confirmed_fixed" ? "reopened" : "still_present" } : v;
+  });
+  // Legacy retests without an asset or timestamp stay visible but cannot close any finding.
+  for (const v of verified) if (!v.ref || !v.at) currentVerification.push({ ...v, status: "insufficient_data" });
+  if (currentVerification.some((v) => v.status === "insufficient_data")) incomplete.push("retest");
   const counts = Object.fromEntries(PRIORITIES.map((p) => [p, open.filter((f) => f.priority === p).length]));
   const areas = AREAS.map((a) => [a, open.filter((f) => f.area === a && f.priority !== "IDEA").length]).filter(([, n]) => n);
   const verdict = counts.P0 ? "act" : counts.P1 ? "attention" : counts.P2 || counts.P3 ? "routine" : incomplete.length ? "incomplete" : "clear";
-  return { findings: open.slice(0, 400), total: open.length, counts, areas, verdict, verified, sources, stats, incomplete, limitations: [...limitations].slice(0, 14) };
+  return { findings: open.slice(0, 400), total: open.length, counts, areas, verdict, verified: currentVerification, sources, stats, incomplete: [...new Set(incomplete)], limitations: [...limitations].slice(0, 14) };
 }
 
 const T = {
   en: {
     report: "Security audit report", dashboard: "Defense dashboard", generated: "Generated", sources: "evidence sources",
-    verdict: { act: "Act today", attention: "Needs attention this week", routine: "Routine maintenance", clear: "No findings in the checked scope", incomplete: "Incomplete: run the lookup again" },
+    verdict: { act: "Act today", attention: "Needs attention this week", routine: "Routine maintenance", clear: "No findings in the checked scope", incomplete: "Incomplete coverage: review missing checks" },
     verdictNote: { act: "At least one issue is critical or actively exploited.", attention: "High-priority issues were found.", routine: "Only medium and low priority items were found.", clear: "This is not proof of security. See coverage.", incomplete: "Some results were truncated or unavailable, so no conclusion can be drawn yet." },
-    incompleteNote: "Incomplete vulnerability lookup: results were truncated or unavailable. Re-run it before relying on these totals. Report:",
-    open: "Open findings", fixed: "Confirmed fixes", checked: "Packages checked", listed: "Packages listed", ideas: "Improvement ideas",
+    incompleteNote: "Incomplete checks or unverified scanner coverage. Review the source reports before relying on these totals. Reports:",
+    status: { open: "Open", reopened: "Problem returned" }, open: "Open findings", fixed: "Confirmed fixes", checked: "Packages checked", listed: "Packages listed", ideas: "Improvement ideas",
     top: "Start here", topSub: "The three things that matter most", by: "Where the risk is", findings: "Findings", improve: "Worth improving",
     what: "What could happen", saw: "What was observed", fix: "How to fix it", verify: "How to verify", verified: "Verification", coverage: "Coverage and limits",
     notChecked: "packages had no machine-readable feed and were not checked automatically.", none: "Nothing in this category.",
@@ -132,8 +152,8 @@ const T = {
     report: "Raport z audytu bezpieczeństwa", dashboard: "Panel obrony", generated: "Wygenerowano", sources: "źródeł dowodów",
     verdict: { act: "Działaj dziś", attention: "Wymaga uwagi w tym tygodniu", routine: "Rutynowa konserwacja", clear: "Brak ustaleń w sprawdzonym zakresie", incomplete: "Niepełne: uruchom sprawdzenie ponownie" },
     verdictNote: { act: "Co najmniej jeden problem jest krytyczny lub aktywnie wykorzystywany.", attention: "Znaleziono problemy o wysokim priorytecie.", routine: "Znaleziono tylko pozycje o średnim i niskim priorytecie.", clear: "To nie jest dowód bezpieczeństwa. Zobacz pokrycie.", incomplete: "Część wyników została obcięta lub była niedostępna, więc nie można jeszcze wyciągać wniosków." },
-    incompleteNote: "Niepełne sprawdzenie podatności: wyniki zostały obcięte lub były niedostępne. Uruchom je ponownie, zanim oprzesz się na tych liczbach. Raport:",
-    open: "Otwarte ustalenia", fixed: "Potwierdzone poprawki", checked: "Sprawdzone pakiety", listed: "Pakiety na liście", ideas: "Pomysły na ulepszenia",
+    incompleteNote: "Niepełne kontrole lub niezweryfikowane pokrycie skanera. Sprawdź raporty źródłowe przed oceną wyników. Raporty:",
+    status: { open: "Otwarte", reopened: "Problem powrócił" }, open: "Otwarte ustalenia", fixed: "Potwierdzone poprawki", checked: "Sprawdzone pakiety", listed: "Pakiety na liście", ideas: "Pomysły na ulepszenia",
     top: "Zacznij tutaj", topSub: "Trzy najważniejsze rzeczy", by: "Gdzie jest ryzyko", findings: "Ustalenia", improve: "Warto dopracować",
     what: "Co może się stać", saw: "Co zaobserwowano", fix: "Jak to naprawić", verify: "Jak sprawdzić poprawkę", verified: "Weryfikacja", coverage: "Pokrycie i ograniczenia",
     notChecked: "pakietów nie ma publicznej bazy i nie zostało sprawdzonych automatycznie.", none: "Brak pozycji w tej kategorii.",
@@ -196,7 +216,7 @@ export function renderVisual(data, { title, lang = "en", mode = "report", now = 
   const real = data.findings.filter((f) => f.priority !== "IDEA" && f.priority !== "P3");
   const soft = data.findings.filter((f) => f.priority === "IDEA" || f.priority === "P3");
   const fixedCount = data.verified.filter((v) => v.status === "confirmed_fixed").length;
-  const card = (f) => `<article class="card finding" style="--c:${COLOR[f.priority]}"><div class="meta"><span class="tag">${f.priority}</span><span class="chip">${esc(t.area[f.area])}</span><span class="chip">${esc(f.basis)}</span><span class="mono">${esc(f.source)}</span></div><h3>${esc(f.title)}</h3><div class="grid">${f.impact ? `<div><b>${t.what}</b><p>${esc(f.impact)}</p></div>` : ""}${f.evidence ? `<div><b>${t.saw}</b><p>${esc(f.evidence)}</p></div>` : ""}<div class="fix"><b>${t.fix}</b><p>${esc(f.fix)}</p></div>${f.verify ? `<div><b>${t.verify}</b><p>${esc(f.verify)}</p></div>` : ""}</div></article>`;
+  const card = (f) => `<article class="card finding" style="--c:${COLOR[f.priority]}"><div class="meta"><span class="tag">${f.priority}</span><span class="chip">${esc(t.area[f.area])}</span><span class="chip">${esc(f.basis)}</span><span class="chip">${esc(t.status[f.status] ?? t.status.open)}</span><span class="mono">${esc(f.source)}</span></div><h3>${esc(f.title)}</h3><div class="grid">${f.impact ? `<div><b>${t.what}</b><p>${esc(f.impact)}</p></div>` : ""}${f.evidence ? `<div><b>${t.saw}</b><p>${esc(f.evidence)}</p></div>` : ""}<div class="fix"><b>${t.fix}</b><p>${esc(f.fix)}</p></div>${f.verify ? `<div><b>${t.verify}</b><p>${esc(f.verify)}</p></div>` : ""}</div></article>`;
   const max = Math.max(1, ...data.areas.map(([, n]) => n));
   const hidden = data.total - data.findings.length;
   return `<!doctype html><html lang="${lang === "pl" ? "pl" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">${dash ? '<meta http-equiv="refresh" content="5">' : ""}<title>${esc(title ?? (dash ? t.dashboard : t.report))}</title><style>${CSS}</style></head><body><div class="page">

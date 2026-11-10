@@ -1,31 +1,48 @@
-# Roadmap
+# Development path
 
-v0.2 ships read-only defensive checks: 4 simple static rules, bounded JSON/SARIF import, lockfile and machine software inventory, OSV.dev + CISA KEV lookup, a passive website posture check, prioritized Markdown and conservative retest, plus nine expert playbooks. The public demo is static. See [expert capabilities](EXPERT_CAPABILITIES.md).
+Updated 10 November 2026. The first product milestone is a reproducible repository review that explains what changed, why it matters and what evidence confirms a fix. Existing computer, website, database and incident-response playbooks remain available.
 
-## Next: wider automatic coverage
+## Implemented in the evidence and CI update
 
-1. Vendor-catalogue adapters for desktop software (winget, Homebrew, endoflife.date) so fewer applications need manual lookup. Each needs disclosure of what leaves the machine.
-2. EPSS enrichment and inventory-to-inventory retest for the advisory report.
-3. Read-only posture collectors (firewall, disk encryption, update settings) with the same consent model.
-4. Live verification of the advisory client against OSV.dev in CI with recorded fixtures.
+| Capability | Result | Verification |
+| --- | --- | --- |
+| Current finding status | Latest retest wins. Reappearance is labelled. Legacy data cannot close unrelated findings. | Regression cases for stale fixes, later uncertainty, missing dates and separate roots. |
+| Project views | File reports and retests can be filtered by approved root. | CLI dashboard and scope-isolation tests. |
+| Scanner evidence | Original Gitleaks, Trivy and OSV-Scanner JSON adapters with bounded input and redacted output. | Real Gitleaks 8.30.1 synthetic export plus Trivy/OSV shape fixtures, path rejection, unknown severity and empty-report tests. |
+| Snapshot comparison | New, existing and no-longer-observed findings with coverage. | Inserted-line identity, incompatible assets/scanners and missing-file tests. |
+| SARIF export | Validated locations and deterministic fingerprints. | Export/redaction tests. GitHub upload remains opt-in. |
+| PR review | Trusted base tools and policy review candidate files, then write an Actions summary. | Local end-to-end runner plus cross-platform CLI tests. Remote run evidence belongs in VERIFICATION.md. |
+| CI hardening | Pinned action SHAs, disabled checkout credential persistence and job timeouts. | Workflow inspection and GitHub checks. |
 
-## Next: better offline evidence
+Usage and current adapter limits are in [scanner integrations](SCANNER_INTEGRATIONS.md).
 
-1. Evaluate pinned Semgrep, Gitleaks and Trivy SARIF exporters against adversarial fixtures. Keep running scanners external until execution isolation and resource limits are in place.
-2. Add lockfile/SBOM adapters, tested advisory snapshots, clear supported versions and reachability distinctions.
-3. Add held-out clean/vulnerable fixtures and measure false positives, false negatives, evidence completeness and missing coverage. A knowledge pack or popular repository does not establish expert performance.
-4. Expand the implemented bounded `cda.model-input.v1` envelope with validated, versioned adapters. Keep raw logs outside model context. See [architecture](ARCHITECTURE.md).
+## Next milestones
 
-## Planned agent platform
+| Order | Milestone | Definition of done | Dependencies |
+| --- | --- | --- | --- |
+| 1 | Exporter compatibility matrix | Capture clean, vulnerable, malformed and incomplete output from pinned Gitleaks, OSV-Scanner and Trivy releases on Linux. Record versions and digests. Repeat supported cases on Windows/macOS. | Current adapters and fixture suite. |
+| 2 | Host acceptance | Complete one clean-install Codex session and one Claude Code session, from scope approval to report and retest. Record where each host sends data and whether every boundary held. | Installed/authenticated hosts and a synthetic project. |
+| 3 | Detection benchmark | Separate held-out clean/vulnerable fixtures from regression fixtures. Publish false positives, missed findings and evidence completeness per scanner/rule. | Ground-truth labels and exporter matrix. |
+| 4 | Full PR scanner jobs | Run pinned external scanners in isolated jobs with bounded runtime and report sizes. Preserve source/commit identity, expose coverage failures and use opt-in SARIF upload. | Exporter matrix and isolation tests. |
+| 5 | Finding history across versions | Persist validated events per asset, scanner and rule version. Retain source digests, first/last seen and fixed/reopened transitions. Add alias-aware vulnerability grouping without losing package locations. | Stable scanner identities and migration tests for existing reports. |
+| 6 | Desktop coverage | Add consented vendor-catalogue adapters and firewall/encryption/update-setting collectors. Every unsupported app is counted. | Real-device tests and declared outbound data. |
+| 7 | Prioritization | Add EPSS with observation time, exposure context and inventory-to-inventory retest. Show the reason for each priority. | Recorded feed fixtures and existing OSV/KEV coverage. |
+| 8 | AI skill review | Evaluate importing SkillSpector evidence for agent skills and MCP configuration. Show concrete source locations and permissions requiring review. | A supported exporter schema and held-out fixtures. |
 
-Provider-neutral model routing (local/small → explicitly authorized frontier analysis), separately scoped MCP adapters, episodic incident correlation and opt-in false-positive memory are designs, not available integrations. Sigma/YARA, LiteLLM/Ollama and SIEM/EDR remain candidate modules. Before shipping: schemas, quotas, timeouts, evaluation fixtures, provenance, retention, privacy review and independent authorization gates. External IOC lookups also need consent to transmit private indicators.
+These are acceptance-driven milestones. Dates follow measured integration work. Full host sessions and real exporter runs are tracked separately from local tests.
 
-Active response stays disabled: reversible actions require preapproved policy, TTL, allowlists and rollback; disruptive production/IAM actions require authenticated human approval of the exact action digest. No Slack/Telegram approval or firewall/EDR executor exists in this release.
+## How upstream projects inform the implementation
 
-## Later: web / API
+- Gitleaks informs the explicit handling of secret evidence. CDA records identifiers and locations while omitting raw values and report instructions.
+- Trivy informs the common report across dependency and configuration findings. Each adapter category retains its declared scope.
+- OSV-Scanner informs package/source identities and the comparison of dependency evidence.
+- OpenSSF Scorecard informs immutable workflow references and least-privilege automation. A Scorecard integration is a future independent check.
+- SkillSpector informs a focused future audit of agent skills before installation. That adapter is not shipped.
 
-Do not ship until an independent, deny-by-default authorization gateway exists outside the model process: verified ownership + explicit Rules of Engagement, versioned scope, exact target/method registry, expiring/revocable consent, DNS/connect-time validation, blocked redirects by default, independent egress controls, budget/rate/time limits, audit log and operational STOP. Test all of these with isolated synthetic applications first.
+The code is an original implementation of documented interchange formats. No upstream source code was copied into the project. Links and field references are in [scanner integrations](SCANNER_INTEGRATIONS.md).
 
-## Later: network / cloud
+## Later platform work
 
-A separate runner with a scoped identity, network enforcement, approved lab targets, read-only cloud connections and tested tenant isolation. No network scan or penetration-testing command is exposed by this release; the passive `web` check is not a scanner. Nmap, Nuclei, CALDERA and Atomic Red Team remain optional lab references, not bundled adapters.
+Provider-neutral routing, local model runtimes, MCP connections, SIEM/EDR correlation and false-positive memory require separate schemas, budgets, retention rules and evaluation. Start with one measured workflow after host acceptance.
+
+Read-only cloud connections need scoped identities and tested tenant isolation. Active web/API/network testing requires an independent authorization gateway, verified target scope, request/time budgets, egress enforcement and STOP. Any future remediation needs an exact reviewed action, rollback and a fresh verification step. These capabilities remain separate projects beyond the current release.

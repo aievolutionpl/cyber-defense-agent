@@ -21,7 +21,7 @@ flowchart LR
   F --> T[Fresh local checks + digest + retest]
 ```
 
-The CLI itself has no LLM/provider SDK, network transport, telemetry, target code execution or remediation capability. The model cannot turn a scanner message into an executable action. The host still has its own tools and permissions; these scripts do not sandbox the host.
+The CLI has no LLM/provider SDK, telemetry, target code execution or remediation capability. Outbound requests are confined to the explicitly consented advisory and website modules. The model cannot turn a scanner message into an executable action. The host still has its own tools and permissions; these scripts do not sandbox the host.
 
 | OODA step | Implemented | Limits |
 |---|---|---|
@@ -85,3 +85,9 @@ Persistent memory needs opt-in, tenant isolation, retention/deletion, encryption
 ## Verification boundary
 
 Offline tests prove specific parser, scope, redaction, summary and retest properties on fixtures. They do not prove resistance to all prompt injection, agent expertise, production containment, scanner recall or model quality. End-to-end host/model integrations remain separately documented in [VERIFICATION.md](VERIFICATION.md).
+
+## Evidence and CI extension
+
+`scanner-adapters.mjs` maps selected Gitleaks, Trivy and OSV JSON fields into the existing guarded importer. `comparison.mjs` validates normalized snapshots, compares deterministic fingerprints and exports SARIF. The comparison never promotes absence to a confirmed fix.
+
+`pr-review.mjs` reads the base-branch file policy and uses ScopedReader for both repository snapshots. The workflow runs the base tools and writes an informational summary. Reports use a logical repository hash so temporary checkout paths do not create different asset identities. The runner executes no candidate code. See [integration boundaries](SCANNER_INTEGRATIONS.md).

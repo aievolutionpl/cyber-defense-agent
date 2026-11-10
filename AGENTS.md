@@ -17,6 +17,9 @@ Use Node.js >=22. The site is in apps/site. Local tools use only the Node standa
 - `skills/cyber-defense/references/knowledge/`: expert playbooks. Keep them accurate, sourced and defensive; verify facts against primary sources when editing.
 - `tools/visual.mjs`: the deliverable. Normalises every report type, renders the dark self-contained HTML report and dashboard (no scripts, no external resources, all strings escaped) and prints to PDF with a locally installed Chromium-based browser. Expert findings recorded here are always labelled model judgment.
 - `tools/updates.mjs`: bounded offline inventory validation and update plans; no OS collectors, installs or live catalog queries.
+- `tools/scanner-adapters.mjs`: bounded native scanner JSON mappings, consumed through the approved importer.
+- `tools/comparison.mjs`: validated snapshot comparison and redacted SARIF export. Absence is never a confirmed fix.
+- `tools/pr-review.mjs`: trusted base-policy review of separate repository snapshots. Never execute candidate code.
 - `tools/triage.mjs`: bounded model-input facts; no automatic transmission.
 - `tools/welcome.mjs`: deterministic terminal intake; no target access, persistence or consent side effects.
 - `apps/site/`: static presentation, EN/PL and synthetic examples. No real scan or model API.

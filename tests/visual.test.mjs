@@ -68,8 +68,8 @@ test("retest additions, same-rule findings in other files and incomplete lookups
   const partial = collect([["vulns", { ...advisories, findings: [], incomplete: true }]]);
   assert.equal(partial.verdict, "incomplete");
   assert.deepEqual(partial.incomplete, ["vulns"]);
-  assert.match(renderVisual(partial), /Incomplete vulnerability lookup/);
-  assert.match(renderVisual(partial, { lang: "pl" }), /Niepełne sprawdzenie podatności/);
+  assert.match(renderVisual(partial), /Incomplete checks or unverified scanner coverage/);
+  assert.match(renderVisual(partial, { lang: "pl" }), /Niepełne kontrole lub niezweryfikowane pokrycie skanera/);
   assert.ok(!renderVisual(partial).includes("No findings in the checked scope"));
 });
 

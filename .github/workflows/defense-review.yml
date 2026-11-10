@@ -1,0 +1,49 @@
+name: Defensive PR review
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out trusted base tools and policy
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: trusted
+          persist-credentials: false
+      - name: Check out candidate as data
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          path: candidate
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '22'
+      - name: Compare approved files
+        if: ${{ hashFiles('trusted/tools/pr-review.mjs') != '' }}
+        env:
+          CDA_ASSET: ${{ github.repository }}
+        run: >-
+          node trusted/tools/pr-review.mjs
+          --base-root trusted --head-root candidate
+          --policy .github/cda-scope.json --asset "$CDA_ASSET" --authorized
+      - name: Explain initial adoption
+        if: ${{ hashFiles('trusted/tools/pr-review.mjs') == '' }}
+        run: echo 'CDA review is awaiting adoption on the base branch. This run did not scan the PR. CLI regression tests validate the candidate implementation separately.' >> "$GITHUB_STEP_SUMMARY"
+      - name: Save review reports
+        if: ${{ hashFiles('trusted/.cda/reports/pr-comparison.md') != '' }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: defense-review
+          path: |
+            trusted/.cda/reports/pr-comparison.md
+            trusted/.cda/reports/pr-after.html
+            trusted/.cda/reports/pr-after.sarif
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7

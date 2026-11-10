@@ -106,7 +106,7 @@ export class StateStore {
     this.root = path.join(this.repoRoot, '.cda');
   }
   file(kind, name, ext = 'json', create = false) {
-    if (!['scopes', 'reports'].includes(kind) || typeof name !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(name) || !['json', 'md', 'html', 'pdf'].includes(ext)) deny('INVALID_STATE_NAME');
+    if (!['scopes', 'reports'].includes(kind) || typeof name !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(name) || !['json', 'md', 'html', 'pdf', 'sarif'].includes(ext)) deny('INVALID_STATE_NAME');
     let cursor = this.repoRoot;
     for (const part of ['.cda', kind]) {
       cursor = path.join(cursor, part);
@@ -135,7 +135,7 @@ export class StateStore {
   write(kind, name, value, ext = 'json') {
     const target = this.file(kind, name, ext, true);
     const temporary = `${target}.${crypto.randomUUID()}.tmp`;
-    const content = ext === 'json' ? `${JSON.stringify(value, null, 2)}\n` : value;
+    const content = ['json', 'sarif'].includes(ext) ? `${JSON.stringify(value, null, 2)}\n` : value;
     if (Buffer.byteLength(content) > MAX_BYTES) deny('REPORT_TOO_LARGE');
     try {
       fs.writeFileSync(temporary, content, { encoding: 'utf8', flag: 'wx', mode: 0o600 });
