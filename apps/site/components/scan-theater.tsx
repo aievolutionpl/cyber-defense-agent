@@ -31,7 +31,7 @@ const stages: { id: string; icon: typeof ScanSearch; label: [string, string]; ca
     id: "report", icon: FileText, label: ["Report", "Raport"],
     caption: ["Before anything is fixed you get a dark, visual PDF: the verdict, the three things to start with, every fix and how to verify it.", "Zanim cokolwiek zostanie naprawione, dostajesz ciemny, wizualny PDF: werdykt, trzy rzeczy na start, każdą poprawkę i sposób jej sprawdzenia."],
     rows: [
-      { kind: "cmd", text: ["node tools/cda.mjs report --name audit-report --from deps-vulns --from site --from expert", "node tools/cda.mjs report --name audit-report --from deps-vulns --from site --from expert --lang pl"] },
+      { kind: "cmd", text: ["node tools/cda.mjs report --name audit-report --from deps-vulns --from site --from expert --pdf", "node tools/cda.mjs report --name audit-report --from deps-vulns --from site --from expert --lang pl --pdf"] },
       { kind: "ok", text: ["audit-report.pdf · verdict: act today · 10 findings · 2 ideas", "audit-report.pdf · werdykt: działaj dziś · 10 ustaleń · 2 pomysły"] },
       { kind: "out", text: ["dashboard.html refreshed", "dashboard.html odświeżony"] },
     ],

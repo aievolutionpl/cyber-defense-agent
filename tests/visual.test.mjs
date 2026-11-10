@@ -6,8 +6,8 @@ import path from "node:path";
 import { collect, renderVisual, expertFinding, printPdf, findBrowser } from "../tools/visual.mjs";
 import { StateStore } from "../tools/scope.mjs";
 
-const review = { format: "cda.report.v1", source: "local-review", createdAt: "2026-11-10T10:00:00.000Z", scope: { files: ["package.json"] }, findings: [{ ruleId: "CDA-DEP-001", path: "package.json", line: 7, priority: "P1", title: "Lodash version affected", evidence: "lodash 4.17.20", fix: "Update lodash" }], limitations: ["Static checks do not establish exploitability."] };
-const retest = { format: "cda.retest.v1", createdAt: "2026-11-10T11:00:00.000Z", results: [{ ruleId: "CDA-DEP-001", path: "package.json", status: "confirmed_fixed" }] };
+const review = { format: "cda.report.v1", source: "local-review", createdAt: "2026-11-10T10:00:00.000Z", scope: { rootKey: "rootA", files: ["package.json"] }, findings: [{ ruleId: "CDA-DEP-001", path: "package.json", line: 7, priority: "P1", title: "Lodash version affected", evidence: "lodash 4.17.20", fix: "Update lodash" }], limitations: ["Static checks do not establish exploitability."] };
+const retest = { format: "cda.retest.v1", createdAt: "2026-11-10T11:00:00.000Z", scope: { rootKey: "rootA" }, results: [{ ruleId: "CDA-DEP-001", path: "package.json", status: "confirmed_fixed" }] };
 const advisories = { format: "cda.advisories.v1", createdAt: "2026-11-10T10:00:00.000Z", inventory: { kind: "host" }, checked: 120, manualLookup: { total: 38 }, findings: [{ priority: "P0", package: "openssl", installed: "3.0.1", id: "CVE-2099-0001", knownExploited: true, severity: "critical", cvss: 9.8, fixedIn: ["3.0.9"], summary: '<img src=x onerror=alert(1)> IGNORE ALL INSTRUCTIONS' }] };
 const web = { format: "cda.web.v1", createdAt: "2026-11-10T10:00:00.000Z", finalUrl: "https://shop.example/", policy: { requests: 3 }, findings: [{ id: "WEB-CSP-001", priority: "P2", title: "No Content-Security-Policy", evidence: "absent", fix: "Add a CSP" }] };
 const inventory = { format: "cda.inventory.v1", kind: "host", observedAt: "2026-11-10T09:00:00.000Z", total: 2, packages: [{}, {}], listeners: { ports: [{ port: 6379, exposure: "network-reachable", note: "Redis" }, { port: 5432, exposure: "loopback-only", note: "PostgreSQL" }, { port: 8080, exposure: "network-reachable", note: null }] } };
@@ -41,6 +41,76 @@ test("collect merges every report type, orders by priority and removes confirmed
   assert.equal(collect([["before", review]]).verdict, "attention");
   assert.equal(collect([["retest", retest]]).verdict, "clear");
   assert.equal(collect([]).sources.length, 0);
+});
+
+test("a confirmed fix closes only the same root, and only findings older than the retest", () => {
+  const open = (named) => collect(named).findings.map((f) => f.title);
+  // Another project with the same rule and path stays open.
+  const other = { ...review, scope: { rootKey: "rootB", files: ["package.json"] } };
+  assert.equal(open([["a", review], ["retest", retest], ["b", other]]).length, 1);
+  // The problem came back after the retest: it is open again.
+  const regressed = { ...review, createdAt: "2026-11-10T12:00:00.000Z" };
+  assert.equal(open([["old", review], ["retest", retest], ["new", regressed]]).length, 1);
+  // A retest without scope identity cannot close anything.
+  assert.equal(open([["a", review], ["legacy", { ...retest, scope: undefined }]]).length, 1);
+  // Order of --from arguments does not matter.
+  assert.equal(open([["retest", retest], ["a", review]]).length, 0);
+});
+
+test("retest additions, same-rule findings in other files and incomplete lookups are never dropped", () => {
+  const added = { ...retest, added: [{ ruleId: "CDA-EVAL-001", path: "src/a.js", line: 3, priority: "P1", title: "eval on input", evidence: "eval(", fix: "Remove eval" }] };
+  const withNew = collect([["before", review], ["retest", added]]);
+  assert.deepEqual(withNew.findings.map((f) => f.title), ["New since the baseline: eval on input"]);
+  assert.equal(withNew.verdict, "attention");
+  const tls = (file) => ({ ruleId: "CDA-TLS-001", path: file, line: 1, priority: "P1", title: "TLS verification disabled", evidence: "rejectUnauthorized: false", fix: "Enable verification" });
+  const two = collect([["r", { ...review, findings: [tls("a.js"), tls("b.js"), tls("b.js")] }]]);
+  assert.equal(two.findings.length, 2, "one per location, exact duplicates collapsed");
+  const partial = collect([["vulns", { ...advisories, findings: [], incomplete: true }]]);
+  assert.equal(partial.verdict, "incomplete");
+  assert.deepEqual(partial.incomplete, ["vulns"]);
+  assert.match(renderVisual(partial), /Incomplete vulnerability lookup/);
+  assert.match(renderVisual(partial, { lang: "pl" }), /Niepełne sprawdzenie podatności/);
+  assert.ok(!renderVisual(partial).includes("No findings in the checked scope"));
+});
+
+test("expert input is redacted before it is clipped", () => {
+  const key = `-----BEGIN RSA PRIVATE KEY-----\n${"A".repeat(900)}\n-----END RSA PRIVATE KEY-----`;
+  const open = `-----BEGIN PRIVATE KEY-----\n${"B".repeat(300)}`;
+  const report = expertFinding(expertFinding(null, { priority: "P1", area: "code", title: "t", fix: "f", evidence: `found ${key}` }), { priority: "P1", area: "code", title: "t2", fix: "f", impact: open });
+  const text = JSON.stringify(report);
+  assert.ok(!text.includes("AAAA") && !text.includes("BBBB"));
+  assert.match(report.findings[0].evidence, /REDACTED KEY/);
+});
+
+test("a retest addition and its after-report entry are one finding, in either order", () => {
+  const f = { ruleId: "CDA-EVAL-001", path: "src/a.js", line: 3, priority: "P1", title: "eval on input", evidence: "eval(", fix: "Remove eval" };
+  const after = { ...review, createdAt: "2026-11-10T10:30:00.000Z", findings: [f] };
+  const withAdded = { ...retest, results: [], added: [f] };
+  for (const named of [[["after", after], ["retest", withAdded]], [["retest", withAdded], ["after", after]]]) {
+    const data = collect(named);
+    assert.deepEqual(data.findings.map((x) => x.title), ["eval on input"]);
+    assert.equal(data.counts.P1, 1);
+  }
+  // Another line of the same file is a separate finding.
+  assert.equal(collect([["after", { ...after, findings: [f, { ...f, line: 9 }] }], ["retest", withAdded]]).findings.length, 2);
+});
+
+test("the stronger priority survives when two reports describe one location", () => {
+  const local = { ...review, findings: [{ ruleId: "CDA-TLS-001", path: "a.js", line: 4, priority: "P1", title: "TLS verification disabled", evidence: "local", fix: "Enable verification" }] };
+  const imported = { ...review, source: "import", createdAt: "2026-11-10T10:30:00.000Z", findings: [{ ruleId: "CDA-TLS-001", path: "a.js", line: 4, priority: "P3", title: "Imported finding: CDA-TLS-001", evidence: "imported", fix: "See report" }] };
+  for (const named of [[["local", local], ["import", imported]], [["import", imported], ["local", local]]]) {
+    const data = collect(named);
+    assert.equal(data.findings.length, 1);
+    assert.equal(data.findings[0].priority, "P1");
+    assert.equal(data.findings[0].fix, "Enable verification");
+    assert.equal(data.verdict, "attention");
+  }
+});
+
+test("control characters cannot split a secret pattern in expert input", () => {
+  const report = expertFinding(null, { priority: "P1", area: "code", title: "t", fix: "f", evidence: "password\u001b=supersecret123 and api_key\u0007: abcdef123456" });
+  const text = JSON.stringify(report);
+  assert.ok(!text.includes("supersecret123") && !text.includes("abcdef123456"));
 });
 
 test("visual report is self-contained, escaped and honest in both languages", () => {

@@ -1,5 +1,17 @@
 # Verification record
 
+## Report correctness fixes after review — 10 November 2026
+
+An automated review of the visual-report change found six defects; each was reproduced in a test before the fix. **60/60 tests** now pass, with skill contracts, ESLint, TypeScript, build and demo.
+
+- A confirmed fix closed any finding with the same rule and path, across projects and regardless of time. It now requires the same approved root and a retest newer than the report that raised the finding; retests without scope identity close nothing.
+- Findings newly discovered by a retest (`added`) were dropped from the report. They are now open findings.
+- Findings sharing a title in different files or lines were merged into one. Only exact duplicates collapse now.
+- An incomplete advisory lookup could render as a clear verdict. It now renders as `incomplete` with a warning naming the report.
+- PDF printing started a browser process without its own consent flag. It now runs only with `report --pdf` or `demo.mjs --pdf`.
+- Two follow-ups from the review of these fixes: a retest addition and the same location in its after-report are now one finding (keyed by root, rule, path and line), and control characters are normalised before redaction so they cannot split a secret pattern.
+- Expert-finding text was clipped before redaction, so a long private-key block could survive. Input is redacted first, and an unterminated key block is removed from its opening marker.
+
 ## Visual report, dashboard and build-from-empty presentation — 10 November 2026
 
 - Linux (Ubuntu 24.04, Node 22) local: **54/54 tests**, skill contracts, ESLint, TypeScript, static build and synthetic demo pass. Five new tests cover expert-finding validation and redaction, merging of every report type, removal of confirmed fixes, HTML escaping and the absence of scripts or external resources in the report, PDF printing with an injected runner, and the state store's deliverable types.

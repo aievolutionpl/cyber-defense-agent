@@ -333,6 +333,7 @@ export function retest(scope, before, after) {
     format: "cda.retest.v1",
     version: VERSION,
     createdAt: new Date().toISOString(),
+    scope: { rootKey: sha(scope.root) },
     results: [],
     added: [],
     limitations: [

@@ -51,7 +51,8 @@ if (
   throw new Error("DEMO_FAILED");
 // The demo ends the way every audit should: with a visual report, before any fixing starts.
 const visual = store.write("reports", "demo-report", renderVisual(collect([["demo-before", before], ["demo-import", imported]]), { title: "Demo audit: northstar / customer-portal" }), "html");
-const printed = printPdf(path.join(store.repoRoot, visual), store.file("reports", "demo-report", "pdf", true));
+// Printing starts a browser process, so it happens only when asked for: node tools/demo.mjs --pdf
+const printed = process.argv.includes("--pdf") ? printPdf(path.join(store.repoRoot, visual), store.file("reports", "demo-report", "pdf", true)) : { pdf: false };
 process.stdout.write(
-  `DEMO passed: SARIF import → evidence → remediate synthetic copy → retest.\nConfirmed fix: ${result.results[0].status}\nIncomplete report: ${incomplete.results[0].status}\nOut of scope: ${blocked}\nReports: .cda/reports/demo-{before,import,after,retest,no-data}.md\nVisual report: ${visual}${printed.pdf ? " and .cda/reports/demo-report.pdf" : " (no Chromium-based browser found for the PDF: open the HTML and print to PDF)"}\nDemo scope: ${scratch}\nNo fixture code executed. No network calls.\n`,
+  `DEMO passed: SARIF import → evidence → remediate synthetic copy → retest.\nConfirmed fix: ${result.results[0].status}\nIncomplete report: ${incomplete.results[0].status}\nOut of scope: ${blocked}\nReports: .cda/reports/demo-{before,import,after,retest,no-data}.md\nVisual report: ${visual}${printed.pdf ? " and .cda/reports/demo-report.pdf" : " (HTML only; add --pdf to print it with a local Chromium-based browser)"}\nDemo scope: ${scratch}\nNo fixture code executed. No network calls.\n`,
 );
