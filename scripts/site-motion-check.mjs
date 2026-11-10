@@ -25,6 +25,7 @@ try {
       const held = await page.locator('.theater').getAttribute('data-stage');
       await page.waitForTimeout(1600);
       assert.equal(await page.locator('.theater').getAttribute('data-stage'), held, 'local pause');
+      assert(await page.locator('.trow').evaluateAll(rows => rows.every(row => getComputedStyle(row).opacity === '1')), 'pause leaves evidence text readable');
       await page.screenshot({ path: `output/site-review/${locale}-${width}.png` });
       await page.mouse.move(0, 0);
       await page.locator('.host-workflows').scrollIntoViewIfNeeded();

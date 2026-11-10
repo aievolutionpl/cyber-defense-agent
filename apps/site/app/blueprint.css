@@ -144,3 +144,6 @@
 @media(max-width: 699px) { .motion-clips { grid-template-columns: 1fr; } }
 
 @media(max-width: 699px) { .nav-actions > .motion-toggle { display: none; } .motion-menu { margin: 12px 20px; min-height: 44px; font-size: 13px; } }
+/* Pausing the illustration must never freeze evidence text half-revealed. */
+.theater[data-playing="false"] .trow,
+.theater[data-playing="false"] .theater-caption { animation: none; opacity: 1; transform: none; }
