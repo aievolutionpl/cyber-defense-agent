@@ -12,7 +12,7 @@ import { compareReports, toSarif, findingFingerprint } from "../tools/comparison
 import { runPrReview } from "../tools/pr-review.mjs";
 
 function fixture(t) {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), "cda-evidence-"));
+  const root = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), "cda-evidence-")));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   const write = (name, value) => {
     fs.mkdirSync(path.dirname(path.join(root, name)), { recursive: true });
