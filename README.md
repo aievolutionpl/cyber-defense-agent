@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/product-preview.png" alt="Cyber Defense Agent — emerald hero with original 3D illustration and a four-stage defensive workflow" width="100%" />
+  <img src="docs/assets/product-preview.png" alt="Cyber Defense Agent — emerald hero with original 3D illustration and a five-stage defensive workflow" width="100%" />
 </p>
 
 <h1 align="center">Cyber Defense Agent</h1>
@@ -36,7 +36,15 @@ The skill is the workflow; the CLI enforces file access and validates reports; t
 
 [![AI cursors assembling a security workflow: dependency, configuration and update planning](docs/assets/protection-preview.png)](https://aievolutionpl.github.io/cyber-defense-agent/#protection)
 
-The animated hero illustrates **inspect → find → human-reviewed fix → verify** using original graphite/emerald artwork. Its infrastructure map is conceptual: live network scanning remains on the roadmap. [Artwork and motion implementation](docs/EMERALD_HERO.md).
+The hero starts as an empty canvas: simulated agents draw its frame, assemble the real text and reveal a five-image story. **Scope → scan approved files → find evidence → review a proposed fix → retest.** This is an on-demand skill, not background antivirus or EDR; network scanning remains on the roadmap. [Artwork, prompts and implementation](docs/FIVE_FRAME_HERO.md).
+
+<p align="center">
+  <img src="apps/site/public/assets/defense-scope.webp" width="19%" alt="1. Approved scope" />
+  <img src="apps/site/public/assets/defense-scan.webp" width="19%" alt="2. Local inspection" />
+  <img src="apps/site/public/assets/defense-finding.webp" width="19%" alt="3. Finding and evidence" />
+  <img src="apps/site/public/assets/defense-patch.webp" width="19%" alt="4. Proposed human-reviewed fix" />
+  <img src="apps/site/public/assets/defense-verified.webp" width="19%" alt="5. Bounded retest" />
+</p>
 
 The [interactive presentation](https://aievolutionpl.github.io/cyber-defense-agent/) walks through one synthetic dependency finding, the blocked out-of-scope action, its remediation and a retest. English by default, Polish available, with keyboard navigation, reduced motion and an optional agent-cursor build effect. Website buttons never grant access to your local files.
 

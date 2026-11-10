@@ -8,8 +8,15 @@ export const RULES = [
   "CDA-TLS-001",
   "CDA-SECRET-001",
   "CDA-EVAL-001",
+  "CDA-AGENT-001",
+  "CDA-AGENT-002",
+  "CDA-PUBLIC-001",
+  "CDA-XSS-001",
 ];
-const SOURCE = /\.(?:[cm]?js|jsx|tsx?|py|json|ya?ml|toml|ini|conf|env)$/i;
+const SOURCE = /\.(?:[cm]?js|jsx|tsx?|py|json|ya?ml|toml|ini|conf|env|md|mdc)$/i;
+const AGENT_CONFIG =
+  /(?:^|\/)(?:AGENTS\.md|CLAUDE\.md|SKILL\.md|\.cursorrules|\.mcp\.json|claude_desktop_config\.json)$/i;
+const BIDI_OR_ZERO_WIDTH = /[\u200B-\u200F\u202A-\u202E\u2066-\u2069\uFEFF]/;
 const SEVERITIES = ["critical", "high", "medium", "low", "info"];
 const CONFIDENCES = ["high", "medium", "low"];
 const priority = (severity) =>
@@ -161,7 +168,7 @@ export function inspect(file, text) {
       "A secret-like assignment was detected. Entire value: [REDACTED].",
       "Validate locally. If this is a real secret, revoke it and move it to a secret manager. Do not validate the value with a provider.",
     );
-    if (/\.[cm]?[jt]sx?$/.test(file))
+    if (/\.[cm]?[jt]sx?$/.test(file)) {
       scan(
         "CDA-EVAL-001",
         /\beval\s*\(/,
@@ -171,6 +178,50 @@ export function inspect(file, text) {
         "An eval call was detected. The source of its argument was not assessed.",
         "Replace eval with a data parser or an explicit operation map. Verify the data flow.",
       );
+      scan(
+        "CDA-XSS-001",
+        /\bdangerouslySetInnerHTML\b/,
+        "Unverified HTML injection sink (dangerouslySetInnerHTML)",
+        "medium",
+        "medium",
+        "A dangerouslySetInnerHTML sink was detected. Input sanitization was not assessed.",
+        "Ensure content is strictly static or sanitized before rendering, or replace with structured DOM elements.",
+      );
+    }
+    if (
+      path.posix.basename(file).startsWith(".env") ||
+      /\.(?:[cm]?[jt]sx?|json|ya?ml)$/i.test(file)
+    ) {
+      scan(
+        "CDA-PUBLIC-001",
+        /\b(?:NEXT_PUBLIC|VITE|REACT_APP)_[A-Z0-9_]*(?:SECRET|PRIVATE|SERVICE_ROLE|PASSWORD|TOKEN)[A-Z0-9_]*\s*[:=]/i,
+        "Client-exposed secret environment variable prefix",
+        "critical",
+        "high",
+        "A public client-bundle prefix is assigned to a secret/service-role identifier. Value: [REDACTED].",
+        "Move private keys and service-role credentials to server-only environment variables and rotate any exposed key.",
+      );
+    }
+    if (AGENT_CONFIG.test(file)) {
+      scan(
+        "CDA-AGENT-001",
+        BIDI_OR_ZERO_WIDTH,
+        "Hidden bidirectional or zero-width Unicode control in agent config",
+        "high",
+        "high",
+        "Invisible Unicode control characters were detected in an agent instruction or MCP configuration file.",
+        "Strip zero-width and bidirectional control characters and inspect the raw file bytes for hidden prompt-injection text.",
+      );
+      scan(
+        "CDA-AGENT-002",
+        /--dangerously-skip-permissions\b|"autoApprove"\s*:\s*\[[^\]]*["'](?:\*|bash|sh|powershell|cmd)["']/i,
+        "Unrestricted agent shell or permission bypass flag",
+        "high",
+        "high",
+        "An unrestricted execution or auto-approve setting was found in agent configuration.",
+        "Remove global permission bypasses and restrict auto-approved tools to explicit read-only operations.",
+      );
+    }
   }
   return { findings, checks };
 }

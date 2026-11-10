@@ -26,7 +26,13 @@ const cubic = (a: Point, b: Point, c: Point, d: Point, t: number): Point => ({
 });
 
 /** Visual construction only. Random local paths never click, inspect or edit user data. */
-export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
+export function AgentBuildScroll({
+  locale = "en",
+  buildFromBlank = false,
+}: {
+  locale?: "en" | "pl";
+  buildFromBlank?: boolean;
+}) {
   const [paused, setPaused] = useState(false);
   const reduced = useSyncExternalStore(
     subscribeReduced,
@@ -40,7 +46,11 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
     const disabled = paused || reduced;
     document.documentElement.dataset.motion = disabled ? "paused" : "running";
     window.dispatchEvent(new Event("agent-build:motion"));
-    if (disabled || !overlay.current) return;
+    if (disabled || !overlay.current) {
+      if (paused || getReduced())
+        delete document.documentElement.dataset.buildIntro;
+      return;
+    }
     const layer = overlay.current;
     const cursors = Array.from(
       layer.querySelectorAll<HTMLElement>(".build-cursor"),
@@ -69,7 +79,11 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
       animations = [];
       layer.dataset.active = "false";
       layer.style.opacity = "0";
-      if (current) current.dataset.buildStage = "assembled";
+      if (current) {
+        current.dataset.buildStage = "assembled";
+        if (current.hasAttribute("data-build-intro-target"))
+          delete document.documentElement.dataset.buildIntro;
+      }
     };
     const build = (target: HTMLElement) => {
       if (document.hidden || target.contains(document.activeElement)) return;
@@ -77,53 +91,117 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
       current = target;
       const compact =
         window.matchMedia("(pointer: coarse)").matches || innerWidth < 700;
-      const duration = compact ? 1200 : between(2200, 2800);
+      const duration = buildFromBlank
+        ? compact
+          ? 2100
+          : 3100
+        : compact
+          ? 1200
+          : between(2200, 2800);
       const started = performance.now();
       builtAt.set(target, started);
       target.dataset.buildStage = "drafting";
       layer.dataset.active = "true";
       caption.textContent =
         target.dataset.agentLabel ?? "Building the next section";
-      const parts = Array.from(target.children)
+      const marked = target.querySelectorAll<HTMLElement>("[data-build-piece]");
+      const parts = Array.from(marked.length ? marked : target.children)
         .filter(
           (el): el is HTMLElement =>
             el instanceof HTMLElement &&
             !["SCRIPT", "STYLE"].includes(el.tagName),
         )
-        .slice(0, 6);
-      // All content is readable by default. Effects are temporary and cancelled on focus/pause.
-      if (!compact)
+        .slice(0, 12);
+      // Explicit opt-in: draw the frame, then assemble real content from zero.
+      // Focus, pause, reduced motion and cleanup cancel every effect to reveal it.
+      if (buildFromBlank || !compact)
         animations = parts.map((part, index) =>
           part.animate(
-            [
-              { opacity: 0.35, transform: "translateY(9px)" },
-              { opacity: 1, transform: "translateY(0)" },
-            ],
+            buildFromBlank
+              ? [
+                  {
+                    opacity: 0,
+                    clipPath: "inset(0 100% 0 0)",
+                    transform: compact ? "none" : "translateY(10px)",
+                    filter: compact ? "none" : "blur(3px)",
+                  },
+                  {
+                    opacity: 1,
+                    clipPath: "inset(0 0 0 0)",
+                    transform: "none",
+                    filter: "none",
+                  },
+                ]
+              : [
+                  { opacity: 0.35, transform: "translateY(9px)" },
+                  { opacity: 1, transform: "translateY(0)" },
+                ],
             {
-              duration: 680,
-              delay: 120 + index * 100,
+              duration: buildFromBlank ? (compact ? 380 : 650) : 680,
+              delay: buildFromBlank
+                ? (compact ? 320 : 620) + index * (compact ? 110 : 180)
+                : 120 + index * 100,
               easing: "cubic-bezier(.2,.8,.2,1)",
+              fill: "backwards",
             },
           ),
         );
+      if (target.hasAttribute("data-build-intro-target"))
+        delete document.documentElement.dataset.buildIntro;
+      const isHeroIntro = target.hasAttribute("data-build-intro-target");
+      const heroAnchors: Array<{ start: Point; bend1: Point; bend2: Point; end: Point }> = [
+        // Scout: inspects left headline & scope perimeter
+        {
+          start: { x: 0.06, y: 0.14 },
+          bend1: { x: 0.28, y: 0.22 },
+          bend2: { x: 0.56, y: 0.18 },
+          end: { x: 0.64, y: 0.28 },
+        },
+        // Builder: wires the CTAs & central processor core
+        {
+          start: { x: 0.14, y: 0.72 },
+          bend1: { x: 0.36, y: 0.58 },
+          bend2: { x: 0.68, y: 0.44 },
+          end: { x: 0.76, y: 0.46 },
+        },
+        // Verifier: validates the right-hand evidence console & X-Ray HUD
+        {
+          start: { x: 0.92, y: 0.18 },
+          bend1: { x: 0.84, y: 0.52 },
+          bend2: { x: 0.66, y: 0.74 },
+          end: { x: 0.82, y: 0.78 },
+        },
+      ];
       const paths = cursors.map((_, i) => {
-        const start = { x: between(0.06, 0.94), y: between(0.05, 0.95) };
-        const end = { x: between(0.12, 0.88), y: between(0.16, 0.84) };
+        const anchor = isHeroIntro ? heroAnchors[i % heroAnchors.length] : null;
+        const start = anchor
+          ? anchor.start
+          : { x: between(0.06, 0.94), y: between(0.05, 0.95) };
+        const end = anchor
+          ? anchor.end
+          : { x: between(0.12, 0.88), y: between(0.16, 0.84) };
         return {
           start,
           end,
-          bend1: { x: between(0.04, 0.96), y: between(0.02, 0.8) },
-          bend2: { x: between(0.1, 0.9), y: between(0.2, 0.98) },
-          delay: i * between(70, 150),
-          pace: between(0.72, 1),
-          pause: between(0.35, 0.58),
+          bend1: anchor
+            ? anchor.bend1
+            : { x: between(0.04, 0.96), y: between(0.02, 0.8) },
+          bend2: anchor
+            ? anchor.bend2
+            : { x: between(0.1, 0.9), y: between(0.2, 0.98) },
+          delay: i * (isHeroIntro ? 95 : between(70, 150)),
+          pace: isHeroIntro ? 0.86 + i * 0.05 : between(0.72, 1),
+          pause: isHeroIntro ? 0.42 + i * 0.06 : between(0.35, 0.58),
         };
       });
       const tick = (now: number) => {
         const progress = clamp((now - started) / duration, 0, 1);
         const r = target.getBoundingClientRect();
         const x = Math.max(12, r.left - 6),
-          y = Math.max(86, r.top - 6);
+          y = Math.max(
+            target.hasAttribute("data-build-intro-target") ? 112 : 86,
+            r.top - 6,
+          );
         const w = Math.min(r.right + 6, innerWidth - 12) - x,
           h = Math.min(r.bottom + 6, innerHeight - 70) - y;
         if (w < 35 || h < 35 || document.hidden) {
@@ -133,17 +211,23 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
         frame.style.transform = `translate3d(${x}px,${y}px,0)`;
         frame.style.width = `${w}px`;
         frame.style.height = `${h}px`;
+        frame.style.setProperty(
+          "--frame-draw",
+          String(Math.min(1, progress / 0.25)),
+        );
         frame.style.opacity = String(
           Math.min(1, progress * 7) * Math.min(1, (1 - progress) * 5),
         );
         frame.dataset.phase =
           progress < 0.32 ? "layout" : progress < 0.7 ? "content" : "verified";
-        target.dataset.buildStage =
+        const stage =
           progress < 0.32
             ? "drafting"
-            : progress < 0.8
+            : progress < 0.85
               ? "assembling"
               : "assembled";
+        if (target.dataset.buildStage !== stage)
+          target.dataset.buildStage = stage;
         blueprints.forEach((line, i) => {
           const rect = parts[i]?.getBoundingClientRect();
           line.hidden = !rect || compact;
@@ -262,6 +346,7 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
     };
     window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", stop, { passive: true });
+    window.addEventListener("agent-build:reveal", stop);
     document.addEventListener("visibilitychange", onVisibility);
     document.addEventListener("focusin", onFocus);
     return () => {
@@ -271,21 +356,34 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
       regions.forEach((r) => delete r.dataset.inView);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", stop);
+      window.removeEventListener("agent-build:reveal", stop);
+      delete document.documentElement.dataset.buildIntro;
       document.removeEventListener("visibilitychange", onVisibility);
       document.removeEventListener("focusin", onFocus);
       delete document.documentElement.dataset.motion;
     };
-  }, [paused, reduced, pl]);
+  }, [paused, reduced, pl, buildFromBlank]);
 
   return (
     <>
       <div
         className="agent-build-overlay"
+        data-from-blank={buildFromBlank}
         ref={overlay}
         aria-hidden="true"
         data-active="false"
       >
         <div className="build-outline">
+          <svg className="build-frame-svg" aria-hidden="true">
+            <rect
+              x="0.5"
+              y="0.5"
+              width="99.8%"
+              height="99.8%"
+              rx="5"
+              pathLength="1"
+            />
+          </svg>
           <span className="build-caption" />
           <span className="build-phase" />
         </div>

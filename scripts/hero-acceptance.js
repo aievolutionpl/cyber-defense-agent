@@ -20,7 +20,7 @@ async (page) => {
   );
   assert(true, "hero sequence advances automatically");
   const controls = story.locator(".story-steps button");
-  for (let index = 0; index < 4; index++) {
+  for (let index = 0; index < 5; index++) {
     await controls.nth(index).focus();
     await controls.nth(index).press("Enter");
     assert(
@@ -32,7 +32,7 @@ async (page) => {
     (await story.innerText()).includes("Network scanning: roadmap"),
     "network scan is disclosed as roadmap",
   );
-  await controls.nth(2).click();
+  await controls.nth(3).click();
   assert(
     (await story.innerText()).includes("Apply it outside this tool"),
     "human remediation remains explicit",
@@ -81,13 +81,15 @@ async (page) => {
       .evaluate((el) => getComputedStyle(el).display === "none"),
     "reduced motion removes scan beam",
   );
-  await controls.nth(3).click();
+  await controls.nth(4).click();
   assert(
-    (await story.getAttribute("data-step")) === "3",
+    (await story.getAttribute("data-step")) === "4",
     "manual stages work with reduced motion",
   );
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert(await page.locator('.hero h1 span').evaluate(el => el.getBoundingClientRect().right <= innerWidth), `headline fits ${width}px`);
     assert(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -96,7 +98,7 @@ async (page) => {
     );
   }
   const image = await story
-    .locator("img")
+    .locator('.story-frame[data-active="true"]')
     .evaluate((img) => ({
       loaded: img.complete && img.naturalWidth > 0,
       alt: img.alt,
@@ -105,5 +107,11 @@ async (page) => {
     image.loaded && image.alt.length > 30,
     "generated artwork loads with descriptive alt text",
   );
+  const frames = await story.locator('.story-frame').evaluateAll(images => images.map(img => ({src:img.src,loaded:img.complete && img.naturalWidth>0})));
+  assert(frames.length === 5 && new Set(frames.map(img=>img.src)).size === 5, "five distinct generated frames are present");
+  assert(frames.every(img=>img.loaded), "all five frames load successfully");
+  assert(await story.locator('.isometric-vector-stage').isVisible(), "isometric vector stage is rendered");
+  assert(await story.locator('.hero-xray-hud').isVisible(), "live code X-Ray HUD is visible");
+  assert(await story.locator('.iso-trace-pulse').count() === 4, "four animated circuit traces are active");
   return { passed: checks.length, checks };
 }

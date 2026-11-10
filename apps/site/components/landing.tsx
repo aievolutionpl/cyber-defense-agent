@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { HostWorkflows } from "./host-workflows";
 import { ProtectionMap } from "./protection-map";
 import {
@@ -33,6 +34,10 @@ export function Landing({ locale }: { locale: Locale }) {
   const faq = pl
     ? [
         [
+          "Czy to program antywirusowy?",
+          "To skill do przeglądu bezpieczeństwa na żądanie. Nie monitoruje systemu w tle, nie usuwa malware i nie zastępuje antywirusa ani EDR. Narzędzia analizują tylko zatwierdzone lokalne pliki i obsługiwane raporty.",
+        ],
+        [
           "Co działa w v0.1?",
           "Lokalny przegląd wskazanych plików czterema regułami (lodash, TLS, możliwy sekret, eval), onboarding z zatwierdzonej listy, import cda.scan.v1 JSON i ograniczonego SARIF 2.1.0, Markdown, retest i plan aktualizacji na podstawie dostarczonego wykazu offline. To wąskie, jawne kontrole, a nie pełny SAST lub aktualizowana baza CVE.",
         ],
@@ -62,6 +67,10 @@ export function Landing({ locale }: { locale: Locale }) {
         ],
       ]
     : [
+        [
+          "Is this antivirus software?",
+          "This is an on-demand security-review skill. It does not monitor your system in the background, remove malware or replace antivirus/EDR. The tools review only approved local files and supported reports.",
+        ],
         [
           "What actually works in v0.1?",
           "Local review of explicit files with four rules (lodash, TLS, possible secrets, eval), onboarding from the approved list, cda.scan.v1 JSON and limited SARIF 2.1.0 import, Markdown reports, conservative retesting and offline update-inventory planning. These are narrow, transparent checks, not a complete SAST engine or a live CVE database.",
@@ -150,60 +159,72 @@ export function Landing({ locale }: { locale: Locale }) {
       <Navigation locale={locale} />
       <main id="main">
         <section className="hero" aria-labelledby="hero-title">
-          <div className="hero-grid section-shell">
-            <div
-              className="hero-copy"
-              data-agent-target="Builder"
-              data-agent-label={
-                pl ? "Budowanie systemu obrony" : "Building your defense"
-              }
-            >
-              <div className="eyebrow hero-eyebrow">
+          <Image
+            className="hero-texture"
+            src={asset("/assets/defense-backdrop.webp")}
+            fill
+            sizes="100vw"
+            unoptimized
+            alt=""
+            aria-hidden="true"
+          />
+          <div
+            className="hero-grid section-shell"
+            data-agent-target="Builder"
+            data-build-intro-target
+            data-agent-label={
+              pl
+                ? "Agenci budują Twój system obrony"
+                : "Agents are building your defense"
+            }
+          >
+            <div className="hero-copy">
+              <div className="eyebrow hero-eyebrow" data-build-piece>
                 <span className="status-dot" />
                 {pl
-                  ? "TWÓJ LOKALNY AGENT BEZPIECZEŃSTWA"
-                  : "YOUR LOCAL SECURITY COPILOT"}
+                  ? "SKILL BEZPIECZEŃSTWA DLA TWOJEGO AGENTA"
+                  : "THE SECURITY SKILL FOR YOUR AI AGENT"}
               </div>
-              <h1 id="hero-title">
+              <h1 id="hero-title" data-build-piece>
                 {pl ? (
                   <>
-                    Twój agent tworzy.
+                    Twój agent AI.
                     <br />
-                    <span>Naucz go chronić.</span>
+                    <span>Pomaga chronić.</span>
                   </>
                 ) : (
                   <>
-                    Your agent builds.
+                    Your AI agent.
                     <br />
-                    <span>Teach it to defend.</span>
+                    <span>Ready to defend.</span>
                   </>
                 )}
               </h1>
-              <p className="hero-description">
+              <p className="hero-description" data-build-piece>
                 {pl
-                  ? "Zamień pośpiech przed wdrożeniem w uporządkowany przegląd. Sprawdź kod, konfigurację i listy aktualizacji. Zobacz dowód, ustal priorytet i zweryfikuj poprawkę."
-                  : "Turn the pre-release rush into a repeatable security review. Inspect code, configuration and update inventories. See the evidence, prioritise the change and verify the fix."}
+                  ? "Znajdź ryzykowny kod. Zrozum dowód. Zaplanuj poprawkę. Jeden otwarty skill dla Codex, Claude Code i Twojego sposobu pracy."
+                  : "Find risky code. Understand the evidence. Plan the fix. One open-source skill for Codex, Claude Code and your existing workflow."}
               </p>
-              <div className="hero-ctas">
+              <div className="hero-ctas" data-build-piece>
                 <GitHubLink>{start}</GitHubLink>
                 <a href="#demo" className="button button-secondary">
                   {pl ? "Zobacz przykładowy audyt" : "Explore the audit"}
                   <ArrowDown size={16} />
                 </a>
               </div>
-              <div className="hero-assurance">
+              <div className="hero-assurance" data-build-piece>
                 <LockKeyhole size={14} />
                 {pl
                   ? "Lokalne narzędzia. Jawny zakres. Otwarty kod."
                   : "Local tools. Explicit scope. Open source."}
               </div>
-              <div className="hero-terminal">
+              <div className="hero-terminal" data-build-piece>
                 <span className="terminal-prompt">$</span>
                 <code>node tools/demo.mjs</code>
                 <span className="terminal-caret" aria-hidden="true" />
               </div>
             </div>
-            <div className="hero-product">
+            <div className="hero-product" data-build-piece>
               <HeroSignal locale={locale} />
             </div>
           </div>
@@ -833,7 +854,7 @@ export function Landing({ locale }: { locale: Locale }) {
           </a>
         </nav>
       </footer>
-      <AgentBuildScroll locale={locale} />
+      <AgentBuildScroll locale={locale} buildFromBlank />
     </>
   );
 }

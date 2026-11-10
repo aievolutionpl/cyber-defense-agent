@@ -16,7 +16,7 @@
       "ref": { "type": "string", "pattern": "^finding_[0-9]{3}$" },
       "fileRef": { "type": "string", "pattern": "^file_[0-9]{3}$" },
       "line": { "type": "integer", "minimum": 1, "maximum": 10000000 },
-      "rule": { "enum": ["CDA-DEP-001", "CDA-TLS-001", "CDA-SECRET-001", "CDA-EVAL-001", "external"] },
+      "rule": { "enum": ["CDA-DEP-001", "CDA-TLS-001", "CDA-SECRET-001", "CDA-EVAL-001", "CDA-AGENT-001", "CDA-AGENT-002", "CDA-PUBLIC-001", "CDA-XSS-001", "external"] },
       "ruleRef": { "type": "string", "pattern": "^rule_[0-9]{3}$" },
       "severity": { "enum": ["critical", "high", "medium", "low", "info"] },
       "priority": { "enum": ["P0", "P1", "P2", "P3"] },

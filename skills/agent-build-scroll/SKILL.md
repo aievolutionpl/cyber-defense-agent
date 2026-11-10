@@ -5,13 +5,13 @@ description: Add named AI cursors that draw frames and assemble real page sectio
 
 # Agent Build Scroll
 
-Build an original staged construction effect over a functioning page. Preserve its real DOM, content order, focus and controls. This effect is a visual demonstration, not evidence of real agents editing the visitor's page.
+Build an original staged construction effect over a functioning page. Preserve its real DOM, content order, focus and controls. When explicitly requested, support an empty-canvas intro with the opt-in path below; the normal mode keeps content visible. This effect is a visual demonstration, not evidence of real agents editing the visitor's page.
 
 ## Inspect and select
 
 Read the project's instructions, stack, page and existing motion. Identify 3–8 meaningful regions. Define a short keep/change list and one coherent visual direction. Do not remove working interaction or add a framework only for animation.
 
-For React/Next.js, reuse `assets/AgentBuildScroll.tsx` and `assets/agent-build-scroll.css`. The component uses React, IntersectionObserver, WAAPI and bounded requestAnimationFrame; no additional package, extension or service is required. For other stacks, port this contract without introducing React.
+For React/Next.js, reuse `assets/AgentBuildScroll.tsx` and `assets/agent-build-scroll.css`; `assets/build-intro.ts` is optional for the explicitly requested blank-canvas intro. The component uses React, IntersectionObserver, WAAPI and bounded requestAnimationFrame; no additional package, extension or service is required. For other stacks, port this contract without introducing React.
 
 ## Integrate
 
@@ -35,3 +35,16 @@ Use the same surface palette and typography as the target page. Place the dock a
 Report implementation location, preview, controls and tested limitations. Do not claim a live multi-agent system or guaranteed frame rate.
 
 The new choreography also observes `[data-motion-region]` and sets `data-in-view` for optional diagram and marquee animations. Pause offscreen regions. Focus entering an active target cancels its construction effect immediately; resize and backgrounding cancel it too. Do not hide the page by default.
+
+## Explicit blank-canvas mode
+
+Use only when the user asks to start empty and have agents construct the content. Their request overrides the default visible-first aesthetic; keep accessibility and failure recovery.
+
+1. Mount `<AgentBuildScroll locale="en" buildFromBlank />`.
+2. Mark the hero container with both `data-agent-target="Builder"` and `data-build-intro-target`. Remove nested agent targets inside that region. Mark its meaningful real children with `data-build-piece` (headline, paragraph, CTA group, art). Keep at most twelve pieces.
+3. For SSR, import `BUILD_INTRO_SCRIPT` from `assets/build-intro.ts` and emit its static inline script before body content. It sets a temporary attribute before paint only when motion is allowed. If React owns the document, narrowly suppress hydration warnings on the root HTML attribute modified by this bootstrap. No dynamic user data belongs in this script.
+4. The controller draws an SVG frame and blueprint bounds before revealing the real pieces from zero opacity/clip. The default fallback remains readable HTML. No JavaScript means no hiding; reduced motion bypasses it. A missing client bundle reveals the hero after 6.5 seconds, and the first key press reveals it immediately. The shared pause/focus/resize cleanup settles animations to readable content.
+5. Keep the functional navigation and motion controls available during construction. Other marked regions construct on viewport entry. This is a visual simulation; cursors do not click controls or change product data.
+6. Test first paint with application bundles deliberately blocked, then test the timeout, keyboard, pause, reduced motion and no-JS paths. Capture empty → frame → assembly → completed screenshots. Do not accept a flash of the fully built hero before the intro, or a permanently blank page.
+
+Do not run a formatter that adds a terminal semicolon to a Playwright CLI callback expression without removing that semicolon afterward; the CLI run-code expression parser rejects it.

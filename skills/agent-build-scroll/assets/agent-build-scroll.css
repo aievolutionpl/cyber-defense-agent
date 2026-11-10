@@ -24,3 +24,13 @@ html[data-motion="paused"] *,html[data-motion="paused"] *:before,html[data-motio
 .build-outline:before,.build-outline:after{background:#a6a8ff}.build-caption{background:#11172c;border-color:#52628d;color:#d2dcff;font-size:10px}.build-phase{position:absolute;right:8px;bottom:-26px;padding:3px 7px;background:#11172c;color:#a9b9e0;border:1px solid #52628d;font:8px/1.5 monospace}.build-outline[data-phase=layout] .build-phase:before{content:'01 / WIREFRAME'}.build-outline[data-phase=content] .build-phase:before{content:'02 / ASSEMBLING'}.build-outline[data-phase=verified] .build-phase:before{content:'03 / READY'}
 .build-cursor{color:#a9ceff}.build-cursor span{background:#a9ceff;color:#071020;font-size:10px;white-space:nowrap;padding:4px 9px}.cursor-1{color:#c3a6ff}.cursor-1 span{background:#c3a6ff}.cursor-2{color:#9ce4d3}.cursor-2 span{background:#9ce4d3}.build-cursor:before{content:'';position:absolute;left:-7px;top:-7px;width:20px;height:20px;border:1px solid currentColor;border-radius:50%;opacity:0}.build-cursor[data-clicking=true]:before{opacity:.75}.motion-dock{border-color:#465476;background:#101627eb;color:#bccbeb}.motion-dock button{border-color:#465476}
 @media(max-width:699px){.build-phase,.blueprint-line{display:none}.build-cursor span{font-size:9px}.motion-dock{max-width:calc(100vw - 20px)}}
+
+/* Opt-in blank canvas. Without the bootstrap, content is visible by default. */
+html[data-build-intro="pending"] [data-build-intro-target] { opacity:0; pointer-events:none; }
+.build-frame-svg { display:none; position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.agent-build-overlay[data-from-blank="true"] .build-outline { border-color:transparent; box-shadow:none; }
+.agent-build-overlay[data-from-blank="true"] .build-frame-svg { display:block; }
+.build-frame-svg rect { fill:none; stroke:#a3dfb8; stroke-width:1; stroke-dasharray:1; stroke-dashoffset:calc(1 - var(--frame-draw,0)); }
+.agent-build-overlay[data-from-blank="true"] .blueprint-line { border-color:#8ecaa575; background:repeating-linear-gradient(90deg,#90cfa20b 0 16px,transparent 16px 22px); }
+.agent-build-overlay[data-from-blank="true"] .build-caption,.agent-build-overlay[data-from-blank="true"] .build-phase { background:#0c1911; border-color:#456e51; color:#c5ecd1; }
+@media (prefers-reduced-motion:reduce) { html[data-build-intro="pending"] [data-build-intro-target] { opacity:1; pointer-events:auto; } }

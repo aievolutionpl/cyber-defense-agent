@@ -1,0 +1,44 @@
+async (page) => {
+ const base=page.url().replace(/pl\/$/,'').replace(/\/$/,'')+'/';
+ const checks=[];const assert=(v,n)=>{if(!v)throw new Error(n);checks.push(n)};
+ const browser=page.context().browser();
+ // Block the app bundle, not the inline bootstrap: prove first paint and fail-open.
+ const delayed=await browser.newContext({viewport:{width:1440,height:1000},reducedMotion:'no-preference'});
+ await delayed.route('**/_next/static/**/*.js',route=>route.abort());
+ const blocked=await delayed.newPage();await blocked.goto(base,{waitUntil:'domcontentloaded'});
+ assert(await blocked.locator('html').getAttribute('data-build-intro')==='pending','bootstrap runs before hydration');
+ assert(await blocked.locator('[data-build-intro-target]').evaluate(el=>getComputedStyle(el).opacity==='0'),'first paint is an empty hero');
+ assert((await blocked.locator('h1').textContent()).length>10,'real headline remains server rendered');
+ await blocked.screenshot({path:'output/playwright/cinematic-00-empty.png'});
+ await blocked.waitForFunction(()=>!document.documentElement.dataset.buildIntro,{},{timeout:9000});
+ assert(await blocked.locator('[data-build-intro-target]').evaluate(el=>getComputedStyle(el).opacity==='1'),'missing client bundle fails open');
+ await delayed.close();
+ await page.emulateMedia({reducedMotion:'no-preference'});await page.setViewportSize({width:1440,height:1000});
+ await page.goto(base,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>document.querySelector('.agent-build-overlay')?.dataset.active==='true');
+ assert(await page.locator('[data-build-piece]').evaluateAll(els=>els.every(el=>getComputedStyle(el).opacity==='0')),'all seven hero pieces start invisible');
+ await page.waitForTimeout(240);
+ assert(await page.locator('.build-outline').evaluate(el=>parseFloat(el.style.getPropertyValue('--frame-draw'))>0),'frame draws before content');
+ await page.screenshot({path:'output/playwright/cinematic-01-frame.png'});
+ await page.waitForTimeout(650);
+ const opacities=await page.locator('[data-build-piece]').evaluateAll(els=>els.map(el=>parseFloat(getComputedStyle(el).opacity)));
+ assert(opacities.some(x=>x>0)&&opacities.some(x=>x===0),'content assembles in staggered pieces');
+ await page.screenshot({path:'output/playwright/cinematic-02-assembly.png'});
+ await page.waitForFunction(()=>document.querySelector('[data-build-intro-target]')?.dataset.buildStage==='assembled');
+ assert(await page.locator('[data-build-piece]').evaluateAll(els=>els.every(el=>getComputedStyle(el).opacity==='1')),'completed hero is fully readable');
+ await page.goto(base,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>document.querySelector('.agent-build-overlay')?.dataset.active==='true');
+ await page.keyboard.press('Tab');
+ assert(await page.locator('[data-build-piece]').evaluateAll(els=>els.every(el=>getComputedStyle(el).opacity==='1')),'keyboard immediately reveals construction');
+ await page.goto(base,{waitUntil:'domcontentloaded'});
+ await page.waitForFunction(()=>document.querySelector('.agent-build-overlay')?.dataset.active==='true');
+ await page.getByRole('button',{name:'Pause animations',exact:true}).click();
+ assert(await page.locator('[data-build-piece]').evaluateAll(els=>els.every(el=>getComputedStyle(el).opacity==='1')),'pause settles the real DOM');
+ await page.emulateMedia({reducedMotion:'reduce'});await page.goto(base);
+ assert(await page.locator('html').getAttribute('data-build-intro')===null,'reduced motion bypasses empty intro');
+ assert(await page.locator('[data-build-intro-target]').evaluate(el=>getComputedStyle(el).opacity==='1'),'reduced-motion hero is readable immediately');
+ const nojs=await browser.newContext({javaScriptEnabled:false});const plain=await nojs.newPage();await plain.goto(base);
+ assert(await plain.locator('[data-build-intro-target]').evaluate(el=>getComputedStyle(el).opacity==='1'),'no-JS content is never hidden');
+ assert(await plain.locator('h1').isVisible(),'no-JS headline remains accessible');await nojs.close();
+ return {passed:checks.length,checks};
+}
