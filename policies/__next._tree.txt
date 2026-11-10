@@ -1,6 +1,7 @@
-:HL["/cyber-defense-agent/_next/static/chunks/3lke-7-wmps4c.css","style"]
+:HL["/cyber-defense-agent/_next/static/chunks/04q_kml7_5z-j.css","style"]
+:HL["/cyber-defense-agent/_next/static/chunks/2dl2x34rink5g.css","style"]
 :HC["/",""]
 3:[["children",{"s":"__PAGE__","h":160}]]
 2:[["children",{"s":"policies","h":96,"c":"$Q3"}]]
 1:[["children",{"s":"(english)","h":112,"c":"$Q2"}]]
-0:{"b":"WhNp5AhoYLCchqjmRJk3n","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
+0:{"b":"1XK8TrkmDhrhYoqmmJ5eY","t":{"t":{"s":"","h":80,"c":"$Q1"}}}
