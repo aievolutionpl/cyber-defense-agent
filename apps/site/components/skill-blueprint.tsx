@@ -29,7 +29,7 @@ export function SkillBlueprint({ locale }: { locale: Locale }) {
     { label: "Scanner reports", icon: Layers3, prompt: "Combine scanner results and help prioritize the work.", scope: "Approved report files", finding: "A vulnerable dependency in a Trivy report", action: "Review the fixed version and plan an update.", evidence: "Package, report source and comparison with a later result." },
   ];
   const current = examples[selected];
-  return <section className="blueprint-section section-shell" id="skill" aria-labelledby="blueprint-title">
+  return <section data-build-section className="blueprint-section section-shell" id="skill" aria-labelledby="blueprint-title">
     <div className="blueprint-heading">
       <span className="eyebrow">{pl ? "POZNAJ SKILL / OD PYTANIA DO DOWODU" : "MEET THE SKILL / FROM QUESTION TO EVIDENCE"}</span>
       <h2 id="blueprint-title">{pl ? <>Twój agent ma narzędzia.<br /><span>Daj mu metodę.</span></> : <>Your agent has tools.<br /><span>Give it a method.</span></>}</h2>

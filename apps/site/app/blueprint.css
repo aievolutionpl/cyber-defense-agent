@@ -92,3 +92,53 @@
 @media (prefers-reduced-motion: reduce) {
   .blueprint-options label > span { transition: none; }
 }
+/* Compact sales page: ice and lilac frame the story; red/green explain state. */
+:root { --story-lilac: #cbb9ff; }
+.hero h1 span, .gradient-text { background-image: linear-gradient(110deg, #b9f6db, #a4e7ff 58%, #cbb9ff); }
+.motion-toggle { border: 1px solid #516370; background: #14212a; color: #d5e8ef; border-radius: 8px; padding: 8px 10px; min-height: 40px; font-size: 11px; cursor: pointer; }
+.motion-toggle:focus-visible { outline: 2px solid #cbb9ff; outline-offset: 3px; }
+.theater-playback { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 20px; background: #101c27; border-bottom: 1px solid #344753; }
+.theater-playback > span { color: #b9dce9; font: 10px var(--mono); }
+.theater-playback button { display: flex; gap: 8px; align-items: center; min-height: 44px; padding: 8px 12px; border: 1px solid #64758a; background: #1b2b3c; color: #e4f1ff; border-radius: 8px; cursor: pointer; font-size: 12px; }
+.scene { background: radial-gradient(ellipse at 30% 30%, #76bfff1a, transparent 65%), radial-gradient(ellipse at 80% 65%, #b79aff20, transparent 60%), #0f1923; }
+.scene-status { position: absolute; z-index: 5; left: 20px; bottom: 105px; right: 20px; font: 12px var(--mono); color: #b6e9ff; }
+.scene-layer { background: linear-gradient(135deg, #293c52e8, #182438eb); border-color: #6a82a4; transition: transform .8s ease, border-color .5s; }
+.scene-layer:nth-child(2n) { background: linear-gradient(135deg, #3b3454e0, #1e2436e8); }
+.scene-label { color: #c7dcff; }
+.scene-layer i { background: #344e63; border-color: #627c95; }
+.theater[data-stage="scan"] .scene-layer { transform: translateZ(calc(var(--z) * 65px)); }
+.theater[data-stage="verify"] .scene-layer { transform: translateZ(calc(var(--z) * 12px)); border-color: #9af3c5; }
+.theater[data-stage="detect"] .scene-layer i[data-flag] { background: #ff657e; border-color: #ffc4ca; box-shadow: 0 0 24px #ff627a90; }
+.theater[data-stage="detect"] .scene-status { color: #ffb4c0; }
+.theater[data-stage="detect"] .scene-shield { background: #491f31; color: #ff91a8; border-color: #ff91a8; box-shadow: 0 0 36px #ff647a30; }
+.theater[data-stage="fix"] .scene-status, .theater[data-stage="fix"] .scene-shield { color: #d5c4ff; }
+.theater[data-stage="verify"] .scene-status { color: #a8f8ce; }
+.theater[data-stage="verify"] .scene-doc { opacity: 0; }
+.theater .scene-world { animation: none !important; }
+.theater .scene-beam { border-color: #a5e9ff; box-shadow: 0 0 30px #82c9ff77; }
+.theater[data-stage="scan"] .scene-beam { animation-duration: 1.5s; }
+.theater[data-playing="false"] *, .theater[data-playing="false"] *::after { animation-play-state: paused !important; }
+.theater .terminal-rows { min-height: 215px; }
+.host-track { animation-duration: 24s; }
+.host-item { background: linear-gradient(140deg, #1c2a3c, #191f2d); border-color: #44546f; }
+.host-heading h2 { color: #c2e6ff; }
+.host-auto { display: none; }
+@media(max-width: 699px) {
+  .motion-toggle { font-size: 10px; padding: 6px; min-height: 40px; }
+  .nav-actions { gap: 6px; }
+  .theater-terminal .terminal-rows { display: none; }
+  .theater-caption { min-height: 125px; }
+  .scene-status { font-size: 10px; bottom: 98px; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .scene-layer { transition: none; }
+}
+.motion-clips { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-top: 32px; }
+.motion-clips figure { margin: 0; overflow: hidden; border: 1px solid #43536c; border-radius: 18px; background: #121d2c; }
+.motion-clips video { display: block; width: 100%; height: auto; aspect-ratio: 12 / 7; }
+.motion-clips figcaption { padding: 24px; }
+.motion-clips figcaption > span { color: #b5c7eb; font: 10px var(--mono); letter-spacing: .1em; }
+.motion-clips h3 { font-size: 20px; line-height: 1.35; margin: 12px 0; }
+.motion-clips p { color: #b4c5da; font-size: 14px; }
+.motion-clips a { color: #b5e8ff; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
+@media(max-width: 699px) { .motion-clips { grid-template-columns: 1fr; } }
