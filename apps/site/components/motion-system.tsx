@@ -51,7 +51,12 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
       const tick = (now: number) => {
         const elapsed = now - start;
         const bounds = target.getBoundingClientRect();
-        if (!enabled() || bounds.bottom < 90 || bounds.top > innerHeight || target.contains(document.activeElement)) { clear(); return; }
+        if (!enabled() || bounds.bottom < 90 || bounds.top > innerHeight || target.contains(document.activeElement)) {
+          clear();
+          const next = [...visible].find(candidate => !built.has(candidate));
+          if (next) build(next);
+          return;
+        }
         target.dataset.buildStage = elapsed < 350 ? "drafting" : "assembling";
         parts.forEach((part, index) => {
           const arrival = 350 + index * 420;

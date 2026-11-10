@@ -33,6 +33,18 @@ try {
       assert.equal(await page.locator('.host-track').evaluate(el => getComputedStyle(el).animationPlayState), 'running', 'host slides active');
     }
   }
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('http://127.0.0.1:3107/');
+  await page.waitForFunction(() => document.documentElement.dataset.motion === 'running');
+  await page.locator('#missions').scrollIntoViewIfNeeded();
+  await page.waitForFunction(() => document.querySelector('#missions').dataset.buildStage === 'assembling');
+  const cursorStart = await page.locator('.build-cursor').nth(1).evaluate(el => el.style.transform);
+  await page.waitForTimeout(250);
+  const cursorEnd = await page.locator('.build-cursor').nth(1).evaluate(el => el.style.transform);
+  assert.notEqual(cursorStart, cursorEnd, 'cursor moves during section assembly');
+  await page.screenshot({ path: 'output/site-review/desktop-construction.png' });
+  await page.waitForFunction(() => !document.querySelector('#missions').dataset.buildStage);
+  assert.equal(await page.locator('#missions > div').first().evaluate(el => el.style.opacity), '', 'assembly restores content');
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.locator('#scan').scrollIntoViewIfNeeded();
   await page.waitForTimeout(300);
