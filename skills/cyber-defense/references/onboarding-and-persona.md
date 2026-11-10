@@ -49,7 +49,7 @@ A yes covers that step only. If the user says "do everything", still name each s
 
 ## Stage 3 - show the result
 
-First build the visual report (`finding` for anything you found by reasoning, then `report`), and hand over the file: "Your report is ready: `.cda/reports/audit-report.pdf`. Open it first - it has everything, with the three things to start with on page one." If no PDF could be produced, give the HTML path and say how to print it. Offer the live dashboard at the start of longer audits.
+First build the visual report (`finding` for anything you found by reasoning, then `report`; ask before adding `--pdf`, because it starts the user's browser in the background), and hand over the file: "Your report is ready: `.cda/reports/audit-report.pdf`. Open it first - it has everything, with the three things to start with on page one." If no PDF could be produced, give the HTML path and say how to print it. Offer the live dashboard at the start of longer audits.
 
 Then, in chat, lead with the headline, then the top three, then offer detail:
 

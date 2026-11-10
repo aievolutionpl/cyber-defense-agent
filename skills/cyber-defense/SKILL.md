@@ -111,11 +111,11 @@ The four local rules are deliberately narrow. When the user wants an expert code
    Priorities: `P0`-`P3`, or `IDEA` for "worth improving" items that are not defects. Areas: `code`, `dependencies`, `software`, `website`, `database`, `network`, `host`, `other`. Write these fields in the user's language. Never put a secret value, row data or a credential in any field. The tool labels them `expert review - model judgment`.
 2. Build the report from every evidence report of this audit:
 
-   `node tools/cda.mjs report --name audit-report --from before --from deps-vulns --from site --from expert --title "Audit: <project>" --lang pl`
+   `node tools/cda.mjs report --name audit-report --from before --from deps-vulns --from site --from expert --title "Audit: <project>" --lang pl --pdf`
 
-   It writes `.cda/reports/audit-report.html` (dark, self-contained, no scripts) and, when a Chromium-based browser (Edge, Chrome, Chromium, Brave) is installed, `.cda/reports/audit-report.pdf`. If the output has `"pdf": null`, tell the user to open the HTML and use Print > Save as PDF; do not install a browser. The report contains the verdict, P0-P3 chart, the three things to start with, every finding with impact, evidence, fix and verification, improvement ideas, confirmed fixes, coverage and limits.
+   It always writes `.cda/reports/audit-report.html` (dark, self-contained, no scripts). `--pdf` additionally starts a locally installed Chromium-based browser (Edge, Chrome, Chromium, Brave) in headless mode to print that one file to `.cda/reports/audit-report.pdf`. Starting that process is its own consent step: ask once per audit - "May I use your installed browser in the background to save the report as a PDF? It opens only the report file." - and pass `--pdf` only after a yes. Without consent, or if the output has `"pdf": null`, give the HTML path and tell the user to open it and use Print > Save as PDF; do not install a browser. The report contains the verdict, P0-P3 chart, the three things to start with, every finding with impact, evidence, fix and verification, improvement ideas, confirmed fixes, coverage and limits. If the verdict is `incomplete`, re-run the lookup it names before drawing conclusions.
 3. Give the user the file path and ask them to open it. Then summarise the top three in chat and ask which to tackle first. Do not paste the whole report into the conversation.
-4. After fixes and a retest, add the retest report with another `--from` and rebuild under a new name (`audit-report-after`) so before and after both exist. Confirmed fixes leave the open list automatically.
+4. After fixes and a retest, add the retest report with another `--from` and rebuild under a new name (`audit-report-after`) so before and after both exist. A confirmed fix closes a finding only for the same approved root, rule and file, and only when the retest is newer than the report that raised it; findings the retest newly discovered are added as open.
 
 **Live dashboard.** `.cda/reports/dashboard.html` rebuilds itself after every evidence command and refreshes in the browser every few seconds. At the start of an audit, offer it: "Open `.cda/reports/dashboard.html` in your browser to watch the results build up." `node tools/cda.mjs dashboard --lang pl` rebuilds it on demand. It aggregates every report in `.cda/reports/`, so say so if older audits are mixed in.
 
@@ -123,7 +123,7 @@ The report and dashboard are local files. They can contain private paths and fin
 
 ### Bundled demo
 
-A user invocation with `demo` authorizes only the synthetic fixture: run `node tools/demo.mjs`, read only the generated `demo-before.md`, `demo-retest.md` and `demo-no-data.md`, and explain P1, the evidence, `confirmed_fixed`, `insufficient_data` and the blocked out-of-scope action. The demo also writes `.cda/reports/demo-report.html` (and `.pdf` when a browser is available): point the user to it as an example of the deliverable. Never install or execute the fixture or call it a real audit.
+A user invocation with `demo` authorizes only the synthetic fixture: run `node tools/demo.mjs`, read only the generated `demo-before.md`, `demo-retest.md` and `demo-no-data.md`, and explain P1, the evidence, `confirmed_fixed`, `insufficient_data` and the blocked out-of-scope action. The demo also writes `.cda/reports/demo-report.html` (and `.pdf` when run as `node tools/demo.mjs --pdf` after the user agrees): point the user to it as an example of the deliverable. Never install or execute the fixture or call it a real audit.
 
 ## Reporting
 

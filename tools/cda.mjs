@@ -51,10 +51,11 @@ A website you own or are authorized to assess (a few passive GET requests)
 
 Deliverables (local files only)
   node tools/cda.mjs finding --name <expert-report> --priority <P0|P1|P2|P3|IDEA> --area <area> --title <text> --fix <text> [--impact <text>] [--evidence <text>] [--verify <text>]
-  node tools/cda.mjs report --name <audit-report> --from <report> [--from <report>] [--title <text>] [--lang en|pl] [--html-only]
+  node tools/cda.mjs report --name <audit-report> --from <report> [--from <report>] [--title <text>] [--lang en|pl] [--pdf]
   node tools/cda.mjs dashboard [--lang en|pl]
 
-The report is a dark, print-ready HTML file and, when a Chromium-based browser is installed, a PDF.
+The report is a dark, print-ready HTML file. With --pdf (after the user agrees) it also starts a locally
+installed Chromium-based browser in headless mode to print that one file to PDF.
 The dashboard (.cda/reports/dashboard.html) rebuilds itself after every command and refreshes in the browser.
 
 Reports: .cda/reports/<name>.json and .md. Nothing is installed, changed or executed in a target.
@@ -93,7 +94,7 @@ async function main() {
       evidence: { type: "string" },
       fix: { type: "string" },
       verify: { type: "string" },
-      "html-only": { type: "boolean" },
+      pdf: { type: "boolean" },
       inventory: { type: "string" },
       authorized: { type: "boolean" },
       "share-package-names": { type: "boolean" },
@@ -121,7 +122,7 @@ async function main() {
     advisories: ["inventory", "name", "share-package-names"],
     web: ["url", "name", "authorized"],
     finding: ["name", "priority", "area", "title", "impact", "evidence", "fix", "verify"],
-    report: ["name", "from", "title", "lang", "html-only"],
+    report: ["name", "from", "title", "lang", "pdf"],
     dashboard: ["lang"],
     retest: ["scope", "before", "after", "name"],
     revoke: ["scope"],
@@ -157,8 +158,9 @@ async function main() {
     if (!data.sources.length) deny("NO_SUPPORTED_REPORTS");
     const html = store.write("reports", v.name, renderVisual(data, { title: v.title?.slice(0, 120), lang: v.lang ?? "en" }), "html");
     const pdfPath = store.file("reports", v.name, "pdf", true);
-    const printed = v["html-only"] ? { pdf: false, reason: "HTML_ONLY_REQUESTED" } : printPdf(path.join(ROOT, html), pdfPath);
-    process.stdout.write(`${JSON.stringify({ html, pdf: printed.pdf ? path.relative(ROOT, pdfPath).replaceAll("\\", "/") : null, pdfNote: printed.pdf ? null : `${printed.reason}: open the HTML in a browser and use Print > Save as PDF`, verdict: data.verdict, counts: data.counts, sources: data.sources.length })}\n`);
+    // Starting a browser process is its own consent step: never implied by asking for a report.
+    const printed = v.pdf === true ? printPdf(path.join(ROOT, html), pdfPath) : { pdf: false, reason: "PDF_NOT_REQUESTED" };
+    process.stdout.write(`${JSON.stringify({ html, pdf: printed.pdf ? path.relative(ROOT, pdfPath).replaceAll("\\", "/") : null, pdfNote: printed.pdf ? null : printed.reason === "PDF_NOT_REQUESTED" ? "HTML only. Re-run with --pdf after the user agrees to start a local browser, or open the HTML and use Print > Save as PDF" : `${printed.reason}: open the HTML in a browser and use Print > Save as PDF`, verdict: data.verdict, counts: data.counts, sources: data.sources.length })}\n`);
     return;
   }
   if (command === "dashboard") {

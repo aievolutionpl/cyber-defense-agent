@@ -9,6 +9,9 @@ export const PRIORITIES = ["P0", "P1", "P2", "P3", "IDEA"];
 export const AREAS = ["code", "dependencies", "software", "website", "database", "network", "host", "other"];
 const esc = (value) => redact(value ?? "").replace(/[&<>"'`]/g, (c) => `&#${c.charCodeAt(0)};`);
 const clip = (value, max) => String(value ?? "").replace(/[\u0000-\u001f\u007f]+/g, " ").trim().slice(0, max);
+// Redact the whole input first: clipping can cut off the closing marker a secret pattern needs.
+// An unterminated private-key block is still a key, so everything from its opening marker goes.
+const safe = (value, max) => clip(redact(String(value ?? "").slice(0, 64_000)).replace(/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*/g, "[REDACTED KEY]"), max);
 
 /** One expert-review finding recorded by the agent. Bounded, redacted, always labelled model judgment. */
 export function expertFinding(existing, input, now = Date.now()) {
@@ -17,12 +20,12 @@ export function expertFinding(existing, input, now = Date.now()) {
   if (report.findings.length >= 200) deny("TOO_MANY_FINDINGS");
   const priority = String(input.priority ?? "").toUpperCase();
   const area = String(input.area ?? "other").toLowerCase();
-  const title = clip(input.title, 160);
-  if (!PRIORITIES.includes(priority) || !AREAS.includes(area) || !title || !clip(input.fix, 600)) deny("INVALID_FINDING");
+  const title = safe(input.title, 160);
+  if (!PRIORITIES.includes(priority) || !AREAS.includes(area) || !title || !safe(input.fix, 600)) deny("INVALID_FINDING");
   report.findings.push({
-    priority, area, title: redact(title),
-    impact: redact(clip(input.impact, 400)), evidence: redact(clip(input.evidence, 500)),
-    fix: redact(clip(input.fix, 600)), verify: redact(clip(input.verify, 300)),
+    priority, area, title,
+    impact: safe(input.impact, 400), evidence: safe(input.evidence, 500),
+    fix: safe(input.fix, 600), verify: safe(input.verify, 300),
     basis: "expert review - model judgment", recordedAt: new Date(now).toISOString(),
   });
   report.updatedAt = new Date(now).toISOString();
@@ -38,21 +41,28 @@ export function collect(named) {
   const verified = [];
   const limitations = new Set();
   const stats = { packages: 0, checked: 0, notChecked: 0, requests: 0, files: 0 };
+  const incomplete = [];
   const add = (source, f) => findings.push({ impact: "", evidence: "", fix: "", verify: "", basis: "tool evidence", ...f, source });
+  const time = (r) => Date.parse(r.createdAt ?? r.observedAt ?? r.updatedAt ?? "") || 0;
   for (const [name, r] of named) {
     if (!r || typeof r !== "object") continue;
     let kind = null;
     if (r.format === "cda.report.v1" && Array.isArray(r.findings)) {
       kind = r.source === "local-review" ? "Local file review" : "Imported scanner report";
       stats.files += r.scope?.files?.length ?? 0;
-      for (const f of r.findings) add(name, { priority: f.priority, area: "code", title: f.title ?? f.ruleId, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location in the original scanner report.", verify: "Repeat the same check and run retest.", ref: `${f.ruleId}:${f.path}` });
+      const root = r.scope?.rootKey ?? "";
+      for (const f of r.findings) add(name, { priority: f.priority, area: "code", title: f.title ?? f.ruleId, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location in the original scanner report.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, at: time(r) });
     } else if (r.format === "cda.retest.v1" && Array.isArray(r.results)) {
       kind = "Retest";
-      for (const x of r.results) verified.push({ ref: `${x.ruleId}:${x.path}`, label: `${x.ruleId} - ${x.path}`, status: x.status, source: name });
+      const root = r.scope?.rootKey ?? "";
+      for (const x of r.results) verified.push({ ref: root ? `${root}:${x.ruleId}:${x.path}` : null, label: `${x.ruleId} - ${x.path}`, status: x.status, source: name, at: time(r) });
+      // A retest can also discover something new. It is an open finding, not a footnote.
+      for (const f of Array.isArray(r.added) ? r.added : []) add(name, { priority: f.priority, area: "code", title: `New since the baseline: ${f.title ?? f.ruleId}`, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location and fix it, then retest.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, at: time(r) });
     } else if (r.format === "cda.advisories.v1" && Array.isArray(r.findings)) {
       kind = "Known-vulnerability lookup (OSV.dev, CISA KEV)";
       stats.checked += r.checked ?? 0;
       stats.notChecked += r.manualLookup?.total ?? 0;
+      if (r.incomplete) incomplete.push(name);
       const area = r.inventory?.kind === "project" ? "dependencies" : "software";
       for (const f of r.findings) add(name, { priority: f.priority, area, title: `${f.package} ${f.installed}: ${f.id}${f.knownExploited ? " - exploited in the wild" : ""}`, impact: f.summary, evidence: `Installed version is inside a published affected range. Severity ${f.severity}${f.cvss != null ? ` (CVSS ${f.cvss})` : ""}. Known exploited: ${f.knownExploited === true ? "yes" : f.knownExploited === false ? "no" : "unknown"}.`, fix: f.fixedIn?.length ? `Update to ${f.fixedIn.join(" or ")} or later through the official channel.` : "Update to the vendor's fixed release; see the advisory.", verify: "Collect a fresh inventory and re-run advisories." });
     } else if (r.format === "cda.web.v1" && Array.isArray(r.findings)) {
@@ -74,27 +84,31 @@ export function collect(named) {
     sources.push({ name, kind, createdAt: r.createdAt ?? r.observedAt ?? r.updatedAt ?? "" });
     for (const text of r.limitations ?? []) limitations.add(clip(text, 300));
   }
-  // Newest statement about the same thing wins; confirmed fixes leave the open list.
-  const fixed = new Set(verified.filter((v) => v.status === "confirmed_fixed").map((v) => v.ref));
+  // A confirmed fix closes a finding only for the same approved root, rule and file, and only when the
+  // retest is newer than the report that raised it. Anything else stays open.
+  const fixedAt = new Map();
+  for (const v of verified) if (v.status === "confirmed_fixed" && v.ref) fixedAt.set(v.ref, Math.max(fixedAt.get(v.ref) ?? 0, v.at));
   const seen = new Map();
   for (const f of findings) {
     if (!PRIORITIES.includes(f.priority)) f.priority = "P3";
     if (!AREAS.includes(f.area)) f.area = "other";
-    if (f.ref && fixed.has(f.ref)) continue;
-    seen.set(`${f.area}\u0000${f.title}`, f);
+    if (f.ref && fixedAt.has(f.ref) && fixedAt.get(f.ref) > (f.at ?? 0)) continue;
+    // Same defect reported twice collapses; the same rule in another file or line does not.
+    seen.set(`${f.area}\u0000${f.title}\u0000${f.evidence}`, f);
   }
   const open = [...seen.values()].sort((a, b) => PRIORITIES.indexOf(a.priority) - PRIORITIES.indexOf(b.priority) || a.area.localeCompare(b.area));
   const counts = Object.fromEntries(PRIORITIES.map((p) => [p, open.filter((f) => f.priority === p).length]));
   const areas = AREAS.map((a) => [a, open.filter((f) => f.area === a && f.priority !== "IDEA").length]).filter(([, n]) => n);
-  const verdict = counts.P0 ? "act" : counts.P1 ? "attention" : counts.P2 || counts.P3 ? "routine" : "clear";
-  return { findings: open.slice(0, 400), total: open.length, counts, areas, verdict, verified, sources, stats, limitations: [...limitations].slice(0, 14) };
+  const verdict = counts.P0 ? "act" : counts.P1 ? "attention" : counts.P2 || counts.P3 ? "routine" : incomplete.length ? "incomplete" : "clear";
+  return { findings: open.slice(0, 400), total: open.length, counts, areas, verdict, verified, sources, stats, incomplete, limitations: [...limitations].slice(0, 14) };
 }
 
 const T = {
   en: {
     report: "Security audit report", dashboard: "Defense dashboard", generated: "Generated", sources: "evidence sources",
-    verdict: { act: "Act today", attention: "Needs attention this week", routine: "Routine maintenance", clear: "No findings in the checked scope" },
-    verdictNote: { act: "At least one issue is critical or actively exploited.", attention: "High-priority issues were found.", routine: "Only medium and low priority items were found.", clear: "This is not proof of security. See coverage." },
+    verdict: { act: "Act today", attention: "Needs attention this week", routine: "Routine maintenance", clear: "No findings in the checked scope", incomplete: "Incomplete: run the lookup again" },
+    verdictNote: { act: "At least one issue is critical or actively exploited.", attention: "High-priority issues were found.", routine: "Only medium and low priority items were found.", clear: "This is not proof of security. See coverage.", incomplete: "Some results were truncated or unavailable, so no conclusion can be drawn yet." },
+    incompleteNote: "Incomplete vulnerability lookup: results were truncated or unavailable. Re-run it before relying on these totals. Report:",
     open: "Open findings", fixed: "Confirmed fixes", checked: "Packages checked", listed: "Packages listed", ideas: "Improvement ideas",
     top: "Start here", topSub: "The three things that matter most", by: "Where the risk is", findings: "Findings", improve: "Worth improving",
     what: "What could happen", saw: "What was observed", fix: "How to fix it", verify: "How to verify", verified: "Verification", coverage: "Coverage and limits",
@@ -105,8 +119,9 @@ const T = {
   },
   pl: {
     report: "Raport z audytu bezpieczeństwa", dashboard: "Panel obrony", generated: "Wygenerowano", sources: "źródeł dowodów",
-    verdict: { act: "Działaj dziś", attention: "Wymaga uwagi w tym tygodniu", routine: "Rutynowa konserwacja", clear: "Brak ustaleń w sprawdzonym zakresie" },
-    verdictNote: { act: "Co najmniej jeden problem jest krytyczny lub aktywnie wykorzystywany.", attention: "Znaleziono problemy o wysokim priorytecie.", routine: "Znaleziono tylko pozycje o średnim i niskim priorytecie.", clear: "To nie jest dowód bezpieczeństwa. Zobacz pokrycie." },
+    verdict: { act: "Działaj dziś", attention: "Wymaga uwagi w tym tygodniu", routine: "Rutynowa konserwacja", clear: "Brak ustaleń w sprawdzonym zakresie", incomplete: "Niepełne: uruchom sprawdzenie ponownie" },
+    verdictNote: { act: "Co najmniej jeden problem jest krytyczny lub aktywnie wykorzystywany.", attention: "Znaleziono problemy o wysokim priorytecie.", routine: "Znaleziono tylko pozycje o średnim i niskim priorytecie.", clear: "To nie jest dowód bezpieczeństwa. Zobacz pokrycie.", incomplete: "Część wyników została obcięta lub była niedostępna, więc nie można jeszcze wyciągać wniosków." },
+    incompleteNote: "Niepełne sprawdzenie podatności: wyniki zostały obcięte lub były niedostępne. Uruchom je ponownie, zanim oprzesz się na tych liczbach. Raport:",
     open: "Otwarte ustalenia", fixed: "Potwierdzone poprawki", checked: "Sprawdzone pakiety", listed: "Pakiety na liście", ideas: "Pomysły na ulepszenia",
     top: "Zacznij tutaj", topSub: "Trzy najważniejsze rzeczy", by: "Gdzie jest ryzyko", findings: "Ustalenia", improve: "Warto dopracować",
     what: "Co może się stać", saw: "Co zaobserwowano", fix: "Jak to naprawić", verify: "Jak sprawdzić poprawkę", verified: "Weryfikacja", coverage: "Pokrycie i ograniczenia",
@@ -166,7 +181,7 @@ const MARK = `<svg viewBox="0 0 40 44" fill="none" aria-hidden="true"><path d="M
 export function renderVisual(data, { title, lang = "en", mode = "report", now = Date.now() } = {}) {
   const t = T[lang] ?? T.en;
   const dash = mode === "dashboard";
-  const vColor = { act: COLOR.P0, attention: COLOR.P1, routine: COLOR.P2, clear: COLOR.P3 }[data.verdict];
+  const vColor = { act: COLOR.P0, attention: COLOR.P1, routine: COLOR.P2, clear: COLOR.P3, incomplete: COLOR.P1 }[data.verdict];
   const real = data.findings.filter((f) => f.priority !== "IDEA" && f.priority !== "P3");
   const soft = data.findings.filter((f) => f.priority === "IDEA" || f.priority === "P3");
   const fixedCount = data.verified.filter((v) => v.status === "confirmed_fixed").length;
@@ -176,7 +191,7 @@ export function renderVisual(data, { title, lang = "en", mode = "report", now = 
   return `<!doctype html><html lang="${lang === "pl" ? "pl" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">${dash ? '<meta http-equiv="refresh" content="5">' : ""}<title>${esc(title ?? (dash ? t.dashboard : t.report))}</title><style>${CSS}</style></head><body><div class="page">
 <header><span class="brand">${MARK}Cyber Defense Agent</span><span>${dash ? `<span class="live">${t.live}</span>` : `${t.generated} ${esc(new Date(now).toISOString().slice(0, 16).replace("T", " "))} UTC`}</span></header>
 <h1>${esc(title ?? (dash ? t.dashboard : t.report))}</h1><p class="sub">${data.sources.length} ${t.sources}${data.sources.length ? ": " + esc(data.sources.map((s) => s.kind).filter((k, i, a) => a.indexOf(k) === i).join(" · ")) : ""}</p>
-${!data.sources.length ? `<div class="card"><p>${t.empty}</p></div>` : `<section class="hero"><div class="card verdict" style="--v:${vColor}"><b>${t.verdict[data.verdict]}</b><p>${t.verdictNote[data.verdict]}</p><div class="kpis"><div class="kpi"><b>${data.total - data.counts.IDEA}</b><span>${t.open}</span></div><div class="kpi"><b class="ok">${fixedCount}</b><span>${t.fixed}</span></div><div class="kpi"><b>${data.stats.checked || data.stats.packages}</b><span>${data.stats.checked ? t.checked : t.listed}</span></div><div class="kpi"><b>${data.counts.IDEA}</b><span>${t.ideas}</span></div></div></div>
+${!data.sources.length ? `<div class="card"><p>${t.empty}</p></div>` : `${data.incomplete.length ? `<div class="card" style="border-color:${COLOR.P1};margin-bottom:14px"><p class="warn" style="margin:0">${t.incompleteNote} <span class="mono">${esc(data.incomplete.join(", "))}</span></p></div>` : ""}<section class="hero"><div class="card verdict" style="--v:${vColor}"><b>${t.verdict[data.verdict]}</b><p>${t.verdictNote[data.verdict]}</p><div class="kpis"><div class="kpi"><b>${data.total - data.counts.IDEA}</b><span>${t.open}</span></div><div class="kpi"><b class="ok">${fixedCount}</b><span>${t.fixed}</span></div><div class="kpi"><b>${data.stats.checked || data.stats.packages}</b><span>${data.stats.checked ? t.checked : t.listed}</span></div><div class="kpi"><b>${data.counts.IDEA}</b><span>${t.ideas}</span></div></div></div>
 <div class="card ring">${donut(data.counts)}<div class="legend">${["P0", "P1", "P2", "P3"].map((p) => `<span><i style="background:${COLOR[p]}"></i>${p} &nbsp;<b>${data.counts[p]}</b></span>`).join("")}</div></div></section>
 ${data.findings.length ? `<h2>${t.top}</h2><p class="lead">${t.topSub}</p><section class="top">${data.findings.slice(0, 3).map((f) => `<div class="card" style="--c:${COLOR[f.priority]}"><span class="tag">${f.priority}</span><h3>${esc(f.title)}</h3><p>${esc(f.fix)}</p></div>`).join("")}</section>` : ""}
 ${data.areas.length ? `<h2>${t.by}</h2><div class="card bars">${data.areas.map(([a, n]) => `<div class="bar"><span>${esc(t.area[a])}</span><div><i style="width:${Math.round((n / max) * 100)}%"></i></div><b>${n}</b></div>`).join("")}</div>` : ""}

@@ -47,7 +47,7 @@ export function Landing({ locale }: { locale: Locale }) {
         ],
         [
           "Co dostaję po audycie?",
-          "Ciemny, wizualny raport w HTML i PDF: werdykt, wykres priorytetów, trzy rzeczy na start, każde ustalenie z dowodem, poprawką i sposobem sprawdzenia oraz pomysły, co warto dopracować. Dostajesz go, zanim zacznie się naprawianie. PDF powstaje lokalnie przez zainstalowaną przeglądarkę Edge, Chrome lub Chromium; bez niej dostajesz HTML do wydrukowania. Do tego panel dashboard.html, który odświeża się sam, gdy agent pracuje.",
+          "Ciemny, wizualny raport w HTML i PDF: werdykt, wykres priorytetów, trzy rzeczy na start, każde ustalenie z dowodem, poprawką i sposobem sprawdzenia oraz pomysły, co warto dopracować. Dostajesz go, zanim zacznie się naprawianie. PDF powstaje lokalnie, za Twoją zgodą, przez zainstalowaną przeglądarkę Edge, Chrome lub Chromium; bez niej dostajesz HTML do wydrukowania. Do tego panel dashboard.html, który odświeża się sam, gdy agent pracuje.",
         ],
         [
           "Czy muszę znać się na bezpieczeństwie?",
@@ -81,7 +81,7 @@ export function Landing({ locale }: { locale: Locale }) {
         ],
         [
           "What do I get after an audit?",
-          "A dark, visual report in HTML and PDF: the verdict, a priority chart, the three things to start with, every finding with evidence, fix and verification, and ideas worth improving. You get it before any fixing starts. The PDF is produced locally by an installed Edge, Chrome or Chromium; without one you get the HTML to print. Plus a dashboard.html that refreshes itself while the agent works.",
+          "A dark, visual report in HTML and PDF: the verdict, a priority chart, the three things to start with, every finding with evidence, fix and verification, and ideas worth improving. You get it before any fixing starts. The PDF is produced locally, with your consent, by an installed Edge, Chrome or Chromium; without one you get the HTML to print. Plus a dashboard.html that refreshes itself while the agent works.",
         ],
         [
           "Do I need to know security?",
@@ -119,8 +119,8 @@ export function Landing({ locale }: { locale: Locale }) {
     ] as const
   ).map(([icon, title, text, code]) => ({ icon, title: title[pl ? 1 : 0], text: text[pl ? 1 : 0], code }));
   const stats: [number, string][] = pl
-    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [54, "testy bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
-    : [[9, "expert playbooks"], [6, "areas of protection"], [54, "tool security tests"], [0, "changes without your consent"]];
+    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [57, "testów bezpieczeństwa narzędzi"], [0, "zmian bez Twojej zgody"]]
+    : [[9, "expert playbooks"], [6, "areas of protection"], [57, "tool security tests"], [0, "changes without your consent"]];
   return (
     <>
       <a className="skip-link" href="#main">
