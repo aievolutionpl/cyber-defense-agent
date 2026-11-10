@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createPlan, runWelcome } from "../tools/welcome.mjs";
+import { buildAgentBridge, detectAgents } from "../tools/ui.mjs";
 
 test("intake never grants scope or model consent across every supported choice", () => {
   for (let a = 0; a < 2; a++)
@@ -59,4 +60,23 @@ test("invalid or incomplete intake cannot create a plan", () => {
     [0, NaN, 0, 0],
   ])
     assert.throws(() => createPlan(values), /INVALID_INTAKE/);
+});
+
+test("bilingual Polish intake and Claude/Codex agent bridge keep consent explicit", async () => {
+  const plPlan = createPlan([0, 3, 0, 0], "pl");
+  assert.equal(plPlan.scopeApproved, false);
+  assert.match(plPlan.steps.join(" "), /inventory --name pc --yes/);
+
+  const claudeBridge = buildAgentBridge({ host: "claude", mission: "pc", lang: "pl" });
+  assert.equal(claudeBridge.bin, "claude");
+  assert.match(claudeBridge.prompt, /\/cyber-defense/);
+  assert.match(claudeBridge.prompt, /--share-package-names/);
+
+  const codexBridge = buildAgentBridge({ host: "codex", mission: "code", target: "./apps/site", lang: "en" });
+  assert.equal(codexBridge.bin, "codex");
+  assert.match(codexBridge.prompt, /\$cyber-defense/);
+
+  const detected = detectAgents();
+  assert.equal(typeof detected.claude.entryExists, "boolean");
+  assert.equal(typeof detected.codex.entryExists, "boolean");
 });

@@ -17,6 +17,7 @@ import { compareReports, renderComparison, toSarif } from "./comparison.mjs";
 import { onboarding } from "./onboarding.mjs";
 import { modelSummary } from "./triage.mjs";
 import { welcomeTerminal } from "./welcome.mjs";
+import { detectAgents, buildAgentBridge, startMiniUi } from "./ui.mjs";
 import { reviewUpdates, renderUpdatePlan } from "./updates.mjs";
 import { collectInventory, depsInventory, renderInventory } from "./inventory.mjs";
 import { checkAdvisories, renderAdvisories } from "./advisories.mjs";
@@ -60,10 +61,12 @@ export function renderPrComment(scope, retestReport) {
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(ROOT);
 let dashboardScope;
-const help = `Cyber Defense Agent v0.2 — evidence tools for a defensive agent
+const help = `Cyber Defense Agent v0.2 — evidence tools for a defensive agent (AI Evolution Polska)
 
-Guided start (human terminal)
-  node tools/cda.mjs start
+Interactive Command Center & Agent Bridge
+  node tools/cda.mjs start [--lang pl|en]
+  node tools/cda.mjs ui [--lang pl|en] [--port 3109]
+  node tools/cda.mjs agent [--host claude|codex] [--mission demo|code|pc|web|report] [--target <path|url>] [--lang pl|en]
 
 Files you approve (read-only, exact allowlist, 24 h)
   node tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>
@@ -143,6 +146,10 @@ async function main() {
       inventory: { type: "string" },
       authorized: { type: "boolean" },
       "share-package-names": { type: "boolean" },
+      host: { type: "string" },
+      mission: { type: "string" },
+      target: { type: "string" },
+      port: { type: "string" },
       help: { type: "boolean" },
     },
   });
@@ -153,7 +160,9 @@ async function main() {
   if (positionals.length !== 1) deny("INVALID_ARGUMENTS");
   const command = positionals[0];
   const permitted = {
-    start: [],
+    start: ["lang"],
+    ui: ["lang", "port"],
+    agent: ["host", "mission", "target", "lang"],
     scope: ["root", "allow", "git-staged", "name"],
     approve: ["scope", "root", "yes"],
     show: ["scope"],
@@ -181,7 +190,51 @@ async function main() {
   )
     deny("INVALID_ARGUMENTS");
   if (command === "start") {
-    await welcomeTerminal();
+    if (v.lang && !["en", "pl"].includes(v.lang)) deny("INVALID_ARGUMENTS");
+    await welcomeTerminal({ lang: v.lang });
+    return;
+  }
+  if (command === "ui") {
+    if (v.lang && !["en", "pl"].includes(v.lang)) deny("INVALID_ARGUMENTS");
+    const port = v.port ? Number(v.port) : 3109;
+    if (!Number.isInteger(port) || port < 1024 || port > 65535) deny("INVALID_ARGUMENTS");
+    const ui = await startMiniUi({ port, lang: v.lang || "pl", openBrowser: true });
+    process.stdout.write(
+      `\n\x1b[38;2;52;211;153m╭──────────────────────────────────────────────────────────────────────────╮\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m│\x1b[0m  🛡️  \x1b[1mCYBER DEFENSE AGENT v0.2 — MINI INTERFACE & AGENT BRIDGE\x1b[0m            \x1b[38;2;52;211;153m│\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m│\x1b[0m  🌐 URL: \x1b[1m\x1b[38;2;56;189;248m${ui.url}\x1b[0m                                        \x1b[38;2;52;211;153m│\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m│\x1b[0m  🤖 Claude Code CLI & Codex CLI Bridge + Local 1-Click Runner            \x1b[38;2;52;211;153m│\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m╰──────────────────────────────────────────────────────────────────────────╯\x1b[0m\n` +
+        `Press Ctrl+C to stop the local interface.\n`,
+    );
+    await new Promise((resolve) => process.once("SIGINT", resolve));
+    ui.server.close();
+    return;
+  }
+  if (command === "agent") {
+    if (v.lang && !["en", "pl"].includes(v.lang)) deny("INVALID_ARGUMENTS");
+    if (v.host && !["claude", "codex"].includes(v.host)) deny("INVALID_ARGUMENTS");
+    const lang = v.lang || "pl";
+    const pl = lang === "pl";
+    const agents = detectAgents();
+    const bridge = buildAgentBridge({
+      host: v.host || "claude",
+      mission: v.mission || "demo",
+      target: v.target || "",
+      lang,
+    });
+    process.stdout.write(
+      `\n\x1b[38;2;52;211;153m╭────────────────────────────────────────────────────────────────────────────╮\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m│\x1b[0m  🤖 \x1b[1mCYBER DEFENSE AGENT v0.2 — ${pl ? "MOSTEK CLAUDE CODE & CODEX CLI" : "CLAUDE CODE & CODEX CLI BRIDGE"}\x1b[0m             \x1b[38;2;52;211;153m│\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m├────────────────────────────────────────────────────────────────────────────┤\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m│\x1b[0m  • Claude Code CLI: ${agents.claude.installed ? `\x1b[38;2;52;211;153m✓ (${agents.claude.version})\x1b[0m` : "\x1b[38;2;251;191;36m○ skill ready (.claude/skills/cyber-defense)\x1b[0m"}\n` +
+        `\x1b[38;2;52;211;153m│\x1b[0m  • OpenAI Codex CLI: ${agents.codex.installed ? `\x1b[38;2;52;211;153m✓ (${agents.codex.version})\x1b[0m` : "\x1b[38;2;251;191;36m○ skill ready (.agents/skills/cyber-defense)\x1b[0m"}\n` +
+        `\x1b[38;2;52;211;153m╰────────────────────────────────────────────────────────────────────────────╯\x1b[0m\n` +
+        `\n\x1b[1m1. ${pl ? "Uruchom bezpośrednio z terminala:" : "Run directly from terminal:"}\x1b[0m\n` +
+        `   \x1b[38;2;167;243;208m${bridge.cliCommand}\x1b[0m\n\n` +
+        `\x1b[1m2. ${pl ? "Lub wklej w otwartej sesji agenta:" : "Or paste inside an active agent session:"}\x1b[0m\n` +
+        `   \x1b[38;2;248;250;252m${bridge.prompt}\x1b[0m\n\n`,
+    );
     return;
   }
   if (command === "scope") {
@@ -358,6 +411,8 @@ if (
         process.argv[2] &&
         ![
           "start",
+          "ui",
+          "agent",
           "dashboard",
           "scope",
           "approve",

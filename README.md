@@ -99,11 +99,23 @@ cd cyber-defense-agent
 node tools/demo.mjs
 ```
 
-Chcesz przejść przez interaktywne wprowadzenie w terminalu?
+Chcesz przejść przez interaktywne, kolorowe **Terminalowe Centrum Dowodzenia (PL/EN)** lub uruchomić **Lokalny Mini Interfejs Graficzny (GUI + Mostek Claude Code / Codex CLI)**?
 
 ```sh
+# 1. Kolorowe Terminalowe Centrum Dowodzenia (wybór PL / EN na starcie, 8 komend):
 node tools/cda.mjs start
+
+# 2. Lokalny Mini Interfejs Graficzny w przeglądarce (127.0.0.1:3109) + Mostek Agentów:
+node tools/cda.mjs ui
+
+# 3. Bezpośredni generator komend i promptów dla Claude Code CLI / Codex CLI:
+node tools/cda.mjs agent --host claude --mission code --lang pl
+node tools/cda.mjs agent --host codex --mission pc --lang pl
 ```
+
+<p align="center">
+  <img src="docs/assets/mini-interface-preview.png" alt="Cyber Defense Agent — Lokalny Mini Interfejs Graficzny i Mostek Claude Code CLI & Codex CLI" width="100%" />
+</p>
 
 ### Najważniejsze polecenia CLI (v0.2)
 

@@ -112,7 +112,9 @@ export function Landing({ locale }: { locale: Locale }) {
               </div>
               <div className="hero-terminal">
                 <span className="terminal-prompt">$</span>
-                <code>node tools/demo.mjs</code>
+                <code>node tools/cda.mjs start</code>
+                <span className="terminal-sep">·</span>
+                <code>node tools/cda.mjs ui</code>
                 <span className="terminal-caret" aria-hidden="true" />
               </div>
             </div>
