@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+const { chromium } = await import(process.env.CDA_PLAYWRIGHT_MODULE || 'playwright');
 import { mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
 const browser = await chromium.launch();

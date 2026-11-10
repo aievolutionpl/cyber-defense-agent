@@ -7,7 +7,7 @@ permissions:
   contents: read
 jobs:
   browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -18,13 +18,13 @@ jobs:
           node-version: '22'
           cache: npm
       - run: npm ci
-      - run: npm install --no-save --package-lock=false playwright@1.57.0
-      - run: npx playwright install --with-deps chromium
+      - run: npm install --prefix /tmp/cda-browser --no-save --package-lock=false playwright@1.57.0
+      - run: /tmp/cda-browser/node_modules/.bin/playwright install --with-deps chromium
       - run: npm run build
       - name: Browser acceptance
         run: |
           python3 -m http.server 3107 --directory apps/site/out > /tmp/site-server.log 2>&1 &
-          node scripts/site-motion-check.mjs
+          CDA_PLAYWRIGHT_MODULE=/tmp/cda-browser/node_modules/playwright/index.mjs node scripts/site-motion-check.mjs
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
