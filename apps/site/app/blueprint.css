@@ -142,3 +142,5 @@
 .motion-clips p { color: #b4c5da; font-size: 14px; }
 .motion-clips a { color: #b5e8ff; font-size: 12px; text-decoration: underline; text-underline-offset: 4px; }
 @media(max-width: 699px) { .motion-clips { grid-template-columns: 1fr; } }
+
+@media(max-width: 699px) { .nav-actions > .motion-toggle { display: none; } .motion-menu { margin: 12px 20px; min-height: 44px; font-size: 13px; } }
