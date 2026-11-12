@@ -198,3 +198,22 @@ test('v0.2 rules detect hidden Unicode in agent config, permission bypass, clien
   const xssSink = inspect('src/View.tsx', 'return <div dangerouslySetInnerHTML={{ __html: html }} />;');
   assert.ok(xssSink.findings.some(f => f.ruleId === 'CDA-XSS-001'));
 });
+
+test('an imported finding that collides with a local rule is not independently verified', () => {
+  const { scope, write } = setup();
+  write('scan.json', { format: 'cda.scan.v1', findings: [{ ruleId: 'CDA-DEP-001', path: 'package.json', line: 1, severity: 'high' }] });
+  const before = importScan(scope, 'scan.json');
+  write('package.json', { dependencies: { lodash: '4.17.21' } });
+  assert.equal(retest(scope, before, review(scope)).results[0].status, 'insufficient_data');
+});
+
+test('rendered coverage identifies skipped and inconclusive files without claiming security', () => {
+  const { scope, write } = setup();
+  write('package.json', '{bad');
+  const report = review(scope);
+  report.skipped.push({ path: 'config.ts', reason: 'Example excluded file' });
+  const text = render(report);
+  assert.match(text, /inconclusive.*package\.json/i);
+  assert.match(text, /skipped.*config\.ts/i);
+  assert.match(text, /not evidence of security/i);
+});

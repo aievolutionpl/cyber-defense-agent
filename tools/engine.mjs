@@ -443,7 +443,7 @@ export function retest(scope, before, after) {
     if (after.findings.some((n) => key(n) === key(f))) {
       status = "still_present";
       reason = "The rule still reports a finding for this file.";
-    } else if (after.source === "local-review") {
+    } else if (before.source === "local-review" && after.source === "local-review") {
       const check = after.checks.find(
         (c) =>
           c.ruleId === f.ruleId &&
@@ -504,5 +504,5 @@ export function render(report) {
     };
     return `# Cyber Defense Agent — retest\n\n${report.results.map((r) => `## ${markdown(r.ruleId)} · ${labels[r.status]}\n\n- Location: ${markdown(r.path)}:${r.line}\n- Priority: ${r.priority}\n- Evidence: ${markdown(r.reason)}\n`).join("\n")}\nNew findings: ${report.added.length}.\n\n${report.limitations.map(markdown).join("\n\n")}\n`;
   }
-  return `# Cyber Defense Agent — report v${VERSION}\n\nDate: ${report.createdAt}\n\nSource: ${report.source === "local-review" ? "local static rules" : "import JSON/SARIF"}\n\n## Scope\n\n${report.scope.files.map((f) => `- ${markdown(f)}`).join("\n")}\n\n## Findings (${report.findings.length})\n\n${report.findings.map((f) => `### ${f.priority} · ${markdown(f.title)}\n\n- Rule: ${markdown(f.ruleId)}\n- Location: ${markdown(f.path)}:${f.line}\n- Severity: ${f.severity}\n- Confidence: ${f.confidence}\n- Status: ${markdown(f.status)}\n- Redacted evidence: ${markdown(f.evidence)}\n- Suggested fix: ${markdown(f.fix)}\n`).join("\n") || "No signals in the completed checks.\n"}\n## Coverage and limitations\n\nChecks: ${report.checks.length}; inconclusive: ${report.checks.filter((c) => c.result === "inconclusive").length}; skipped files: ${report.skipped.length}.\n\n${report.limitations.map(markdown).join("\n\n")}\n`;
+  return `# Cyber Defense Agent — report v${VERSION}\n\nDate: ${report.createdAt}\n\nSource: ${report.source === "local-review" ? "local static rules" : "import JSON/SARIF"}\n\n## Scope\n\n${report.scope.files.map((f) => `- ${markdown(f)}`).join("\n")}\n\n## Findings (${report.findings.length})\n\n${report.findings.map((f) => `### ${f.priority} · ${markdown(f.title)}\n\n- Rule: ${markdown(f.ruleId)}\n- Location: ${markdown(f.path)}:${f.line}\n- Severity: ${f.severity}\n- Confidence: ${f.confidence}\n- Status: ${markdown(f.status)}\n- Redacted evidence: ${markdown(f.evidence)}\n- Suggested fix: ${markdown(f.fix)}\n`).join("\n") || "No signals in the completed checks.\n"}\n## Coverage and limitations\n\nChecks: ${report.checks.length}; inconclusive: ${report.checks.filter((c) => c.result === "inconclusive").length}; skipped files: ${report.skipped.length}.\n\n${report.checks.filter((c) => c.result === "inconclusive").map((c) => `- Inconclusive: ${markdown(c.path)} · ${markdown(c.ruleId)}`).join("\n")}\n${report.skipped.map((s) => `- Skipped: ${markdown(s.path)} · ${markdown(s.reason)}`).join("\n")}\n\n${report.limitations.map(markdown).join("\n\n")}\n`;
 }

@@ -55,7 +55,7 @@ export function collect(named, { rootKey } = {}) {
       stats.files += r.scope?.files?.length ?? 0;
       if (coverageOf(r).status === "incomplete") incomplete.push(name);
       const root = r.scope?.rootKey ?? "";
-      for (const f of r.findings) add(name, { priority: f.priority, area: "code", title: f.title ?? f.ruleId, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location in the original scanner report.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${r.scanner ? f.fingerprint ?? f.line : f.line}` : null, at: time(r) });
+      for (const f of r.findings) add(name, { priority: f.priority, area: "code", title: f.title ?? f.ruleId, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location in the original scanner report.", verify: "Repeat the same check and run retest.", ref: root && r.source === "local-review" ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${r.source === "local-review" ? "" : `import:${name}:`}${f.ruleId}:${f.path}:${r.scanner ? f.fingerprint ?? f.line : f.line}` : null, at: time(r) });
     } else if (r.format === "cda.retest.v1" && Array.isArray(r.results)) {
       kind = "Retest";
       const root = r.scope?.rootKey ?? "";
