@@ -65,11 +65,12 @@ export function collect(named, { rootKey } = {}) {
       for (const f of Array.isArray(r.added) ? r.added : []) add(name, { priority: f.priority, area: "code", title: `New since the baseline: ${f.title ?? f.ruleId}`, evidence: `${f.path}:${f.line} - ${f.evidence ?? f.ruleId}`, fix: f.fix ?? "Review this location and fix it, then retest.", verify: "Repeat the same check and run retest.", ref: root ? `${root}:${f.ruleId}:${f.path}` : null, loc: root ? `${root}:${f.ruleId}:${f.path}:${f.line}` : null, added: true, at: time(r) });
     } else if (r.format === "cda.advisories.v1" && Array.isArray(r.findings)) {
       kind = "Known-vulnerability lookup (OSV.dev, CISA KEV)";
-      stats.checked += (r.checked ?? 0) + (r.vendorCatalogChecked ?? 0);
-      stats.notChecked += r.manualLookup?.total ?? 0;
-      if (r.incomplete) incomplete.push(name);
+      stats.checked += r.checked ?? 0;
+      stats.notChecked += (r.manualLookup?.total ?? 0) + (r.vendorCatalogChecked ?? 0);
+      if (r.incomplete || r.vendorCatalogChecked || r.findings.some((finding) => finding.ecosystem === "Windows:VendorCatalog")) incomplete.push(name);
       const area = r.inventory?.kind === "project" ? "dependencies" : "software";
       for (const f of r.findings) {
+        if (f.ecosystem === "Windows:VendorCatalog") continue;
         const channelHint = f.updateUrl
           ? ` Download: ${f.updateUrl}${f.wingetId ? ` (or run: winget upgrade --id ${f.wingetId})` : ""}.`
           : "";

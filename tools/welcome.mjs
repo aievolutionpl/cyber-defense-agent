@@ -424,7 +424,7 @@ export async function welcomeTerminal(options = {}) {
             )
           )?.trim() || "";
         }
-        const bridge = buildAgentBridge({ host, mission, target, lang });
+        const bridge = buildAgentBridge({ host, mission, target, lang, executablePath: agents[host].commandPath, executableArgs: agents[host].commandArgs });
         write(
           `\n${c.emerald}╭─── ${pl ? "GOTOWA KOMENDA I PROMPT AGENTA" : "READY AGENT COMMAND & PROMPT"} ───────────────────────────────────────╮${c.reset}\n` +
             `  ${c.slate}${pl ? "Komenda CLI:" : "CLI Command:"}${c.reset}\n  ${c.bold}${c.mint}${bridge.cliCommand}${c.reset}\n\n` +
@@ -503,13 +503,18 @@ export async function welcomeTerminal(options = {}) {
       if (choice === "6") {
         const ok = (
           await ask(
-            `\n${c.amber}${pl ? "Czy zatwierdzasz przegląd plików w git diff --cached (--git-staged --yes)? [t/N]: " : "Approve review of staged Git files (--git-staged --yes)? [y/N]: "}${c.reset}`,
+            `\n${c.amber}${pl ? "Przygotować propozycję zakresu dla plików Git staged? [t/N] " : "Prepare a scope proposal for staged Git files? [y/N] "}${c.reset}`,
           )
         )?.trim();
         if (/^(t|tak|y|yes)$/i.test(ok || "")) {
           try {
             const res = runBoundedAction("git-staged", { consent: true });
             write(`\n${c.mint}${res.output}${c.reset}\n`);
+            const approval = (await ask(pl ? "Zatwierdzasz odczyt tej dokładnej listy plików? [t/N] " : "Approve reading this exact file list? [y/N] "))?.trim();
+            if (/^(t|tak|y|yes)$/i.test(approval || "")) {
+              const reviewed = runBoundedAction("review-staged", { consent: true, scopeName: res.scopeName, proposalDigest: res.proposalDigest });
+              write(`\n${c.mint}${reviewed.output}${c.reset}\n`);
+            }
           } catch (err) {
             write(`\n${c.rose}❌ ${err.message}${c.reset}\n`);
           }

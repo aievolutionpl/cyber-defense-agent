@@ -32,7 +32,7 @@ The flags are consent records enforced in code. They are not authentication and 
 | `report --name <n> --from <report> [...]` | Merges evidence reports into one dark, self-contained HTML report (no scripts, no external resources, strict CSP, every string escaped) and, only with the explicit `--pdf` flag, prints it to PDF with a locally installed Chromium-based browser. Without the flag or without a browser it writes HTML only and says so. A confirmed fix closes a finding only for the same root, rule and file and only when the retest is newer; an incomplete advisory lookup is shown as incomplete and never as a clear verdict. | none; the browser opens only the generated local file |
 | `dashboard` | Re-renders `.cda/reports/dashboard.html` from every stored report. Also runs automatically after each evidence command; the page refreshes itself every five seconds. | none |
 
-Network access is limited in code to the hosts above for `advisories` (redirects refused) and to the operator-named site for `web`. No other command uses the network. No command calls a model.
+Outbound evidence requests use the hosts above for `advisories` and the operator-authorized site for `web`. The operator panel listens on loopback. An explicit agent-session launch starts the selected installed CLI, whose provider settings govern its model access and data handling.
 
 PDF printing starts a child process, so it has its own consent flag (`report --pdf`, `demo.mjs --pdf`): the first existing browser from a fixed path list (or `CDA_BROWSER`), with fixed headless arguments and the `file://` URL of the report this tool just wrote. On Linux as root it adds `--no-sandbox`, which is acceptable only because the page is our own script-free HTML. The verdict line in the report ("Act today", "Needs attention", "Routine", "No findings in the checked scope") is derived from priority counts; it is a reading aid, not a score or a certification.
 
@@ -57,3 +57,15 @@ Unit tests cover consent gates, parsers, host allowlisting, alias merging, CVSS 
 The CLI now imports native Gitleaks, Trivy and OSV-Scanner JSON within the existing approved file scope. It compares stored snapshots and exports bounded SARIF locally. Project dashboards show current retest state and label returning findings. These commands make no outbound requests and start no scanners.
 
 The separate PR runner uses an explicitly authorized base-branch policy to read two checkouts and writes JSON, Markdown, HTML and SARIF. The shipped GitHub workflow installs Node and checks out repository content using pinned actions. It publishes an Actions summary, uses read-only contents permission and runs no candidate scripts. See [formats, coverage and limits](SCANNER_INTEGRATIONS.md).
+
+## Local operator panel and guided audits
+
+`node tools/cda.mjs ui --lang pl` opens the local panel on `127.0.0.1:3109`. It checks the actual listener port in Host, Origin and Referer headers. POST actions require the session token. Reports, prompts, sessions and run state use guarded local paths. Session and run JSON use the same atomic state store as evidence reports. Linked state files and directories are rejected.
+
+A project audit requires an explicit list of relative files. The panel displays the CLI's canonical root and complete proposed list before approval. The approval passes the proposal digest to the CLI. Replacing a proposal invalidates that approval. A computer audit first inventories locally, then asks separately before sharing package names and versions with OSV.dev and downloading CISA KEV.
+
+Each run has its own report names and step history. Cancellation is retained when child processes close. Resume waits for the previous attempt to settle and continues from the first unfinished step. Each local evidence step has a five-minute timeout and a two-megabyte combined output limit. Existing interrupted computer audits retain the separate data-sharing gate when resumed.
+
+The Windows catalog supplies official vendor download URLs and winget identifiers. Registry entries remain in manual lookup until supported advisory evidence is available. Inventory counts distinguish packages eligible for OSV lookup from completed vulnerability checks. Legacy reports based on fixed catalog thresholds contribute an incomplete-coverage warning.
+
+Agent sessions submit one prompt using Claude Code print mode or `codex exec`. The panel shows redacted process output, authentication diagnostics and cancellation. Secret redaction is applied to the accumulated stream before the display limit. It remains heuristic. Detection and invocation share the resolved executable path. Supported npm Windows shims run through Node with literal argument arrays. Copyable PowerShell commands preserve the skill prefix and embedded quotes. Interactive follow-up uses the operator's host chat or terminal.

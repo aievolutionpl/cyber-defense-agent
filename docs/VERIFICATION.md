@@ -1,5 +1,20 @@
 # Verification record
 
+## Local panel and workflow repairs — 12 November 2026
+
+Based on `ff0b1c8`, on branch `codex/fix-panel-workflows`. Windows, Node.js 26.12.1.
+
+- `npm run check` passes with **94/94 tests**, skill contracts, ESLint, TypeScript and static export. A separate production TypeScript configuration validates freshly generated route types while excluding stale development-cache types. Source checking remains strict.
+- Sixteen focused regression tests cover linked paths and reports, exact listener origins, final cancellation state, streamed-secret redaction, successful configuration advice, Codex print execution, real Windows npm shim resolution, shell metacharacters, approval tokens, serialized resume, explicit project files, legacy coverage and interrupted-run compatibility.
+- The project workflow was exercised through a copied trusted CLI against a separate synthetic project. It paused before approval, displayed the exact scope and generated the expected lodash finding and HTML report after approval. Replacing the saved proposal before approval produced `SCOPE_PROPOSAL_CHANGED` and prevented the review step.
+- The synthetic demo passes with the bounded fix, incomplete-data result and out-of-scope rejection. The 16-sample benchmark reports eight true positives, zero false positives and zero missed labelled findings for this corpus.
+- Chromium static-export acceptance passes **58/58** checks across PL and EN, command and prompt clipboard operations, keyboard tabs and menu, policy links, reduced motion and 320/390/768/1440 px layouts. Mini UI acceptance passes **29/29**, including exact-scope approval, a real completed synthetic workflow, keyboard controls, clipboard, both languages, all four widths and inert rendering of injected HTML. Both suites recorded zero uncaught browser errors. Static-export requests recorded zero failing local responses.
+- Desktop and mobile screenshots were visually inspected. The panel now wraps installed CLI paths, keeps diagnostic detail from stretching the agent cards and displays process output as text.
+- Agent lifecycle and authentication tests use simulated child processes. Version discovery, installed CLI help and a synthetic Windows npm shim were exercised locally. Live authenticated provider sessions, live OSV/CISA requests and a real machine inventory remain separate acceptance work. Physical devices, Safari and Firefox require their own verification.
+
+Reproduce browser acceptance with the existing Playwright CLI after `npm run build`. Serve the export using `node scripts/preview.mjs --port 3112`, open that URL and run `scripts/ui-acceptance.js` with `run-code --filename`. For the operator panel, open `http://127.0.0.1:3109/` and run `scripts/mini-ui-acceptance.js`. Screenshots are saved under the ignored `output/playwright/` directory.
+
+
 ## Evidence adapters, comparison and PR review — 10 November 2026
 
 - Based on `e4bc7a4`, including the preceding report-correctness fixes from PR #11.

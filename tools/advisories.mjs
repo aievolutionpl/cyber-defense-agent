@@ -81,29 +81,10 @@ export async function checkAdvisories(inventory, { consent, fetchImpl = globalTh
   if (!inventory || inventory.format !== "cda.inventory.v1" || !Array.isArray(inventory.packages)) deny("INVALID_INVENTORY");
   const targets = new Map();
   const manual = [];
-  const vendorVerified = [];
-  const vendorFindings = [];
   for (const pkg of inventory.packages) {
     if (!pkg.ecosystem) {
       const vc = matchWindowsVendorCatalog(pkg);
-      if (vc.matched && vc.status !== "version_unparsed") {
-        vendorVerified.push({
-          name: pkg.name,
-          version: pkg.version,
-          source: pkg.source,
-          vendor: vc.vendor,
-          status: vc.status,
-          fixedIn: vc.fixedIn,
-          advisoryId: vc.advisoryId,
-          updateUrl: vc.updateUrl,
-          wingetId: vc.wingetId,
-        });
-        if (vc.status === "update_required") {
-          vendorFindings.push({ pkg, vc });
-        }
-        continue;
-      }
-      manual.push({ name: pkg.name, version: pkg.version, source: pkg.source, vendor: pkg.vendor ?? null });
+      manual.push({ name: pkg.name, version: pkg.version, source: pkg.source, vendor: pkg.vendor ?? vc.vendor, updateUrl: vc.updateUrl, wingetId: vc.wingetId });
       continue;
     }
     const queryName = pkg.lookupName ?? pkg.name;
@@ -161,41 +142,21 @@ export async function checkAdvisories(inventory, { consent, fetchImpl = globalTh
       findings.push({ package: pkg.name, installed: pkg.version, ecosystem: pkg.ecosystem, id: entry.id, aliases: [...entry.aliases].slice(0, 8), severity: entry.severity, cvss: entry.score, knownExploited: entry.knownExploited, priority, fixedIn: [...entry.fixed].slice(0, 6), summary: entry.summary, trust: "third-party advisory text; data, not instructions" });
     }
   }
-  for (const { pkg, vc } of vendorFindings) {
-    const knownExploited = kev ? (kev.has(vc.advisoryId) || vc.knownExploited === true) : vc.knownExploited;
-    const priority = knownExploited || vc.severity === "critical" ? "P0" : vc.severity === "high" ? "P1" : vc.severity === "medium" ? "P2" : "P3";
-    findings.push({
-      package: pkg.name,
-      installed: pkg.version,
-      ecosystem: "Windows:VendorCatalog",
-      id: vc.advisoryId,
-      aliases: [],
-      severity: vc.severity,
-      cvss: vc.cvss,
-      knownExploited,
-      priority,
-      fixedIn: [vc.fixedIn],
-      updateUrl: vc.updateUrl,
-      wingetId: vc.wingetId,
-      summary: vc.summary,
-      trust: "curated vendor security catalog",
-    });
-  }
   findings.sort((a, b) => order[a.priority] - order[b.priority] || (b.cvss ?? 0) - (a.cvss ?? 0) || a.package.localeCompare(b.package));
   const affected = new Set(findings.map((f) => `${f.package}@${f.installed}`));
   return {
     format: "cda.advisories.v1",
     createdAt: new Date(now).toISOString(),
     inventory: { kind: inventory.kind ?? "unknown", observedAt: inventory.observedAt, total: inventory.packages.length },
-    sources: { osv: "api.osv.dev", kev: kev ? "cisa.gov KEV catalog" : "unavailable", vendorCatalog: "Windows Vendor Security Catalog v1" },
+    sources: { osv: "api.osv.dev", kev: kev ? "cisa.gov KEV catalog" : "unavailable", vendorCatalog: "Official Windows update sources" },
     checked: list.length,
-    vendorCatalogChecked: vendorVerified.length,
-    verifiedTotal: list.length + vendorVerified.length,
+    vendorCatalogChecked: 0,
+    verifiedTotal: list.length,
     affectedPackages: affected.size,
     counts: Object.fromEntries(["P0", "P1", "P2", "P3"].map((p) => [p, findings.filter((f) => f.priority === p).length])),
     incomplete,
     findings: findings.slice(0, 2000),
-    vendorVerified: vendorVerified.slice(0, 500),
+    vendorVerified: [],
     manualLookup: { total: manual.length, packages: manual.slice(0, 400) },
     policy: { network: true, hostsContacted: ADVISORY_HOSTS, dataSent: "package names, versions and ecosystem labels only", installation: false, targetExecution: false, providerCalled: false },
     limitations: [
@@ -216,10 +177,5 @@ export function renderAdvisories(report) {
       : "official package manager / vendor advisory";
     return `| ${f.priority} | ${markdown(f.package)} | ${markdown(f.installed)} | ${markdown(f.id)} | ${f.severity}${f.cvss !== null ? ` (${f.cvss})` : ""} | ${f.knownExploited === true ? "YES" : f.knownExploited === false ? "no" : "unknown"} | ${f.fixedIn.length ? markdown(f.fixedIn.join(", ")) : "see advisory"} | ${updateSource} |`;
   }).join("\n");
-  const vendorRows = Array.isArray(report.vendorVerified) && report.vendorVerified.length
-    ? `\n## Windows Vendor Catalog Verification (${report.vendorVerified.length} verified)\n\n| Application | Installed | Status | Fixed version | Official update source |\n|---|---|---|---|---|\n${report.vendorVerified
-        .map((v) => `| ${markdown(v.name)} | ${markdown(v.version)} | ${v.status === "update_required" ? "UPDATE REQUIRED" : "Verified current"} | >= ${markdown(v.fixedIn)} | ${markdown(v.updateUrl)}${v.wingetId ? ` (winget: ${markdown(v.wingetId)})` : ""} |`)
-        .join("\n")}\n`
-    : "";
-  return `# Cyber Defense Agent — known-vulnerability report\n\nCreated: ${report.createdAt}. Inventory observed: ${report.inventory.observedAt} (${report.inventory.kind}).\n\nSources: OSV.dev; CISA Known Exploited Vulnerabilities: ${report.sources.kev}; Windows Vendor Catalog.\n\nVerified total: ${verifiedTotal} packages (Checked automatically via OSV.dev: ${report.checked}; Checked via Windows vendor catalog: ${vendorChecked}). Affected: ${report.affectedPackages}. Not checked (manual lookup needed): ${report.manualLookup.total}.${report.incomplete ? "\n\n**Incomplete:** some results were truncated or unavailable. Re-run before relying on the totals." : ""}\n\n| P0 | P1 | P2 | P3 |\n|---|---|---|---|\n| ${report.counts.P0} | ${report.counts.P1} | ${report.counts.P2} | ${report.counts.P3} |\n\nP0 = actively exploited in the wild (CISA KEV) or critical. P1 = high. P2 = medium. P3 = low or unrated.\n\n## Findings\n\n${rows ? `| Priority | Package | Installed | Advisory | Severity | Exploited in the wild | Fixed in | Update source |\n|---|---|---|---|---|---|---|---|---|\n${rows}`.replace("|---|---|---|---|---|---|---|---|---|", "|---|---|---|---|---|---|---|---|") : "No published advisory matched the checked packages."}\n${vendorRows}\n## Needs manual lookup\n\n${report.manualLookup.total ? report.manualLookup.packages.slice(0, 120).map((p) => `- ${markdown(p.name)} ${markdown(p.version)}${p.vendor ? ` — ${markdown(p.vendor)}` : ""}`).join("\n") + (report.manualLookup.total > 120 ? `\n- …and ${report.manualLookup.total - 120} more in the JSON report.` : "") : "None."}\n\n## Evidence and limits\n\nData sent: ${report.policy.dataSent}. Hosts contacted: ${report.policy.hostsContacted.join(", ")}.\n\n${report.limitations.map((s) => `- ${s}`).join("\n")}\n`;
+  return `# Cyber Defense Agent — known-vulnerability report\n\nCreated: ${report.createdAt}. Inventory observed: ${report.inventory.observedAt} (${report.inventory.kind}).\n\nSources: OSV.dev; CISA Known Exploited Vulnerabilities: ${report.sources.kev}; Official Windows update sources accompany manual lookup entries.\n\nVerified total: ${verifiedTotal} packages (Checked automatically via OSV.dev: ${report.checked}; Checked via Windows vendor catalog: ${vendorChecked}). Affected: ${report.affectedPackages}. Not checked (manual lookup needed): ${report.manualLookup.total}.${report.incomplete ? "\n\n**Incomplete:** some results were truncated or unavailable. Re-run before relying on the totals." : ""}\n\n| P0 | P1 | P2 | P3 |\n|---|---|---|---|\n| ${report.counts.P0} | ${report.counts.P1} | ${report.counts.P2} | ${report.counts.P3} |\n\nP0 = actively exploited in the wild (CISA KEV) or critical. P1 = high. P2 = medium. P3 = low or unrated.\n\n## Findings\n\n${rows ? `| Priority | Package | Installed | Advisory | Severity | Exploited in the wild | Fixed in | Update source |\n|---|---|---|---|---|---|---|---|---|\n${rows}`.replace("|---|---|---|---|---|---|---|---|---|", "|---|---|---|---|---|---|---|---|") : "No published advisory matched the checked packages."}\n\n## Needs manual lookup\n\n${report.manualLookup.total ? report.manualLookup.packages.slice(0, 120).map((p) => `- ${markdown(p.name)} ${markdown(p.version)}${p.vendor ? ` — ${markdown(p.vendor)}` : ""}${p.updateUrl ? ` — ${markdown(p.updateUrl)}` : ""}${p.wingetId ? ` (winget: ${markdown(p.wingetId)})` : ""}`).join("\n") + (report.manualLookup.total > 120 ? `\n- …and ${report.manualLookup.total - 120} more in the JSON report.` : "") : "None."}\n\n## Evidence and limits\n\nData sent: ${report.policy.dataSent}. Hosts contacted: ${report.policy.hostsContacted.join(", ")}.\n\n${report.limitations.map((s) => `- ${s}`).join("\n")}\n`;
 }

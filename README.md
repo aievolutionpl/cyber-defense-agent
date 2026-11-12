@@ -117,6 +117,11 @@ node tools/cda.mjs agent --host codex --mission pc --lang pl
   <img src="docs/assets/mini-interface-preview.png" alt="Cyber Defense Agent — Lokalny Mini Interfejs Graficzny i Mostek Claude Code CLI & Codex CLI" width="100%" />
 </p>
 
+W panelu wybierz cel audytu. Dla projektu wpisz katalog oraz dokładne ścieżki plików, po jednej w wierszu. Panel pokaże pełny zakres do zatwierdzenia przed odczytem. Audyt komputera ma osobną zgodę na przekazanie nazw i wersji pakietów do OSV.dev. Wynik i historia kroków pojawiają się w panelu, a raport HTML otworzysz z listy plików.
+
+Przycisk uruchomienia agenta przekazuje jedno zadanie do zainstalowanego Claude Code lub Codexa i pokazuje wyjście sesji. Dalszą rozmowę prowadzisz w swoim czacie lub terminalu agenta.
+
+
 ### Najważniejsze polecenia CLI (v0.2)
 
 ```sh
@@ -194,7 +199,7 @@ node tools/demo.mjs
 ```sh
 npm ci
 npm run dev     # serwer deweloperski: http://localhost:3107
-npm run check   # check:skills + 72 testy jednostkowe + ESLint + TypeScript + Next.js static build
+npm run check   # check:skills + testy narzędzi + ESLint + TypeScript + Next.js static build
 npm run demo    # lokalne demo na danych syntetycznych
 ```
 
