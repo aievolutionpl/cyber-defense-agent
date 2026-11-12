@@ -34,7 +34,8 @@ fs.writeFileSync(
   `${JSON.stringify(pkg, null, 2)}\n`,
 );
 const after = save("demo-after", review(scope));
-const result = save("demo-retest", retest(scope, imported, after));
+const result = save("demo-retest", retest(scope, before, after));
+const importedRetest = retest(scope, imported, after);
 const partial = save("demo-partial", importScan(scope, "reports/partial.json"));
 const incomplete = save("demo-no-data", retest(scope, before, partial));
 let blocked;
@@ -46,6 +47,7 @@ try {
 if (
   result.results[0]?.status !== "confirmed_fixed" ||
   incomplete.results[0]?.status !== "insufficient_data" ||
+  importedRetest.results[0]?.status !== "insufficient_data" ||
   !blocked
 )
   throw new Error("DEMO_FAILED");
@@ -54,5 +56,5 @@ const visual = store.write("reports", "demo-report", renderVisual(collect([["dem
 // Printing starts a browser process, so it happens only when asked for: node tools/demo.mjs --pdf
 const printed = process.argv.includes("--pdf") ? printPdf(path.join(store.repoRoot, visual), store.file("reports", "demo-report", "pdf", true)) : { pdf: false };
 process.stdout.write(
-  `DEMO passed: SARIF import → evidence → remediate synthetic copy → retest.\nConfirmed fix: ${result.results[0].status}\nIncomplete report: ${incomplete.results[0].status}\nOut of scope: ${blocked}\nReports: .cda/reports/demo-{before,import,after,retest,no-data}.md\nVisual report: ${visual}${printed.pdf ? " and .cda/reports/demo-report.pdf" : " (HTML only; add --pdf to print it with a local Chromium-based browser)"}\nDemo scope: ${scratch}\nNo fixture code executed. No network calls.\n`,
+  `DEMO passed: SARIF import → evidence → remediate synthetic copy → retest.\nConfirmed fix: ${result.results[0].status}\nImported finding verification: ${importedRetest.results[0].status}\nIncomplete report: ${incomplete.results[0].status}\nOut of scope: ${blocked}\nReports: .cda/reports/demo-{before,import,after,retest,no-data}.md\nVisual report: ${visual}${printed.pdf ? " and .cda/reports/demo-report.pdf" : " (HTML only; add --pdf to print it with a local Chromium-based browser)"}\nDemo scope: ${scratch}\nNo fixture code executed. No network calls.\n`,
 );
