@@ -4,7 +4,7 @@ v0.2 extends the local review of v0.1 into a defensive expert for the operator's
 
 ## Knowledge base
 
-`skills/cyber-defense/references/knowledge/` holds nine original playbooks: triage and severity, installed-software vulnerabilities, endpoint hardening (Windows, macOS, Linux), web applications (OWASP Top 10:2025, API and LLM risks), code review (source-to-sink, CWE patterns, supply chain), databases (PostgreSQL, Supabase/Firebase, MySQL, MongoDB, Redis), home and small-office network, incident first response, and the list of standards and open repositories they were distilled from. They are guidance for the agent; they are not executable adapters, and naming a tool in them does not install or run it.
+`skills/cyber-defense/references/knowledge/` holds ten original knowledge documents: triage and severity, installed-software vulnerabilities, endpoint hardening (Windows, macOS, Linux), web applications (OWASP Top 10:2025, API and LLM risks), code review (source-to-sink, CWE patterns, supply chain), agent security (skills, MCP, permissions, memory and data boundaries), databases (PostgreSQL, Supabase/Firebase, MySQL, MongoDB, Redis), home and small-office network, incident first response, and the list of standards and open repositories they were distilled from. They are guidance for the agent; they are not executable adapters, and naming a tool in them does not install or run it.
 
 ## Consent ladder
 
@@ -69,3 +69,9 @@ Each run has its own report names and step history. Cancellation is retained whe
 The Windows catalog supplies official vendor download URLs and winget identifiers. Registry entries remain in manual lookup until supported advisory evidence is available. Inventory counts distinguish packages eligible for OSV lookup from completed vulnerability checks. Legacy reports based on fixed catalog thresholds contribute an incomplete-coverage warning.
 
 Agent sessions submit one prompt using Claude Code print mode or `codex exec`. The panel shows redacted process output, authentication diagnostics and cancellation. Secret redaction is applied to the accumulated stream before the display limit. It remains heuristic. Detection and invocation share the resolved executable path. Supported npm Windows shims run through Node with literal argument arrays. Copyable PowerShell commands preserve the skill prefix and embedded quotes. Interactive follow-up uses the operator's host chat or terminal.
+
+## Agent review and website planner
+
+The agent-security playbook adds a read-only review route for AI applications, skills and MCP configuration, informed by OWASP Agentic 2026, ASVS 5.0.0 and the MCP security documentation checked on 13 November 2026. It is expert guidance, not a new scanner or connector. Existing local agent rules remain bounded pattern checks. No network destination, OS collector, dependency or implicit permission was added.
+
+The website's seven-scenario planner generates a localized brief for Codex or Claude Code, with expected evidence and explicit limits. It runs entirely in the browser without target inputs, persistence or audit requests; copying a brief does not grant consent. The evidence-review method adds coverage, counter-evidence and decision framing to the skill. Host/model behavioral acceptance remains separate from document and browser validation.

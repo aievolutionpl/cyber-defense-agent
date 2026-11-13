@@ -11,7 +11,7 @@ for (const doc of docs) for (const [, link] of fs.readFileSync(doc, 'utf8').matc
   if (/^https?:/.test(link)) continue;
   assert.ok(fs.existsSync(path.posix.join(path.posix.dirname(doc), link)), `${doc}: broken link ${link}`);
 }
-for (const name of ['triage-and-severity', 'software-vulnerabilities', 'endpoint-hardening', 'web-application', 'code-review', 'databases', 'network', 'incident-first-response', 'sources']) assert.ok(fs.statSync(`skills/cyber-defense/references/knowledge/${name}.md`).size > 2000, `Missing playbook: ${name}`);
+for (const name of ['triage-and-severity', 'software-vulnerabilities', 'endpoint-hardening', 'web-application', 'code-review', 'agent-security', 'databases', 'network', 'incident-first-response', 'sources']) assert.ok(fs.statSync(`skills/cyber-defense/references/knowledge/${name}.md`).size > 2000, `Missing playbook: ${name}`);
 for (const base of ['.agents', '.claude', '.hermes']) {
   const entry = fs.readFileSync(`${base}/skills/cyber-defense/SKILL.md`, 'utf8');
   assert.ok(entry.includes('name: cyber-defense'));
@@ -21,4 +21,4 @@ for (const base of ['.agents', '.claude', '.hermes']) {
 for (const base of ['.agents', '.claude']) {
   assert.ok(fs.readFileSync(`${base}/skills/agent-build-scroll/SKILL.md`, 'utf8').includes('skills/agent-build-scroll/SKILL.md'));
 }
-console.log(`${docs.length} skill documents with resolving links and nine playbooks. `+'Codex + Claude Code + experimental Hermes reference the canonical defense skill. Motion entry points share one source.');
+console.log(`${docs.length} skill documents with resolving links and ten knowledge documents. `+'Codex + Claude Code + experimental Hermes reference the canonical defense skill. Motion entry points share one source.');

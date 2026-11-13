@@ -2,6 +2,14 @@
 
 The playbooks in this folder are original summaries written for this skill. They are distilled from the public standards and open repositories below. Consult these when a task needs more depth than a playbook gives. None of them is bundled, installed or executed by this skill, and mentioning a tool is not permission to run it.
 
+## Agent review sources checked on 13 November 2026
+
+- [OWASP Top 10 for Agentic Applications 2026](https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/): official resource page, published 9 December 2025. Used to frame the review of authority, tools, memory and trust boundaries.
+- [OWASP ASVS 5.0.0](https://asvs.owasp.org/): the official site identifies 5.0.0 as its downloadable release. Used for testable application controls; no claim of full ASVS coverage.
+- [MCP security best practices, revision 2026-07-28](https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices): current documentation reached from the latest-security URL. Used for token audience, proxy consent, state ownership, local server trust and outbound-request boundaries. Apply the revision supported by the reviewed target.
+
+These are public documentation reads, not checks of a user asset. The [agent playbook](agent-security.md) is original guidance, not a bundled scanner. Recheck sources when a version-specific decision depends on them.
+
 ## Standards and catalogues
 
 | Source | Use it for |
@@ -38,7 +46,7 @@ The playbooks in this folder are original summaries written for this skill. They
 | anthropics/claude-code-security-review | diff-focused security review with false-positive filtering |
 | agamm/claude-code-owasp | compact OWASP Top 10:2025 / ASVS 5.0 reference for coding agents |
 | mukul975/Anthropic-Cybersecurity-Skills | a large community library of analyst playbooks mapped to ATT&CK and NIST CSF (includes dual-use material: stay within this skill's hard lines) |
-| OWASP Agentic Skills Top 10 | risks of skills and agent configuration themselves |
+| OWASP Top 10 for Agentic Applications 2026 | trust boundaries, tools and agent authority; see the checked primary sources above |
 
 ## Open-source tools a user may already run
 

@@ -8,12 +8,13 @@ import '@/app/defense-story.css';
 import '@/app/expert.css';
 import '@/app/blueprint.css';
 import '@/app/cinematic-build.css';
+import '@/app/mission-workbench.css';
 import { SITE_URL, type Locale } from '@/lib/config';
 
 export function pageMetadata(locale: Locale): Metadata {
   const pl = locale === 'pl';
   const title = pl ? 'Cyber Defense Agent | Polski skill bezpieczeństwa dla agentów AI — AI Evolution Polska' : 'Cyber Defense Agent | AI Security Skill by AI Evolution Polska';
-  const description = pl ? 'Jeden skill zmienia Twojego agenta AI w eksperta bezpieczeństwa. Sprawdza kod, komputer, stronę WWW, bazę danych i sieć. Tylko odczyt, dowód i raport PDF. Projekt AI Evolution Polska.' : 'One open-source skill turns your AI agent into a security expert. Checks your code, computer, website, database and network. Read-only, with evidence and a PDF report. Created by AI Evolution Polska.';
+  const description = pl ? 'Przegląd kodu, agentów AI, skilli i konfiguracji. Zatwierdzony zakres, konkretne dowody, plan naprawy i retest. Lokalny CLI oraz skill od AI Evolution Polska.' : 'Review code, AI agents, skills and configuration. Approved scope, concrete evidence, a repair plan and retesting. Local CLI and open-source skill by AI Evolution Polska.';
   return {
     ...(SITE_URL ? { metadataBase: new URL(SITE_URL), alternates: { canonical: pl ? './' : 'en/', languages: { pl: './', en: 'en/' } } } : {}),
     title, description, robots: { index: true, follow: true },

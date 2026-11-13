@@ -1,6 +1,7 @@
 const { chromium } = await import(process.env.CDA_PLAYWRIGHT_MODULE || 'playwright');
 import { mkdir } from 'node:fs/promises';
 import assert from 'node:assert/strict';
+const base = (process.env.CDA_SITE_URL || 'http://127.0.0.1:3107').replace(/\/$/, '');
 const browser = await chromium.launch();
 await mkdir('output/site-review', { recursive: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 }, reducedMotion: 'no-preference' });
@@ -10,12 +11,31 @@ try {
   for (const locale of ['en', 'pl']) {
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
-      await page.goto(`http://127.0.0.1:3107/${locale === 'pl' ? 'pl/' : ''}`);
+      await page.goto(`${base}/${locale === 'en' ? 'en/' : ''}`);
+      assert.equal(await page.locator('html').getAttribute('lang'), locale, 'requested document language');
       await page.waitForFunction(() => document.documentElement.dataset.motion === 'running');
       assert.equal(await page.locator('.motion-dock').count(), 0, 'floating dock removed');
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${locale} ${width} no overflow`);
       const missing = await page.locator('a[href^="#"]').evaluateAll(links => links.map(a => a.getAttribute('href')).filter(href => href.length > 1 && !document.getElementById(href.slice(1))));
       assert.deepEqual(missing, [], 'all section links resolve');
+      if (width === 1440) {
+        await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(base).origin });
+        for (const mission of ['agents', 'computer']) {
+          await page.locator(`#mission-${mission}`).focus();
+          await page.keyboard.press('Enter');
+          assert.equal(await page.locator(`#mission-${mission}`).getAttribute('aria-pressed'), 'true', 'mission keyboard selection');
+          for (const host of ['codex', 'claude']) {
+            await page.locator('#mission-host').selectOption(host);
+            await page.waitForFunction(prefix => document.querySelector('.mission-prompt code')?.textContent.startsWith(prefix), host === 'codex' ? '$cyber-defense ' : '/cyber-defense ');
+            await page.locator('#mission-detail .copy-button').click();
+            await page.waitForFunction(() => ['Copied', 'Skopiowano'].includes(document.querySelector('#mission-detail [role="status"]')?.textContent));
+            const brief = (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n');
+            assert.equal(brief, await page.locator('.mission-prompt code').innerText(), 'complete selected brief copied');
+            assert(brief.startsWith(host === 'codex' ? '$cyber-defense ' : '/cyber-defense '), 'correct host invocation');
+            assert(!/--yes|--authorized|--share-package-names/.test(brief), 'brief does not execute consent flags');
+          }
+        }
+      }
       await page.locator('#scan').scrollIntoViewIfNeeded();
       await page.waitForTimeout(1800);
       const first = await page.locator('.theater').getAttribute('data-stage');
@@ -35,7 +55,7 @@ try {
     }
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto('http://127.0.0.1:3107/');
+  await page.goto(`${base}/`);
   await page.waitForFunction(() => document.documentElement.dataset.motion === 'running');
   await page.locator('#missions').scrollIntoViewIfNeeded();
   await page.waitForFunction(() => document.querySelector('#missions').dataset.buildStage === 'assembling');
@@ -55,5 +75,5 @@ try {
   await page.keyboard.press('Enter');
   assert.equal(await page.locator('.theater').getAttribute('data-stage'), 'detect', 'keyboard stage selection');
   assert.deepEqual(errors, [], 'no browser runtime errors');
-  console.log('PASS: EN/PL, 320/390/768/1440, anchors, autoplay, pause, host slides, reduced motion, keyboard and console.');
+  console.log('PASS: EN/PL, 320/390/768/1440, mission clipboard, anchors, autoplay, pause, host slides, reduced motion, keyboard and console.');
 } finally { await browser.close(); }

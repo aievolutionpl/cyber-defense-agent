@@ -4,8 +4,8 @@
 
 <h1 align="center">🛡️ Cyber Defense Agent (v0.2)</h1>
 <p align="center">
-  <strong>Zamień swojego agenta AI w eksperta bezpieczeństwa.</strong><br/>
-  Twój kod, komputer, strona WWW, baza danych i sieć. Znajdź luki z dowodem, zrozum ryzyko i zweryfikuj poprawkę.<br/>
+  <strong>Wiesz, co poprawić. Masz na to dowód.</strong><br/>
+  Przegląd kodu, agentów AI i konfiguracji. Zatwierdzony zakres, konkretne dowody, plan naprawy i retest.<br/>
   <em>Polskie narzędzie open-source stworzone i rozwijane przez <a href="https://github.com/aievolutionpl"><strong>AI Evolution Polska</strong></a>.</em>
 </p>
 
@@ -26,22 +26,26 @@
 
 ## 💡 O co chodzi w 30 sekund?
 
-Modele językowe wiedzą dużo o cyberbezpieczeństwie, ale bez odpowiedniej metody zgadują wersje pakietów, zasypują setkami fałszywych alertów albo uruchamiają komendy bez pytania.
+Bezpieczeństwo zaczyna się od konkretnych pytań: kto ma dostęp do danych, jakie uprawnienia ma agent i co potwierdza, że poprawka działa.
 
-**Cyber Defense Agent** to otwarty, w pełni przejrzysty **skill oraz lokalny zestaw narzędzi CLI (Node.js 22+, zero zewnętrznych zależności npm)**, który daje Twojemu agentowi AI twardą metodę pracy:
+**Cyber Defense Agent** łączy trzy elementy:
 
-1. **Najpierw pyta o zgodę i wyznacza zakres (`Scope Gate`)** — agent czyta wyłącznie te pliki, które jawnie zatwierdzisz.
-2. **Zbiera twarde dowody zamiast domysłów** — sprawdza aktualne bazy podatności (**OSV.dev** oraz listę aktywnie wykorzystywanych luk **CISA KEV**), nagłówki HTTP/TLS, pliki lockfile i reguły kodu.
-3. **Generuje wizualny raport HTML i PDF** — zanim cokolwiek zmienisz, otrzymujesz czytelny raport z werdyktem, priorytetami `P0–P3`, zredagowanymi dowodami i gotowym planem naprawy.
-4. **Nigdy sam niczego nie psuje (100% Read-Only)** — agent przygotowuje dokładną poprawkę (diff) oraz instrukcję jej cofnięcia (`rollback`), ale decyzja o wdrożeniu należy zawsze do Ciebie.
-5. **Weryfikuje poprawkę (`Retest`)** — po wdrożeniu łatki powtarza kontrolę i potwierdza usunięcie luki nowym dowodem (`confirmed_fixed`).
+- **Skill** prowadzi agenta AI przez ustalenie zakresu, analizę dowodów i raport. Przegląd ekspercki jest oznaczony jako ocena modelu.
+- **Lokalny CLI** zbiera wybrane dowody: osiem reguł analizy, zależności, import raportów, pasywna kontrola strony i retest. Wymaga Node.js 22+, bez zewnętrznych zależności npm.
+- **Strona** pomaga wybrać jeden z siedmiu scenariuszy i skopiować brief do Codexa lub Claude Code. Nie uruchamia audytów ani nie przyjmuje plików.
+
+Po przeglądzie otrzymujesz raport HTML z priorytetami, dowodami, ograniczeniami i planem naprawy. PDF wymaga zgody na uruchomienie lokalnej przeglądarki lub ręcznego zapisu przez Drukuj. Zmiany wymagają Twojej decyzji. Retest lokalnej reguły może potwierdzić naprawę; brak alertu w importowanym raporcie pozostaje niewystarczającym dowodem.
+
+**Nowa ścieżka: agenci AI, skille i MCP.** [Playbook](skills/cyber-defense/references/knowledge/agent-security.md) pomaga ocenić uprawnienia narzędzi, granice zaufania, pamięć i przepływ danych. Korzysta ze źródeł OWASP Agentic 2026, ASVS 5.0.0 i MCP sprawdzonych 13 listopada 2026. To metoda przeglądu, nie automatyczny skaner MCP.
+
+Lokalny CLI nie wywołuje modelu. Wybrany host AI może przekazywać treść rozmowy swojemu dostawcy i mieć własne opłaty. Zapytania do OSV i kontrola strony wymagają osobnych zgód.
 
 ---
 
 ## 🤝 Jeden skill. Każdy agent.
 
 <p align="center">
-  <img src="docs/assets/agents-bar-preview.png" alt="Jeden skill. Każdy agent — Codex, Claude Code, Cursor, Antigravity, Lovable, Hermes oraz 6 obszarów audytu" width="100%" />
+  <img src="docs/assets/agents-bar-preview.png" alt="Jeden skill. Każdy agent — Codex, Claude Code, Cursor, Antigravity, Lovable, Hermes oraz obszary audytu" width="100%" />
 </p>
 
 Nie musisz instalować osobnych wtyczek do każdego edytora. Sklonuj repozytorium i otwórz je w swoim ulubionym narzędziu — punkty wejścia w katalogach `.agents/`, `.claude/` oraz `.hermes/` prowadzą do tej samej kanonicznej instrukcji [`skills/cyber-defense/SKILL.md`](skills/cyber-defense/SKILL.md):
@@ -57,15 +61,16 @@ Nie musisz instalować osobnych wtyczek do każdego edytora. Sklonuj repozytoriu
 
 ---
 
-## 🎯 Co sprawdzi Twój agent? (6 obszarów ochrony)
+## 🎯 Co sprawdzi Twój agent? (7 scenariuszy)
 
-Wystarczy, że napiszesz zwykłym zdaniem, co chcesz zabezpieczyć. Agent sam dobierze odpowiednie narzędzie CLI oraz jeden z **9 eksperckich playbooków**:
+Wskaż cel. Skill dobierze lokalne narzędzia lub metodę przeglądu eksperckiego i wyjaśni, jakiego dostępu potrzebuje:
 
 | Co piszesz agentowi | Co robi Cyber Defense Agent | Jaki dowód otrzymujesz |
 |---|---|---|
 | **„Sprawdź mój komputer — co zaktualizować?”** | Wypisuje zainstalowane programy i otwarte porty (Windows, macOS, Linux), sprawdza luki w OSV.dev i CISA KEV, układa plan aktualizacji | `inventory` → `advisories` → raport z priorytetami `P0–P3` i bezpieczną kolejnością aktualizacji |
-| **„Czy moja strona WWW jest bezpieczna?”** | Wykonuje 3 pasywne zapytania GET (jak zwykła przeglądarka): sprawdza HTTPS, HSTS, CSP, flagi cookies, CORS i certyfikat TLS | Raport `web` z gotowymi do wklejenia nagłówkami bezpieczeństwa |
+| **„Czy moja strona WWW jest bezpieczna?”** | Wykonuje ograniczoną liczbę zwykłych zapytań GET i kontrolę TLS: sprawdza HTTPS, HSTS, CSP, flagi cookies, CORS i certyfikat TLS | Raport `web` z gotowymi do wklejenia nagłówkami bezpieczeństwa |
 | **„Przejrzyj mój projekt przed publikacją”** | Bada zależności z 6 formatów lockfile (`npm`, `PyPI`, `Cargo`, `Go`, `Composer`, `RubyGems`), wykrywa wycieki sekretów, błędy TLS, XSS, ukryty Unicode i importuje raporty `SARIF`/`JSON` | Raporty `deps`, `review`, `import`, komentarz PR (`pr-comment`) oraz weryfikacja `retest` |
+| **„Sprawdź uprawnienia mojego agenta AI”** | Przegląda zatwierdzone skille, konfigurację MCP i kod kontroli uprawnień bez ich wykonywania | Mapa uprawnień, źródła ustaleń i oznaczona ocena ekspercka z [playbooka](skills/cyber-defense/references/knowledge/agent-security.md) |
 | **„Sprawdź moją bazę danych w Supabase / Postgres”** | Weryfikuje ekspozycję w sieci, uprawnienia ról oraz luki w politykach Row-Level Security (RLS) zapytaniami tylko do odczytu (bez pobierania danych z wierszy) | Przegląd według playbooka `databases.md` (100% read-only) |
 | **„Czy moja sieć domowa / firmowa jest OK?”** | Pokazuje usługi wystawione przez Twój komputer i prowadzi przez listę kontrolną routera (DNS, WPS, UPnP, przekierowania portów, separacja IoT/gości) | Wynik `inventory` + uporządkowana lista kontrolna `network.md` |
 | **„Chyba miałem włamanie / wyciek klucza API”** | Prowadzi krok po kroku przez pierwsze 5 minut reakcji na incydent: jak odciąć dostęp i zabezpieczyć logi bez niszczenia dowodów | Playbook pierwszej pomocy `incident-first-response.md` |
@@ -78,12 +83,12 @@ Wystarczy, że napiszesz zwykłym zdaniem, co chcesz zabezpieczyć. Agent sam do
   <img src="docs/assets/protection-preview.png" alt="Pięć kroków audytu: Skan, Wykrycie, Raport PDF, Poprawka i Weryfikacja" width="100%" />
 </p>
 
-Każdy audyt opiera się na **6-stopniowej drabinie zgód (`L0–L5`)**. Agent nigdy nie wchodzi poziom wyżej bez Twojej jawnej decyzji zapisanej jako flaga w poleceniu:
+**Drabina zgód (`L0–L5`)** rozdziela rodzaje dostępu. Nie trzeba przechodzić wszystkich poziomów. Istniejąca zgoda obowiązuje w zatwierdzonym zakresie; nowy zakres lub wysyłanie danych wymagają osobnej decyzji:
 
 - **`L0` Doradza** (`domyślnie`) — wyjaśnia i planuje, niczego nie dotyka.
 - **`L1` Czyta zatwierdzone pliki** (`approve --yes`) — tylko dokładna lista plików, ważna przez 24h.
 - **`L2` Sprawdza komputer lokalnie** (`inventory --yes`) — lista programów i portów, bez nazwy hosta i użytkownika.
-- **`L3` Odpytuje bazy luk CVE** (`--share-package-names`) — wysyła wyłącznie nazwy i wersje pakietów do OSV.dev / CISA KEV.
+- **`L3` Odpytuje bazy luk CVE** (`--share-package-names`) — wysyła nazwy, wersje i ekosystemy pakietów do OSV.dev; osobno pobiera publiczną listę CISA KEV.
 - **`L4` Sprawdza Twoją stronę WWW** (`--authorized`) — kilka zwykłych, pasywnych zapytań `GET`.
 - **`L5` Wdrożenie zmian** (`Twoja decyzja`) — agent przygotowuje łatkę i plan cofnięcia; zmiany wdrażasz Ty.
 
@@ -175,12 +180,15 @@ Otwórz repozytorium w środowisku Hermes i poproś agenta o wczytanie [`skills/
 - 🌐 **Live Interactive Presentation**: [Polish (Default)](https://aievolutionpl.github.io/cyber-defense-agent/) · [English Version](https://aievolutionpl.github.io/cyber-defense-agent/en/)
 - 📄 **Sample Visual PDF Report**: [English PDF](examples/sample-audit-report.pdf) · [Polish PDF](examples/sample-audit-report-pl.pdf)
 
+The website includes a seven-scenario brief planner for Codex and Claude Code. The new [agent-security playbook](skills/cyber-defense/references/knowledge/agent-security.md) covers skills, MCP permissions, memory and trust boundaries. It is a read-only review method, not an automatic MCP scanner. Local CLI commands do not call a model; your AI host has its own data-handling settings and costs.
+
 ### Key Capabilities
-1. **One Skill, Every Agent**: Drop-in `.agents/skills`, `.claude/skills`, and `.hermes/skills` entry points backed by 9 expert playbooks (`skills/cyber-defense/references/knowledge/`).
-2. **Six Protection Areas**:
+1. **One Skill, Every Agent**: Drop-in `.agents/skills`, `.claude/skills`, and `.hermes/skills` entry points backed by ten knowledge documents (`skills/cyber-defense/references/knowledge/`).
+2. **Seven Review Scenarios**:
    - **Computer & Server (`inventory` → `advisories`)**: Lists installed packages and listening ports on Windows, macOS, and Linux; checks OSV.dev and CISA KEV.
    - **Website & Web App (`web`)**: Passive HTTP/TLS posture check (HTTPS, HSTS, CSP, cookies, CORS, certificate).
    - **Code & Dependencies (`deps`, `review`, `import`)**: Parses 6 lockfile ecosystems, detects hardcoded secrets, `NEXT_PUBLIC_`/`VITE_` client secret exposure (`CDA-PUBLIC-001`), hidden bidirectional/zero-width Unicode in agent instructions (`CDA-AGENT-001`), dangerous flag bypasses (`CDA-AGENT-002`), DOM XSS sinks (`CDA-XSS-001`), and imports Gitleaks/Trivy/OSV/SARIF reports.
+   - **AI Agents, Skills & MCP**: Read-only configuration and source review of tool authority, consent, memory isolation and data flow; expert judgment, not a new scanner.
    - **Databases, Networks & Incident First Response**: Read-only guided playbooks.
 3. **Visual HTML/PDF Reports & Live Dashboard**: Run `node tools/cda.mjs report --pdf` and `node tools/cda.mjs dashboard` to generate dark executive reports and a self-refreshing local dashboard before applying any fixes.
 4. **Strict Consent Ladder**: Every file read, inventory query, OSV lookup, or passive web check requires an explicit CLI consent flag. Tools are 100% read-only.

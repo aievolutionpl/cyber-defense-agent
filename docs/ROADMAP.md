@@ -1,6 +1,6 @@
 # Development path
 
-Updated 10 November 2026. The first product milestone is a reproducible repository review that explains what changed, why it matters and what evidence confirms a fix. Existing computer, website, database and incident-response playbooks remain available.
+Updated 13 November 2026. The first product milestone is a reproducible repository review that explains what changed, why it matters and what evidence confirms a fix. Existing computer, website, database and incident-response playbooks remain available.
 
 ## Implemented in the evidence and CI update
 
@@ -21,6 +21,10 @@ Updated 10 November 2026. The first product milestone is a reproducible reposito
 
 Usage and current adapter limits are in [scanner integrations](SCANNER_INTEGRATIONS.md).
 
+## Website and skill refinement
+
+The site now builds a local review brief for seven scenarios, including AI agents, skills and MCP. The canonical skill has a dedicated agent-security playbook and an evidence-review method that separates tool signals, expert judgment and missing coverage. Current source references are recorded in the knowledge source list. This ships as review guidance; automatic MCP scanning, new connectors and live host acceptance remain separate work.
+
 ## Next milestones
 
 | Order | Milestone | Definition of done | Dependencies |
@@ -32,7 +36,7 @@ Usage and current adapter limits are in [scanner integrations](SCANNER_INTEGRATI
 | 5 | Finding history across versions | Persist validated events per asset, scanner and rule version. Retain source digests, first/last seen and fixed/reopened transitions. Add alias-aware vulnerability grouping without losing package locations. | Stable scanner identities and migration tests for existing reports. |
 | 6 | Desktop coverage | Add consented vendor-catalogue adapters and firewall/encryption/update-setting collectors. Every unsupported app is counted. | Real-device tests and declared outbound data. |
 | 7 | Prioritization | Add EPSS with observation time, exposure context and inventory-to-inventory retest. Show the reason for each priority. | Recorded feed fixtures and existing OSV/KEV coverage. |
-| 8 | AI skill review | Evaluate importing SkillSpector evidence for agent skills and MCP configuration. Show concrete source locations and permissions requiring review. | A supported exporter schema and held-out fixtures. |
+| 8 | AI skill review | A source-backed manual playbook is available. Next evaluate importing SkillSpector evidence for agent skills and MCP configuration. Show concrete source locations and permissions requiring review. | A supported exporter schema and held-out fixtures. |
 
 These are acceptance-driven milestones. Dates follow measured integration work. Full host sessions and real exporter runs are tracked separately from local tests.
 
