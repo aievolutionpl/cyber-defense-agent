@@ -1,136 +1,67 @@
-import { ArrowUpRight, Check, Database, FileCode2, Globe, Monitor, Siren, Wifi } from "lucide-react";
-import { github, type Locale } from "@/lib/config";
+'use client';
 
-const K = "/blob/main/skills/cyber-defense/references/knowledge/";
-const missions = [
-  {
-    icon: Monitor,
-    doc: "software-vulnerabilities.md",
-    tool: "inventory → advisories",
-    kind: ["CLI + PLAYBOOK", "CLI + PLAYBOOK"],
-    title: ["Computer & server", "Komputer i serwer"],
-    say: ["“Check my computer. What should I update?”", "„Sprawdź mój komputer. Co zaktualizować?”"],
-    points: [
-      ["Installed apps and open ports (Windows, macOS, Linux)", "Zainstalowane programy i otwarte porty (Win, macOS, Linux)"],
-      ["Live vulnerability check via OSV.dev & CISA KEV", "Znane luki w OSV.dev i aktywne ataki (CISA KEV)"],
-      ["Prioritized update plan with safe rollback steps", "Uporządkowany plan aktualizacji z opcją cofnięcia"],
-    ],
-  },
-  {
-    icon: Globe,
-    doc: "web-application.md",
-    tool: "web",
-    kind: ["CLI + PLAYBOOK", "CLI + PLAYBOOK"],
-    title: ["Website & web app", "Strona i aplikacja WWW"],
-    say: ["“Is my website safe?”", "„Czy moja strona jest bezpieczna?”"],
-    points: [
-      ["HTTPS, HSTS, CSP, cookies, CORS & TLS certificate", "HTTPS, HSTS, CSP, ciasteczka, CORS i certyfikat TLS"],
-      ["100% passive check — like a normal browser visit", "W 100% pasywnie — jak zwykła wizyta przeglądarki"],
-      ["Ready-to-paste security header configs", "Gotowe do wklejenia konfiguracje nagłówków"],
-    ],
-  },
-  {
-    icon: FileCode2,
-    doc: "code-review.md",
-    tool: "deps · review · import",
-    kind: ["CLI + PLAYBOOK", "CLI + PLAYBOOK"],
-    title: ["Code & dependencies", "Kod i zależności"],
-    say: ["“Review my project before release.”", "„Sprawdź projekt przed wdrożeniem.”"],
-    points: [
-      ["6 lockfile formats (npm, PyPI, Cargo, Go, Composer, Ruby)", "6 formatów lockfile (npm, PyPI, Cargo, Go, Composer, Ruby)"],
-      ["Leaked secrets, unsafe eval/XSS, agent rules & TLS", "Wycieki sekretów, XSS/eval, reguły agentów i TLS"],
-      ["Imports & deduplicates Semgrep, Trivy, Gitleaks (SARIF)", "Import i deduplikacja raportów Semgrep, Trivy, Gitleaks"],
-    ],
-  },
-  {
-    icon: Database,
-    doc: "databases.md",
-    tool: "read-only SQL",
-    kind: ["PLAYBOOK", "PLAYBOOK"],
-    title: ["Database", "Baza danych"],
-    say: ["“Check my Supabase database.”", "„Sprawdź moją bazę Supabase / Postgres.”"],
-    points: [
-      ["Public exposure, roles and login permissions", "Ekspozycja w sieci, role i uprawnienia logowania"],
-      ["Row-Level Security (RLS) gaps in Supabase & Firebase", "Luki Row-Level Security (RLS) w Supabase i Firebase"],
-      ["Strictly read-only metadata — row data stays private", "Wyłącznie odczyt metadanych — bez pobierania rekordów"],
-    ],
-  },
-  {
-    icon: Wifi,
-    doc: "network.md",
-    tool: "inventory",
-    kind: ["CLI + PLAYBOOK", "CLI + PLAYBOOK"],
-    title: ["Home & office network", "Sieć domowa i firmowa"],
-    say: ["“Is my network OK?”", "„Czy moja sieć jest bezpieczna?”"],
-    points: [
-      ["Services and ports exposed by your machine", "Usługi i porty wystawione przez Twój komputer"],
-      ["Router checklist: DNS, WPS, UPnP, port forwarding", "Lista kontrolna routera: DNS, WPS, UPnP, przekierowania"],
-      ["Wi-Fi segmentation for guests and IoT devices", "Separacja sieci Wi-Fi dla gości i urządzeń IoT"],
-    ],
-  },
-  {
-    icon: Siren,
-    doc: "incident-first-response.md",
-    tool: "first response",
-    kind: ["PLAYBOOK", "PLAYBOOK"],
-    title: ["Incident response", "Nagły incydent"],
-    say: ["“I think I've been hacked.”", "„Podejrzewam włamanie lub wyciek.”"],
-    points: [
-      ["First 5 minutes: step-by-step containment plan", "Pierwsze 5 minut: plan działania krok po kroku"],
-      ["How to isolate threats without destroying evidence", "Jak odciąć zagrożenie bez niszczenia dowodów"],
-      ["Leaked API keys, account takeover & phishing triage", "Wyciek kluczy API, przejęte konta i phishing"],
-    ],
-  },
-];
+import { useState } from 'react';
+import { ArrowRight, ArrowUpRight, Check } from 'lucide-react';
+import { auditMissions, buildAuditPrompt } from '@/lib/audit-missions';
+import { github, type Locale } from '@/lib/config';
+import { CopyButton } from './ui';
 
 export function Missions({ locale }: { locale: Locale }) {
-  const pl = locale === "pl";
-  const i = pl ? 1 : 0;
+  const pl = locale === 'pl';
+  const [missionId, setMissionId] = useState('project');
+  const [host, setHost] = useState<'codex' | 'claude'>('codex');
+  const mission = auditMissions.find(item => item.id === missionId) ?? auditMissions[0];
+  const prompt = buildAuditPrompt(mission, locale, host);
+
   return (
     <section data-build-section className="missions-section section-shell" id="missions" aria-labelledby="missions-title">
-      <div className="section-heading" data-reveal>
+      <div className="section-heading">
         <div>
-          <span className="eyebrow">{pl ? "02 / ZAKRES OCHRONY" : "02 / PROTECTION SCOPE"}</span>
-          <h2 id="missions-title">
-            {pl ? "Napisz jedno zdanie." : "Ask in plain words."}
-            <br />
-            <span className="gradient-text">{pl ? "Sześć obszarów audytu." : "Six areas of protection."}</span>
+          <span className="eyebrow">02 / {pl ? 'TWÓJ PIERWSZY RUCH' : 'YOUR FIRST MOVE'}</span>
+          <h2 id="missions-title">{pl ? 'Od czego zaczynamy?' : 'Where should we start?'}<br />
+            <span className="gradient-text">{pl ? 'Wybierz to, co ma znaczenie.' : 'Choose what matters to you.'}</span>
           </h2>
         </div>
-        <p>
-          {pl
-            ? "Nie musisz znać komend skanerów. Powiedz agentowi, co chcesz sprawdzić — skill dobierze odpowiednie narzędzie i playbook."
-            : "No scanner flags to memorize. Tell your agent what to check — the skill selects the right local tool and playbook."}
-        </p>
+        <p>{pl ? 'Wybierz obszar. Zobacz, czego się dowiesz, i zabierz gotowy brief do swojego agenta.' : 'Choose an area. See what you can learn, then take a ready brief to your agent.'}</p>
       </div>
-      <div className="missions-grid" data-agent-target="Architect" data-agent-label={pl ? "Mapowanie obszarów ochrony" : "Mapping protection areas"}>
-        {missions.map(({ icon: Icon, doc, tool, kind, title, say, points }, n) => (
-          <article key={doc} className="mission-card" data-area={doc.split("-")[0].replace(".md", "")} data-spot data-reveal style={{ "--reveal-delay": `${(n % 3) * 80}ms` } as React.CSSProperties}>
-            <div className="mission-top">
-              <span className="mission-icon">
-                <Icon size={20} strokeWidth={1.6} aria-hidden="true" />
-              </span>
-              <span className="mission-kind">{kind[i]}</span>
-            </div>
-            <h3>{title[i]}</h3>
-            <p className="mission-say">{say[i]}</p>
-            <ul>
-              {points.map((point) => (
-                <li key={point[0]}>
-                  <Check size={14} aria-hidden="true" />
-                  {point[i]}
-                </li>
-              ))}
-            </ul>
-            <div className="mission-foot">
-              <code>{tool}</code>
-              <a href={github(`${K}${doc}`)} aria-label={`Playbook: ${title[i]}`}>
-                Playbook
-                <ArrowUpRight size={14} aria-hidden="true" />
-              </a>
-            </div>
-          </article>
-        ))}
+      <div className="mission-workbench" data-agent-target="Architect" data-agent-label={pl ? 'Planowanie przeglądu' : 'Planning the review'}>
+        <div className="mission-directory" role="group" aria-label={pl ? 'Cel przeglądu' : 'Review goal'}>
+          {auditMissions.map((item, index) => (
+            <button key={item.id} type="button" id={`mission-${item.id}`} aria-pressed={missionId === item.id}
+              aria-controls="mission-detail" onClick={() => setMissionId(item.id)}>
+              <span className="mission-number">{String(index + 1).padStart(2, '0')}</span>
+              <span>{item.title[locale]}</span><ArrowRight size={17} aria-hidden="true" />
+            </button>
+          ))}
+          <p className="mission-local-note">{pl ? 'To planer. Wybór nie uruchamia audytu ani nie udziela zgody na dostęp.' : 'This is a planner. A selection does not run an audit or grant access.'}</p>
+        </div>
+        <div className="mission-detail" id="mission-detail" role="region" aria-labelledby={`mission-${mission.id}`}>
+          <span className="eyebrow">{mission.method[locale]}</span>
+          <h3 aria-live="polite">{mission.question[locale]}</h3>
+          <ul className="mission-evidence">
+            {mission.evidence[locale].map(item => <li key={item}><Check size={17} aria-hidden="true" /><span>{item}</span></li>)}
+          </ul>
+          <div className="mission-boundary"><strong>{pl ? 'Zakres i ograniczenia' : 'Scope & limits'}</strong><p>{mission.boundary[locale]}</p></div>
+          {mission.id === 'agents' && <p className="mission-sources">
+            {pl ? 'Podstawa metody: ' : 'Method references: '}
+            <a href="https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/">OWASP Agentic 2026</a>
+            {' · '}<a href="https://asvs.owasp.org/">ASVS 5.0</a>
+            {' · '}<a href="https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices">MCP</a>
+          </p>}
+          <div className="mission-prompt-heading">
+            <label htmlFor="mission-host">{pl ? 'Brief dla' : 'Brief for'}
+              <select id="mission-host" value={host} onChange={event => setHost(event.target.value as 'codex' | 'claude')}>
+                <option value="codex">Codex</option><option value="claude">Claude Code</option>
+              </select>
+            </label>
+            <CopyButton key={`${missionId}-${host}-${locale}`} locale={locale} text={prompt} label={pl ? 'Skopiuj brief audytu' : 'Copy audit brief'} />
+          </div>
+          <pre className="mission-prompt"><code>{prompt}</code></pre>
+          <div className="mission-detail-footer">
+            <a href="#install">{pl ? 'Jak uruchomić skilla' : 'How to start the skill'}<ArrowRight size={15} aria-hidden="true" /></a>
+            <a href={github(`/blob/main/skills/cyber-defense/references/knowledge/${mission.playbook}`)}>{pl ? 'Metoda przeglądu' : 'Review method'}<ArrowUpRight size={15} aria-hidden="true" /></a>
+          </div>
+        </div>
       </div>
     </section>
   );

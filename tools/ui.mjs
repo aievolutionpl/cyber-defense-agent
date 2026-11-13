@@ -4,6 +4,8 @@ import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { StateStore, scopeDigest } from "./scope.mjs";
+import { redact } from "./redact.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -53,6 +55,22 @@ export function resolveContainedPath(baseDir, ...segments) {
     err.code = "PATH_OUTSIDE_BOUNDARY";
     throw err;
   }
+  let cursor = baseResolved;
+  for (const part of ["", ...rel.split(path.sep)]) {
+    if (part) cursor = path.join(cursor, part);
+    let stat;
+    try {
+      stat = fs.lstatSync(cursor);
+    } catch (error) {
+      if (error.code === "ENOENT") break;
+      throw error;
+    }
+    if (stat.isSymbolicLink() || (stat.isFile() && stat.nlink > 1)) {
+      const error = new Error("STATE_LINK_BLOCKED");
+      error.code = "STATE_LINK_BLOCKED";
+      throw error;
+    }
+  }
   return targetResolved;
 }
 
@@ -65,8 +83,6 @@ export function verifyLocalRequest(req, port, { token = null, requireToken = fal
   const allowedHosts = new Set([
     `127.0.0.1:${port}`,
     `localhost:${port}`,
-    "127.0.0.1",
-    "localhost",
   ]);
   if (!hostHeader || !allowedHosts.has(hostHeader)) {
     const err = new Error("INVALID_HOST_HEADER");
@@ -78,8 +94,6 @@ export function verifyLocalRequest(req, port, { token = null, requireToken = fal
   const allowedOrigins = new Set([
     `http://127.0.0.1:${port}`,
     `http://localhost:${port}`,
-    "http://127.0.0.1",
-    "http://localhost",
   ]);
   if (origin && !allowedOrigins.has(origin)) {
     const err = new Error("INVALID_ORIGIN");
@@ -115,6 +129,26 @@ export function verifyLocalRequest(req, port, { token = null, requireToken = fal
     }
   }
   return true;
+}
+
+/** Launch npm's Windows shims through Node so prompts remain literal arguments. */
+function agentInvocation(executable) {
+  if (process.platform !== "win32" || !/\.(cmd|bat)$/i.test(executable)) {
+    return { command: executable, args: [] };
+  }
+  const shim = fs.readFileSync(executable, "utf8");
+  const match = /"%dp0%[\\/]([^"\r\n]+\.m?js)"/i.exec(shim);
+  if (!match) throw new Error("UNSUPPORTED_AGENT_SHIM");
+  const script = resolveContainedPath(path.dirname(executable), match[1]);
+  if (!fs.statSync(script).isFile()) throw new Error("UNSUPPORTED_AGENT_SHIM");
+  return { command: process.execPath, args: [script] };
+}
+
+function shellArgument(value) {
+  const text = String(value);
+  return process.platform === "win32"
+    ? `'${text.replace(/(\\*)"/g, '$1$1\\"').replace(/'/g, "''")}'`
+    : `'${text.replace(/'/g, "'\\''")}'`;
 }
 
 /**
@@ -173,15 +207,24 @@ export function resolveAgentBinary(host, { execSyncImpl = execFileSync, platform
 
   for (const bin of probeList) {
     try {
-      const out = execSyncImpl(bin, ["--version"], {
+      let invocation = { command: bin, args: [] };
+      const options = {
         encoding: "utf8",
         timeout: 2500,
         stdio: ["ignore", "pipe", "ignore"],
         windowsHide: true,
-      }).trim();
+      };
+      let out;
+      try {
+        out = execSyncImpl(bin, ["--version"], options).trim();
+      } catch (error) {
+        if (platform !== "win32" || !/\.(cmd|bat)$/i.test(bin)) throw error;
+        invocation = agentInvocation(bin);
+        out = execSyncImpl(invocation.command, [...invocation.args, "--version"], options).trim();
+      }
       const ver = out.split(/\r?\n/)[0]?.slice(0, 80) || "detected";
       versionByPath.push({ path: bin, version: ver });
-      if (!chosen) chosen = { executablePath: bin, version: ver };
+      if (!chosen) chosen = { executablePath: bin, commandPath: invocation.command, commandArgs: invocation.args, version: ver };
     } catch {
       /* candidate failed */
     }
@@ -191,6 +234,8 @@ export function resolveAgentBinary(host, { execSyncImpl = execFileSync, platform
   return {
     installed: Boolean(chosen),
     executablePath: chosen ? chosen.executablePath : host,
+    commandPath: chosen?.commandPath || host,
+    commandArgs: chosen?.commandArgs || [],
     version: chosen ? chosen.version : null,
     candidates: versionByPath,
     multipleVersions: distinctVersions.length > 1,
@@ -233,10 +278,10 @@ export function detectAgents(options = {}) {
 }
 
 /** Build structured prompts and CLI invocations for Claude Code, Codex and Hermes. */
-export function buildAgentBridge({ host = "claude", mission = "demo", target = "", lang = "pl", executablePath = null } = {}) {
+export function buildAgentBridge({ host = "claude", mission = "demo", target = "", lang = "pl", executablePath = null, executableArgs = [] } = {}) {
   const safeHost = validateAgentHost(typeof host === "string" ? host.toLowerCase() : "");
   const pl = lang === "pl";
-  const cleanTarget = String(target || "").replace(/[\r\n"`$]/g, "").trim().slice(0, 200);
+  const cleanTarget = String(target || "").replace(/[\r\n\0]/g, " ").trim().slice(0, 200);
   const prefix = safeHost === "codex" ? "$cyber-defense" : "/cyber-defense";
 
   const missions = {
@@ -276,8 +321,11 @@ export function buildAgentBridge({ host = "claude", mission = "demo", target = "
   const selected = missions[selectedKey];
   const bin = safeHost === "codex" ? "codex" : safeHost === "hermes" ? "hermes" : "claude";
   const resolvedBin = executablePath || bin;
-  const quotedBin = resolvedBin.includes(" ") ? `"${resolvedBin}"` : resolvedBin;
-  const cliCommand = `${quotedBin} "${selected.prompt.replace(/"/g, '\\"')}"`;
+  const invocation = [resolvedBin, ...executableArgs, selected.prompt].map(shellArgument).join(" ");
+  const cliCommand = process.platform === "win32"
+    ? `& { $PSNativeCommandArgumentPassing = 'Legacy'; & ${invocation} }`
+    : invocation;
+  const quotedBin = shellArgument(resolvedBin);
 
   return {
     host: safeHost,
@@ -295,7 +343,7 @@ export function buildAgentBridge({ host = "claude", mission = "demo", target = "
 export function detectAgentAuthError(text, host = "claude", lang = "pl") {
   const raw = String(text || "");
   if (
-    /not logged in|please run .*login|authentication failed|unauthorized|invalid api key|missing api key|401|anthropic_api_key|openai_api_key|login required|token expired/i.test(
+    /not logged in|please run .*login|authentication failed|unauthorized|invalid api key|missing api key|HTTP\s*401|anthropic_api_key|openai_api_key|login required|token expired/i.test(
       raw,
     )
   ) {
@@ -313,62 +361,44 @@ export function detectAgentAuthError(text, host = "claude", lang = "pl") {
 
 const activeAgentProcesses = new Map();
 
-function sessionsDir(rootDir = ROOT) {
-  const dir = resolveContainedPath(rootDir, ".cda", "sessions");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
 function saveSessionState(session, rootDir = ROOT) {
-  const dir = sessionsDir(rootDir);
-  const file = resolveContainedPath(dir, `${session.sessionId}.json`);
-  fs.writeFileSync(file, JSON.stringify(session, null, 2), "utf8");
+  new StateStore(rootDir).write("sessions", session.sessionId, session);
   return session;
 }
 
 /** List tracked agent CLI sessions (newest first). */
 export function getAgentSessions(rootDir = ROOT) {
-  const dir = path.join(rootDir, ".cda", "sessions");
+  const dir = resolveContainedPath(rootDir, ".cda", "sessions");
   if (!fs.existsSync(dir)) return [];
-  try {
-    return fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => {
-        try {
-          return JSON.parse(fs.readFileSync(resolveContainedPath(dir, f), "utf8"));
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(b.startedAt || "").localeCompare(String(a.startedAt || "")))
-      .slice(0, 20);
-  } catch {
-    return [];
-  }
+  const store = new StateStore(rootDir);
+  return fs.readdirSync(dir)
+    .filter((name) => /^[a-zA-Z0-9_-]{1,64}\.json$/.test(name))
+    .flatMap((name) => {
+      try { return [store.read("sessions", name.slice(0, -5))]; }
+      catch { return []; }
+    })
+    .sort((a, b) => String(b.startedAt || "").localeCompare(String(a.startedAt || "")))
+    .slice(0, 20);
 }
 
-/** Stop an active agent session by sessionId. */
+/** Cancellation is final even when a child subsequently emits output or closes. */
 export function stopAgentSession(sessionId, rootDir = ROOT) {
-  const cleanId = String(sessionId || "").replace(/[^a-zA-Z0-9_-]/g, "");
-  if (!cleanId) throw new Error("INVALID_SESSION_ID");
-  const dir = sessionsDir(rootDir);
-  const file = resolveContainedPath(dir, `${cleanId}.json`);
-  if (!fs.existsSync(file)) throw new Error("SESSION_NOT_FOUND");
-  const session = JSON.parse(fs.readFileSync(file, "utf8"));
-  const proc = activeAgentProcesses.get(cleanId);
-  if (proc) {
-    try {
-      proc.kill("SIGTERM");
-    } catch {
-      /* process already exited */
-    }
-    activeAgentProcesses.delete(cleanId);
-  }
+  const store = new StateStore(rootDir);
+  const file = store.file("sessions", sessionId);
+  const active = activeAgentProcesses.get(file);
+  const session = active?.session || store.read("sessions", sessionId);
+  if (!["running", "auth_error"].includes(session.status) || session.endedAt) return session;
   session.status = "cancelled";
   session.endedAt = new Date().toISOString();
-  return saveSessionState(session, rootDir);
+  saveSessionState(session, rootDir);
+  try { active?.process.kill("SIGTERM"); }
+  catch (error) {
+    if (error.code !== "ESRCH") {
+      session.error = error.message;
+      saveSessionState(session, rootDir);
+    }
+  }
+  return session;
 }
 
 /**
@@ -381,8 +411,7 @@ export function launchAgentSession(
     rootDir = ROOT,
     agentsMap = null,
     spawnImpl = spawn,
-    openTerminalWindow = process.platform === "win32",
-  } = {},
+    } = {},
 ) {
   const rawHost = payload.host === undefined ? "claude" : payload.host;
   const safeHost = validateAgentHost(typeof rawHost === "string" ? rawHost.toLowerCase() : "");
@@ -399,20 +428,15 @@ export function launchAgentSession(
     mission: payload.mission || "demo",
     target: payload.target || "",
     lang,
-    executablePath: hostInfo.executablePath || safeHost,
+    executablePath: hostInfo.commandPath || hostInfo.executablePath || safeHost,
+    executableArgs: hostInfo.commandArgs || [],
   });
 
-  const cdaDir = resolveContainedPath(rootDir, ".cda");
-  fs.mkdirSync(cdaDir, { recursive: true });
-  const promptFile = resolveContainedPath(cdaDir, `last-agent-prompt-${safeHost}.txt`);
-  fs.writeFileSync(promptFile, bridge.prompt, "utf8");
-
   const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
-  const sessionId = `agent-${safeHost}-${stamp}-${crypto.randomBytes(3).toString("hex")}`;
-  const sDir = sessionsDir(rootDir);
-  const sessionPromptFile = resolveContainedPath(sDir, `${sessionId}-prompt.txt`);
-  fs.writeFileSync(sessionPromptFile, bridge.prompt, "utf8");
-
+  const sessionId = `agent-${safeHost}-${stamp}-${crypto.randomBytes(6).toString("hex")}`;
+  const store = new StateStore(rootDir);
+  const promptFile = store.write("sessions", sessionId, bridge.prompt, "txt");
+  const sessionFile = store.file("sessions", sessionId);
   const session = {
     sessionId,
     host: safeHost,
@@ -425,7 +449,7 @@ export function launchAgentSession(
     version: hostInfo.version || null,
     versionWarning: hostInfo.versionWarning || null,
     prompt: bridge.prompt,
-    promptFile: `.cda/last-agent-prompt-${safeHost}.txt`,
+    promptFile,
     cliCommand: bridge.cliCommand,
     status: hostInfo.installed ? "running" : "not_installed",
     startedAt: new Date().toISOString(),
@@ -454,29 +478,25 @@ export function launchAgentSession(
   }
 
   try {
-    const args = safeHost === "claude" ? ["-p", bridge.prompt] : [bridge.prompt];
-    const useCmdShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(session.executablePath);
-    const proc = useCmdShim
-      ? spawnImpl("cmd.exe", ["/d", "/s", "/c", session.executablePath, ...args], {
-          cwd: rootDir,
-          stdio: ["ignore", "pipe", "pipe"],
-          windowsHide: true,
-        })
-      : spawnImpl(session.executablePath, args, {
-          cwd: rootDir,
-          stdio: ["ignore", "pipe", "pipe"],
-          windowsHide: true,
-        });
-
-    activeAgentProcesses.set(sessionId, proc);
-
+    const args = safeHost === "claude" ? ["-p", "--", bridge.prompt]
+      : safeHost === "codex" ? ["exec", "--", bridge.prompt] : [bridge.prompt];
+    const invocation = hostInfo.commandPath
+      ? { command: hostInfo.commandPath, args: hostInfo.commandArgs || [] }
+      : agentInvocation(session.executablePath);
+    const proc = spawnImpl(invocation.command, [...invocation.args, ...args], {
+      cwd: rootDir,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    activeAgentProcesses.set(sessionFile, { process: proc, session });
+    let rawOutput = "";
     const appendOutput = (chunk) => {
-      session.output = (session.output + String(chunk ?? "")).slice(-12000);
-      const auth = detectAgentAuthError(session.output, safeHost, lang);
-      if (auth.isAuthError) {
-        session.authError = true;
-        session.authHint = auth.hint;
-        session.status = "auth_error";
+      if (session.status === "cancelled" || session.error === "SESSION_OUTPUT_LIMIT") return;
+      rawOutput += String(chunk ?? "");
+      session.output = redact(rawOutput, Infinity).slice(-12000);
+      if (Buffer.byteLength(rawOutput) > 2 * 1024 * 1024) {
+        session.error = "SESSION_OUTPUT_LIMIT";
+        proc.kill("SIGTERM");
       }
       saveSessionState(session, rootDir);
     };
@@ -485,25 +505,25 @@ export function launchAgentSession(
     proc.stderr?.on("data", appendOutput);
 
     proc.on("error", (err) => {
-      activeAgentProcesses.delete(sessionId);
-      session.status = "failed";
+      activeAgentProcesses.delete(sessionFile);
+      if (session.status !== "cancelled") session.status = "failed";
       session.error = err.message || "SPAWN_ERROR";
       session.endedAt = new Date().toISOString();
       saveSessionState(session, rootDir);
     });
 
     proc.on("close", (code) => {
-      activeAgentProcesses.delete(sessionId);
+      activeAgentProcesses.delete(sessionFile);
       session.exitCode = code;
       session.endedAt = new Date().toISOString();
       const auth = detectAgentAuthError(session.output, safeHost, lang);
-      if (auth.isAuthError) {
+      if (code !== 0 && auth.isAuthError && session.status !== "cancelled") {
         session.authError = true;
         session.authHint = auth.hint;
         session.status = "auth_error";
         session.error = auth.hint;
       } else if (session.status !== "cancelled") {
-        session.status = code === 0 ? "completed" : "failed";
+        session.status = code === 0 && !session.error ? "completed" : "failed";
         if (code !== 0 && !session.error) {
           session.error =
             lang === "en"
@@ -514,18 +534,7 @@ export function launchAgentSession(
       saveSessionState(session, rootDir);
     });
 
-    if (openTerminalWindow && spawnImpl === spawn && process.platform === "win32") {
-      try {
-        const winChild = spawn(
-          "cmd.exe",
-          ["/c", "start", "cmd.exe", "/k", session.executablePath, bridge.prompt],
-          { cwd: rootDir, detached: true, stdio: "ignore", windowsHide: true },
-        );
-        winChild.unref();
-      } catch {
-        /* ignore window spawn error */
-      }
-    }
+
   } catch (err) {
     session.status = "failed";
     session.error = err.message || "LAUNCH_FAILED";
@@ -546,7 +555,7 @@ export function launchAgentSession(
 
 /** List existing reports in .cda/reports/ safely. */
 export function listReportsSummary(rootDir = ROOT) {
-  const dir = path.join(rootDir, ".cda", "reports");
+  const dir = resolveContainedPath(rootDir, ".cda", "reports");
   if (!fs.existsSync(dir)) return [];
   try {
     return fs
@@ -574,85 +583,28 @@ export function listReportsSummary(rootDir = ROOT) {
 
 const activeWorkflowChildren = new Map();
 
-function runsDir(rootDir = ROOT) {
-  const dir = resolveContainedPath(rootDir, ".cda", "runs");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
 function saveRunState(run, rootDir = ROOT) {
   run.updatedAt = new Date().toISOString();
-  const dir = runsDir(rootDir);
-  const file = resolveContainedPath(dir, `${run.runId}.json`);
-  fs.writeFileSync(file, JSON.stringify(run, null, 2), "utf8");
+  new StateStore(rootDir).write("runs", run.runId, run);
   return run;
 }
 
 export function getGuidedAudit(runId, rootDir = ROOT) {
-  const cleanId = String(runId || "").replace(/[^a-zA-Z0-9_-]/g, "");
-  if (!cleanId) throw new Error("INVALID_RUN_ID");
-  const file = resolveContainedPath(runsDir(rootDir), `${cleanId}.json`);
-  if (!fs.existsSync(file)) throw new Error("RUN_NOT_FOUND");
-  return JSON.parse(fs.readFileSync(file, "utf8"));
+  return new StateStore(rootDir).read("runs", runId);
 }
 
 export function listGuidedAudits(rootDir = ROOT) {
-  const dir = path.join(rootDir, ".cda", "runs");
+  const dir = resolveContainedPath(rootDir, ".cda", "runs");
   if (!fs.existsSync(dir)) return [];
-  try {
-    return fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => {
-        try {
-          return JSON.parse(fs.readFileSync(resolveContainedPath(dir, f), "utf8"));
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
-      .slice(0, 25);
-  } catch {
-    return [];
-  }
-}
-
-function discoverProjectFiles(targetRoot) {
-  const candidates = [
-    "package.json",
-    "package-lock.json",
-    ".env",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "SKILL.md",
-    ".mcp.json",
-  ];
-  const found = [];
-  for (const rel of candidates) {
-    const full = path.join(targetRoot, rel);
-    if (fs.existsSync(full) && fs.statSync(full).isFile()) {
-      found.push(rel);
-    }
-  }
-  const scanSubdir = (sub) => {
-    const dir = path.join(targetRoot, sub);
-    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return;
-    for (const entry of fs.readdirSync(dir).slice(0, 25)) {
-      const rel = path.posix.join(sub, entry);
-      const full = path.join(targetRoot, sub, entry);
-      if (
-        fs.existsSync(full) &&
-        fs.statSync(full).isFile() &&
-        /\.(?:[cm]?[jt]sx?|py|json|ya?ml|md)$/i.test(entry)
-      ) {
-        found.push(rel);
-      }
-    }
-  };
-  scanSubdir("src");
-  scanSubdir("tools");
-  return [...new Set(found)].slice(0, 30);
+  const store = new StateStore(rootDir);
+  return fs.readdirSync(dir)
+    .filter((name) => /^[a-zA-Z0-9_-]{1,64}\.json$/.test(name))
+    .flatMap((name) => {
+      try { return [store.read("runs", name.slice(0, -5))]; }
+      catch { return []; }
+    })
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .slice(0, 25);
 }
 
 function buildWorkflowDefinition(workflow, runId, params = {}) {
@@ -678,6 +630,7 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
         },
         {
           id: "advisories",
+          requiresApproval: "package_names",
           label: pl ? "2. Weryfikacja luk (OSV.dev, CISA KEV i Katalog Windows)" : "2. Vulnerability check (OSV.dev, CISA KEV & Windows Catalog)",
           script: cda,
           args: ["advisories", "--inventory", invName, "--name", advName, "--share-package-names"],
@@ -698,8 +651,10 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
     if (params.consent !== true) throw new Error("CONSENT_REQUIRED");
     const targetRoot = params.target ? path.resolve(String(params.target)) : ROOT;
     if (!fs.existsSync(targetRoot)) throw new Error("INVALID_TARGET_PATH");
-    const files = Array.isArray(params.files) && params.files.length ? params.files : discoverProjectFiles(targetRoot);
-    if (!files.length) throw new Error("NO_REVIEWABLE_FILES_FOUND");
+    if (!Array.isArray(params.files) || !params.files.length || params.files.length > 100 || params.files.some((file) => typeof file !== "string")) {
+      throw new Error("EXPLICIT_FILES_REQUIRED");
+    }
+    const files = [...new Set(params.files)];
     const scopeName = `${runId}-scope`;
     const revName = `${runId}-review`;
     const depsName = `${runId}-deps`;
@@ -717,6 +672,7 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
       },
       {
         id: "approve",
+        requiresApproval: "scope",
         label: pl ? "2. Zatwierdzenie zakresu tylko do odczytu (24h)" : "2. Approve read-only scope (24h)",
         script: cda,
         args: ["approve", "--scope", scopeName, "--root", targetRoot, "--yes"],
@@ -825,6 +781,9 @@ function computeNextStepRecommendation(run) {
       ? `Krok zakończył się błędem (${run.error || "sprawdź logi"}). Po rozwiązaniu przyczyny kliknij „Wznów audyt”.`
       : `A step failed (${run.error || "check logs"}). Fix the cause and click 'Resume audit'.`;
   }
+  if (run.status === "awaiting_approval") {
+    return pl ? "Sprawdź szczegóły kolejnego kroku i zatwierdź jego wykonanie." : "Review the next step and approve it to continue.";
+  }
   if (run.status === "running") {
     return pl ? "Trwa wykonywanie kroków audytu..." : "Executing guided audit steps...";
   }
@@ -840,44 +799,45 @@ function computeNextStepRecommendation(run) {
 }
 
 async function executeWorkflowSteps(run, { rootDir = ROOT, stepRunner = null } = {}) {
-  const defaultRunner = (step, runId) =>
-    new Promise((resolve, reject) => {
-      const child = spawn(process.execPath, [step.script, ...step.args], {
-        cwd: rootDir,
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-      });
-      activeWorkflowChildren.set(runId, child);
-      let stdout = "";
-      let stderr = "";
-      child.stdout?.on("data", (d) => {
-        stdout += String(d);
-      });
-      child.stderr?.on("data", (d) => {
-        stderr += String(d);
-      });
-      child.on("error", (err) => {
-        activeWorkflowChildren.delete(runId);
-        reject(err);
-      });
-      child.on("close", (code, signal) => {
-        activeWorkflowChildren.delete(runId);
-        if (signal === "SIGTERM" || signal === "SIGKILL") {
-          const cancelErr = new Error("WORKFLOW_CANCELLED");
-          cancelErr.code = "WORKFLOW_CANCELLED";
-          reject(cancelErr);
-          return;
-        }
-        if (code !== 0) {
-          const err = new Error((stderr || stdout || `Step ${step.id} exited with code ${code}`).trim());
-          err.code = "STEP_FAILED";
-          reject(err);
-          return;
-        }
-        resolve(stdout.trim());
-      });
+  const defaultRunner = (step, runId) => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [step.script, ...step.args], {
+      cwd: rootDir,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
     });
-
+    const key = new StateStore(rootDir).file("runs", runId);
+    activeWorkflowChildren.set(key, child);
+    let stdout = "";
+    let stderr = "";
+    let failure = null;
+    const timer = setTimeout(() => {
+      failure = new Error("STEP_TIMEOUT");
+      child.kill("SIGTERM");
+    }, 300_000);
+    const collect = (chunk, isError) => {
+      if (failure) return;
+      if (isError) stderr += String(chunk); else stdout += String(chunk);
+      if (Buffer.byteLength(stdout) + Buffer.byteLength(stderr) > 2 * 1024 * 1024) {
+        failure = new Error("STEP_OUTPUT_TOO_LARGE");
+        child.kill("SIGTERM");
+      }
+    };
+    child.stdout?.on("data", (chunk) => collect(chunk, false));
+    child.stderr?.on("data", (chunk) => collect(chunk, true));
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      activeWorkflowChildren.delete(key);
+      reject(error);
+    });
+    child.on("close", (code, signal) => {
+      clearTimeout(timer);
+      activeWorkflowChildren.delete(key);
+      if (failure) return reject(failure);
+      if (signal) return reject(new Error("WORKFLOW_CANCELLED"));
+      if (code !== 0) return reject(new Error((stderr || stdout || `Step ${step.id} exited with code ${code}`).trim()));
+      resolve(stdout.trim());
+    });
+  });
   const runner = stepRunner || defaultRunner;
 
   for (const step of run.steps) {
@@ -889,6 +849,17 @@ async function executeWorkflowSteps(run, { rootDir = ROOT, stepRunner = null } =
       return run;
     }
     if (step.status === "completed") continue;
+    if (step.requiresApproval && !run.approvals?.[step.requiresApproval]) {
+      run.status = "awaiting_approval";
+      run.pendingApproval = {
+        kind: step.requiresApproval,
+        token: crypto.randomBytes(16).toString("hex"),
+        ...(step.requiresApproval === "scope" ? { root: run.scopeProposal.root, files: run.scopeProposal.files } : {}),
+      };
+      run.nextStep = computeNextStepRecommendation(run);
+      saveRunState(run, rootDir);
+      return run;
+    }
 
     step.status = "running";
     step.startedAt = new Date().toISOString();
@@ -906,9 +877,18 @@ async function executeWorkflowSteps(run, { rootDir = ROOT, stepRunner = null } =
         saveRunState(run, rootDir);
         return run;
       }
+      step.output = String(output || "").slice(0, 4000);
+      if (step.id === "scope") {
+        const scope = JSON.parse(String(output).split("\nAwaiting explicit approval.")[0]);
+        if (scope.approved !== false || !Array.isArray(scope.files) || typeof scope.root !== "string") {
+          throw new Error("INVALID_SCOPE_PROPOSAL");
+        }
+        run.scopeProposal = scope;
+        const approvalStep = run.steps.find((item) => item.id === "approve");
+        approvalStep.args.push("--proposal", scopeDigest(scope));
+      }
       step.status = "completed";
       step.finishedAt = new Date().toISOString();
-      step.output = String(output || "").slice(0, 4000);
       if (step.reportName && !run.reports.includes(step.reportName)) {
         run.reports.push(step.reportName);
       }
@@ -966,7 +946,7 @@ export function startGuidedAudit(
   const workflow = String(params.workflow || "demo").toLowerCase();
   const lang = params.lang === "en" ? "en" : "pl";
   const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
-  const runId = `run-${workflow}-${stamp}-${crypto.randomBytes(2).toString("hex")}`;
+  const runId = `run-${workflow}-${stamp}-${crypto.randomBytes(6).toString("hex")}`;
   const def = buildWorkflowDefinition(workflow, runId, { ...params, lang });
 
   const run = {
@@ -980,7 +960,10 @@ export function startGuidedAudit(
     updatedAt: new Date().toISOString(),
     finishedAt: null,
     error: null,
+    approvals: { package_names: params.sharePackageNames === true },
+    pendingApproval: null,
     steps: def.steps.map((s) => ({
+      ...s,
       id: s.id,
       label: s.label,
       script: s.script,
@@ -998,14 +981,30 @@ export function startGuidedAudit(
   };
 
   saveRunState(run, rootDir);
-  const promise = executeWorkflowSteps(run, { rootDir, stepRunner });
-  if (awaitCompletion) return promise;
-  return Promise.resolve(run);
+  return runGuidedExecution(run, { rootDir, stepRunner, awaitCompletion });
 }
 
-/** Cancel a running guided audit workflow and record cancellation state. */
+const activeWorkflowRuns = new Map();
+
+function runGuidedExecution(run, { rootDir, stepRunner, awaitCompletion }) {
+  const key = new StateStore(rootDir).file("runs", run.runId);
+  const completion = Promise.resolve()
+    .then(() => executeWorkflowSteps(run, { rootDir, stepRunner }))
+    .catch((error) => {
+      run.status = "failed";
+      run.error = error.message;
+      run.nextStep = computeNextStepRecommendation(run);
+      return saveRunState(run, rootDir);
+    })
+    .finally(() => activeWorkflowRuns.delete(key));
+  activeWorkflowRuns.set(key, completion);
+  return awaitCompletion ? completion : Promise.resolve(run);
+}
+
+/** Cancel is idempotent and retains the active child until its close event. */
 export function cancelGuidedAudit(runId, { rootDir = ROOT } = {}) {
   const run = getGuidedAudit(runId, rootDir);
+  if (["completed", "cancelled"].includes(run.status)) return run;
   run.status = "cancelled";
   run.cancelledAt = new Date().toISOString();
   for (const step of run.steps) {
@@ -1016,39 +1015,63 @@ export function cancelGuidedAudit(runId, { rootDir = ROOT } = {}) {
   }
   run.nextStep = computeNextStepRecommendation(run);
   saveRunState(run, rootDir);
-
-  const child = activeWorkflowChildren.get(run.runId);
-  if (child) {
-    try {
-      child.kill("SIGTERM");
-    } catch {
-      /* already exited */
-    }
-    activeWorkflowChildren.delete(run.runId);
-  }
+  const key = new StateStore(rootDir).file("runs", run.runId);
+  activeWorkflowChildren.get(key)?.kill("SIGTERM");
   return run;
 }
 
-/** Resume a failed or cancelled guided audit from the first unfinished step. */
-export function resumeGuidedAudit(
-  runId,
-  { rootDir = ROOT, stepRunner = null, awaitCompletion = false } = {},
-) {
+/** Resume waits for a cancelled child to close, so two attempts cannot overlap. */
+export async function resumeGuidedAudit(runId, { rootDir = ROOT, stepRunner = null, awaitCompletion = false } = {}) {
+  const key = new StateStore(rootDir).file("runs", runId);
+  const active = activeWorkflowRuns.get(key);
+  if (active) {
+    const current = getGuidedAudit(runId, rootDir);
+    if (current.status === "running") return awaitCompletion ? active : current;
+    await active;
+    const resumed = activeWorkflowRuns.get(key);
+    if (resumed) return awaitCompletion ? resumed : getGuidedAudit(runId, rootDir);
+  }
   const run = getGuidedAudit(runId, rootDir);
-  if (run.status === "running") return Promise.resolve(run);
+  if (run.status === "completed") return run;
+  if (run.status === "awaiting_approval" && run.pendingApproval) return run;
+  if (!run.approvals) {
+    run.approvals = {};
+    for (const step of run.steps) {
+      if (run.workflow === "pc" && step.id === "advisories") step.requiresApproval = "package_names";
+      if (run.workflow === "project" && ["scope", "approve"].includes(step.id)) {
+        step.status = "pending";
+        if (step.id === "approve") step.requiresApproval = "scope";
+      }
+    }
+  }
   run.status = "running";
   run.error = null;
+  run.finishedAt = null;
   for (const step of run.steps) {
-    if (step.status === "failed" || step.status === "cancelled") {
+    if (["failed", "cancelled", "running"].includes(step.status)) {
       step.status = "pending";
       step.error = null;
+      step.startedAt = null;
+      step.finishedAt = null;
+      step.output = "";
     }
   }
   run.nextStep = computeNextStepRecommendation(run);
   saveRunState(run, rootDir);
-  const promise = executeWorkflowSteps(run, { rootDir, stepRunner });
-  if (awaitCompletion) return promise;
-  return Promise.resolve(run);
+  return runGuidedExecution(run, { rootDir, stepRunner, awaitCompletion });
+}
+
+/** Approve only the displayed step and its current proposal token. */
+export async function approveGuidedAudit(runId, { approvalToken, rootDir = ROOT, stepRunner = null, awaitCompletion = false } = {}) {
+  const run = getGuidedAudit(runId, rootDir);
+  if (run.status !== "awaiting_approval" || !run.pendingApproval || run.pendingApproval.token !== approvalToken) {
+    throw new Error("APPROVAL_REQUIRED");
+  }
+  run.approvals ||= {};
+  run.approvals[run.pendingApproval.kind] = true;
+  run.pendingApproval = null;
+  saveRunState(run, rootDir);
+  return resumeGuidedAudit(runId, { rootDir, stepRunner, awaitCompletion });
 }
 
 /** Execute a bounded, allowlisted local tool action from the Mini UI or TUI. */
@@ -1099,11 +1122,18 @@ export function runBoundedAction(action, params = {}) {
     const targetRoot = params.root ? path.resolve(String(params.root)) : ROOT;
     const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
     const scopeName = `staged-${stamp}`;
-    const revName = `staged-review-${stamp}`;
     const scopeOut = runNode(cda, ["scope", "--root", targetRoot, "--git-staged", "--name", scopeName]);
-    const approveOut = runNode(cda, ["approve", "--scope", scopeName, "--root", targetRoot, "--yes"]);
-    const reviewOut = runNode(cda, ["review", "--scope", scopeName, "--name", revName]);
-    return { ok: true, action, reportName: revName, output: `${scopeOut}${approveOut}${reviewOut}` };
+    const proposal = new StateStore(ROOT).read("scopes", scopeName);
+    return { ok: true, action, scopeName, proposalDigest: scopeDigest(proposal), output: scopeOut };
+  }
+  if (action === "review-staged") {
+    if (params.consent !== true) throw new Error("CONSENT_REQUIRED");
+    const proposal = new StateStore(ROOT).read("scopes", params.scopeName);
+    if (params.proposalDigest !== scopeDigest(proposal)) throw new Error("SCOPE_PROPOSAL_CHANGED");
+    const reportName = `staged-review-${crypto.randomBytes(6).toString("hex")}`;
+    runNode(cda, ["approve", "--scope", params.scopeName, "--root", proposal.root, "--yes", "--proposal", params.proposalDigest]);
+    const output = runNode(cda, ["review", "--scope", params.scopeName, "--name", reportName]);
+    return { ok: true, action, reportName, output };
   }
   if (action === "dashboard") {
     const lang = params.lang === "en" ? "en" : "pl";
@@ -1114,7 +1144,7 @@ export function runBoundedAction(action, params = {}) {
 }
 
 function renderMiniUiHtml(token, initialLang = "pl") {
-  return `<!doctype html>
+  const markup = `<!doctype html>
 <html lang="${initialLang}">
 <head>
   <meta charset="utf-8" />
@@ -1263,6 +1293,7 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       gap: 10px;
       margin-bottom: 16px;
     }
+    .wf-pill, .agent-pill { color: inherit; font: inherit; text-align: left; }
     .workflow-row {
       grid-template-columns: repeat(4, 1fr);
     }
@@ -1303,7 +1334,7 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       color: #cbd5e1;
       margin-bottom: 6px;
     }
-    select, input[type="text"] {
+    select, input[type="text"], textarea {
       width: 100%;
       padding: 10px 12px;
       border-radius: 8px;
@@ -1444,6 +1475,31 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       color: var(--muted);
     }
     .footer-credit a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    [hidden] { display: none !important; }
+    .shell, .grid-2, .card, .form-row > div { min-width: 0; }
+    .grid-2 { align-items: start; }
+    .agent-pill { align-self: start; }
+    .grid-2 { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
+    .agents-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .workflow-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .agent-pill, .wf-pill, .report-chip { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+    .step-item > *, .next-step-box { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+    .prompt-box { white-space: pre-wrap; max-width: 100%; }
+    .form-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .brand, .brand > div { min-width: 0; }
+    .brand-shield, .lang-switch { flex-shrink: 0; }
+    @media (max-width: 960px) {
+      .grid-2 { grid-template-columns: minmax(0, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .topbar { padding: 12px 16px; }
+      .badge { display: none; }
+      .brand { font-size: 15px; }
+      .shell { padding: 0 12px; }
+      .card { padding: 16px; }
+      .agents-row, .workflow-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .form-row { grid-template-columns: minmax(0, 1fr); }
+    }
   </style>
 </head>
 <body>
@@ -1458,8 +1514,8 @@ function renderMiniUiHtml(token, initialLang = "pl") {
     <div class="topbar-right">
       <span class="badge" id="guard-badge">127.0.0.1 · TYLKO ODCZYT · HOST/ORIGIN GUARD</span>
       <div class="lang-switch">
-        <button type="button" id="lang-pl" class="active" onclick="setLang('pl')">PL</button>
-        <button type="button" id="lang-en" onclick="setLang('en')">EN</button>
+        <button type="button" id="lang-pl" class="${initialLang === "pl" ? "active" : ""}" onclick="setLang('pl')">PL</button>
+        <button type="button" id="lang-en" class="${initialLang === "en" ? "active" : ""}" onclick="setLang('en')">EN</button>
       </div>
     </div>
   </header>
@@ -1473,22 +1529,22 @@ function renderMiniUiHtml(token, initialLang = "pl") {
         <p class="sub">Każde uruchomienie ma własny identyfikator, historię kroków, możliwość anulowania i wznowienia po błędzie.</p>
 
         <div class="workflow-row">
-          <div class="wf-pill active" id="wf-pc" onclick="selectWorkflow('pc')">
+          <button type="button" class="wf-pill active" id="wf-pc" onclick="selectWorkflow('pc')">
             <strong>💻 Komputer</strong>
             <small>Inwentarz + CVE + Windows</small>
-          </div>
-          <div class="wf-pill" id="wf-project" onclick="selectWorkflow('project')">
+          </button>
+          <button type="button" class="wf-pill" id="wf-project" onclick="selectWorkflow('project')">
             <strong>📁 Projekt</strong>
             <small>Scope + Kod v0.2 + Deps</small>
-          </div>
-          <div class="wf-pill" id="wf-web" onclick="selectWorkflow('web')">
+          </button>
+          <button type="button" class="wf-pill" id="wf-web" onclick="selectWorkflow('web')">
             <strong>🌐 Strona WWW</strong>
             <small>HTTPS / CSP / Cookies / TLS</small>
-          </div>
-          <div class="wf-pill" id="wf-demo" onclick="selectWorkflow('demo')">
+          </button>
+          <button type="button" class="wf-pill" id="wf-demo" onclick="selectWorkflow('demo')">
             <strong>🚀 Demo</strong>
             <small>Wykrycie → Fix → Retest</small>
-          </div>
+          </button>
         </div>
 
         <div style="margin-bottom: 12px;">
@@ -1496,13 +1552,17 @@ function renderMiniUiHtml(token, initialLang = "pl") {
           <input type="text" id="wf-target" placeholder="np. ./ lub https://twoja-strona.pl" oninput="syncTarget(this.value)" />
         </div>
 
-        <label class="consent-bar">
+        <div id="wf-files-group" hidden style="margin-bottom:12px;">
+          <label for="wf-files">Pliki względne do katalogu projektu, po jednym w wierszu</label>
+          <textarea id="wf-files" rows="4" placeholder="package.json&#10;package-lock.json"></textarea>
+        </div>
+        <label class="consent-bar" id="workflow-consent">
           <input type="checkbox" id="consent-check" />
-          <span>Zatwierdzam zakres i wyrażam świadomą zgodę na odczyt (--yes / --share-package-names / --authorized).</span>
+          <span id="consent-label">Zgadzam się na lokalny odczyt listy programów i portów.</span>
         </label>
 
         <div class="btn-row">
-          <button class="btn btn-primary" type="button" onclick="startWorkflow()">▶ Uruchom prowadzony audyt</button>
+          <button class="btn btn-primary" type="button" id="start-workflow-btn" onclick="startWorkflow()">▶ Uruchom prowadzony audyt</button>
           <button class="btn btn-danger" type="button" id="cancel-wf-btn" onclick="cancelCurrentWorkflow()" style="display:none">⏹ Anuluj bieżący audyt</button>
           <button class="btn btn-secondary" type="button" id="resume-wf-btn" onclick="resumeCurrentWorkflow()" style="display:none">↻ Wznów od błędu / przerwania</button>
           <a class="btn btn-secondary" href="/report/dashboard.html" target="_blank">📊 Otwórz Dashboard ↗</a>
@@ -1540,7 +1600,7 @@ function renderMiniUiHtml(token, initialLang = "pl") {
         <div class="prompt-box" id="bridge-command"></div>
 
         <div class="btn-row">
-          <button class="btn btn-primary" type="button" onclick="launchAgentTerminal()">⚡ Uruchom agenta z tym zadaniem</button>
+          <button class="btn btn-primary" type="button" id="launch-agent-btn" onclick="launchAgentTerminal()">⚡ Uruchom agenta z tym zadaniem</button>
           <button class="btn btn-secondary" type="button" onclick="copyCommand('cli')">📋 Kopiuj komendę CLI</button>
           <button class="btn btn-secondary" type="button" onclick="copyCommand('prompt')">💬 Kopiuj sam prompt</button>
         </div>
@@ -1552,7 +1612,7 @@ function renderMiniUiHtml(token, initialLang = "pl") {
     <!-- CONSOLE, RUN HISTORY & REPORTS -->
     <section class="card">
       <span class="eyebrow">03 / HISTORIA URUCHOMIEŃ, KONSOLA I RAPORTY (.CDA/REPORTS)</span>
-      <div class="console" id="console-out">Gotowy. Wybierz prowadzony audyt lub uruchom sesję Claude Code / Codex CLI.</div>
+      <div class="console" id="console-out" role="status" aria-live="polite">Gotowy. Wybierz prowadzony audyt lub uruchom sesję Claude Code / Codex CLI.</div>
       <div class="history-list" id="runs-history"></div>
       <div class="reports-grid" id="reports-list"></div>
     </section>
@@ -1564,248 +1624,261 @@ function renderMiniUiHtml(token, initialLang = "pl") {
 
   <script>
     const TOKEN = ${JSON.stringify(token)};
-    let state = {
-      lang: ${JSON.stringify(initialLang)},
-      host: 'claude',
-      workflow: 'pc',
-      activeRunId: null,
-      agents: {},
-      bridge: {},
-      runs: [],
-      sessions: []
-    };
-
-    function syncTarget(val) {
-      document.getElementById('target-input').value = val;
-      refreshBridge();
+    const state = { lang: ${JSON.stringify(initialLang)}, host: 'claude', workflow: 'pc', activeRunId: null, agents: {}, bridge: {}, runs: [], sessions: [] };
+    const t = (pl, en) => state.lang === 'en' ? en : pl;
+    let loadingStatus = false;
+    let bridgeRequest = 0;
+    function element(tag, text, className) {
+      const node = document.createElement(tag);
+      if (text !== undefined) node.textContent = String(text);
+      if (className) node.className = className;
+      return node;
     }
-
-    function selectWorkflow(wf) {
-      state.workflow = wf;
-      ['pc', 'project', 'web', 'demo'].forEach(id => {
-        document.getElementById('wf-' + id).classList.toggle('active', id === wf);
-      });
-      const mapMission = { pc: 'pc', project: 'code', web: 'web', demo: 'demo' };
-      document.getElementById('mission-select').value = mapMission[wf] || 'demo';
-      refreshBridge();
-    }
-
-    function setLang(lang) {
-      state.lang = lang;
-      document.getElementById('lang-pl').classList.toggle('active', lang === 'pl');
-      document.getElementById('lang-en').classList.toggle('active', lang === 'en');
-      refreshBridge();
-      loadStatus();
-    }
-
-    async function loadStatus() {
-      const res = await fetch('/api/status');
-      const data = await res.json();
-      state.agents = data.agents || {};
-      state.runs = data.runs || [];
-      state.sessions = data.sessions || [];
-      if (!state.activeRunId && state.runs.length) {
-        state.activeRunId = state.runs[0].runId;
+    function message(text) { document.getElementById('console-out').textContent = text; }
+    async function request(url, payload) {
+      try {
+        const response = await fetch(url, payload === undefined ? {} : {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN }, body: JSON.stringify(payload)
+        });
+        const data = await response.json();
+        if (!response.ok || data.ok === false) throw new Error(data.error || data.message || 'REQUEST_FAILED');
+        return data;
+      } catch (error) {
+        message(t('Błąd operacji. ', 'Operation failed. ') + error.message);
+        return null;
       }
-      renderAgents();
-      renderActiveRun();
-      renderRunsHistory();
-      renderAgentSessions();
-      renderReports(data.reports || []);
     }
-
+    function syncTarget(value) { document.getElementById('target-input').value = value; refreshBridge(); }
+    function setLang(lang) { window.location.search = '?lang=' + encodeURIComponent(lang); }
+    function selectWorkflow(workflow) {
+      state.workflow = workflow;
+      for (const id of ['pc', 'project', 'web', 'demo']) {
+        const button = document.getElementById('wf-' + id);
+        button.classList.toggle('active', id === workflow);
+        button.setAttribute('aria-pressed', String(id === workflow));
+      }
+      document.getElementById('wf-files-group').hidden = workflow !== 'project';
+      document.getElementById('workflow-consent').hidden = workflow === 'demo';
+      document.getElementById('consent-check').checked = false;
+      const labels = {
+        pc: t('Zgadzam się na lokalny odczyt listy programów i portów.', 'I approve a local inventory of installed programs and listening ports.'),
+        project: t('Zgadzam się na przygotowanie zakresu dla wskazanych plików.', 'I approve preparing a scope for the listed files.'),
+        web: t('Potwierdzam uprawnienia do tej strony i zatwierdzam jej pasywne sprawdzenie.', 'I am authorized to assess this website and approve passive checks.')
+      };
+      document.getElementById('consent-label').textContent = labels[workflow] || '';
+      document.getElementById('mission-select').value = { pc: 'pc', project: 'code', web: 'web', demo: 'demo' }[workflow];
+      refreshBridge();
+    }
+    async function loadStatus() {
+      if (loadingStatus) return;
+      loadingStatus = true;
+      try {
+        const data = await request('/api/status');
+        if (!data) return;
+        state.agents = data.agents || {};
+        state.runs = data.runs || [];
+        state.sessions = data.sessions || [];
+        if (!state.activeRunId && state.runs.length) state.activeRunId = state.runs[0].runId;
+        renderAgents(); renderActiveRun(); renderRunsHistory(); renderAgentSessions(); renderReports(data.reports || []);
+      } finally { loadingStatus = false; }
+    }
     function renderAgents() {
       const row = document.getElementById('agents-row');
-      row.innerHTML = '';
+      row.replaceChildren();
       for (const [id, info] of Object.entries(state.agents)) {
-        const div = document.createElement('div');
-        div.className = 'agent-pill' + (state.host === id ? ' active' : '');
-        div.onclick = () => { state.host = id; renderAgents(); refreshBridge(); };
-        const statusText = info.installed
-          ? ('✓ ' + (info.version || 'CLI'))
-          : (info.entryExists ? '○ Skill gotowy (brak CLI)' : '—');
-        div.innerHTML =
-          '<strong>' + info.name + '</strong>' +
-          '<small class="' + (info.installed ? 'status-ok' : 'status-warn') + '">' + statusText + '</small>' +
-          (info.executablePath ? '<small>' + info.executablePath + '</small>' : '');
-        row.appendChild(div);
+        const button = element('button', undefined, 'agent-pill' + (state.host === id ? ' active' : ''));
+        button.type = 'button';
+        button.setAttribute('aria-pressed', String(state.host === id));
+        button.append(element('strong', info.name), element('small', info.installed ? info.version : t('Skill gotowy', 'Skill available'), info.installed ? 'status-ok' : 'status-warn'));
+        if (info.executablePath) button.append(element('small', info.executablePath));
+        if (info.versionWarning) {
+          const warning = element('small', t('Kilka wersji CLI', 'Multiple CLI versions'), 'status-warn');
+          warning.title = info.versionWarning;
+          button.append(warning);
+        }
+        button.onclick = () => { state.host = id; renderAgents(); refreshBridge(); };
+        row.append(button);
       }
     }
-
+    function reportLink(name) {
+      const link = element('a', name, 'report-chip');
+      link.href = '/report/' + encodeURIComponent(name);
+      link.target = '_blank'; link.rel = 'noopener';
+      return link;
+    }
     function renderActiveRun() {
       const box = document.getElementById('active-run-box');
-      const cancelBtn = document.getElementById('cancel-wf-btn');
-      const resumeBtn = document.getElementById('resume-wf-btn');
-      const run = state.runs.find(r => r.runId === state.activeRunId) || state.runs[0];
-      if (!run) {
-        box.innerHTML = '';
-        cancelBtn.style.display = 'none';
-        resumeBtn.style.display = 'none';
-        return;
-      }
+      const run = state.runs.find(item => item.runId === state.activeRunId) || state.runs[0];
+      document.getElementById('cancel-wf-btn').style.display = run && ['running', 'awaiting_approval'].includes(run.status) ? 'inline-flex' : 'none';
+      document.getElementById('resume-wf-btn').style.display = run && ['failed', 'cancelled'].includes(run.status) ? 'inline-flex' : 'none';
+      box.replaceChildren();
+      if (!run) return;
       state.activeRunId = run.runId;
-      cancelBtn.style.display = run.status === 'running' ? 'inline-flex' : 'none';
-      resumeBtn.style.display = (run.status === 'failed' || run.status === 'cancelled') ? 'inline-flex' : 'none';
-
-      const stepsHtml = (run.steps || []).map(s => {
-        const cls = s.status === 'completed' ? 'status-ok' : s.status === 'running' ? 'status-warn' : s.status === 'failed' || s.status === 'cancelled' ? 'status-err' : '';
-        return '<div class="step-item"><span>' + s.label + '</span><span class="step-status ' + cls + '">' + s.status.toUpperCase() + '</span></div>';
-      }).join('');
-
-      const reportsLinks = (run.reports || []).map(r => '<a class="report-chip" href="/report/' + encodeURIComponent(r) + '" target="_blank">📄 ' + r + '</a>').join(' ');
-
-      box.innerHTML =
-        '<div style="font:600 12px var(--mono);color:#94a3b8;margin-bottom:6px;">AKTYWNE URUCHOMIENIE: ' + run.runId + ' [' + run.status.toUpperCase() + ']</div>' +
-        '<div class="steps-list">' + stepsHtml + '</div>' +
-        (run.nextStep ? '<div class="next-step-box"><strong>Następny krok:</strong> ' + run.nextStep + '</div>' : '') +
-        (reportsLinks ? '<div class="reports-grid">' + reportsLinks + '</div>' : '');
+      box.append(element('p', run.runId + ' · ' + run.status));
+      const steps = element('div', undefined, 'steps-list');
+      for (const step of run.steps || []) {
+        const row = element('div', undefined, 'step-item');
+        row.append(element('span', step.label), element('span', step.status, 'step-status'));
+        steps.append(row);
+      }
+      box.append(steps);
+      if (run.pendingApproval) {
+        const approval = run.pendingApproval;
+        const text = approval.kind === 'scope'
+          ? t('Zatwierdź odczyt dokładnie tego zakresu.', 'Approve reading this exact scope.')
+          : t('Zatwierdź wysłanie nazw i wersji pakietów do OSV.dev oraz pobranie listy CISA KEV.', 'Approve sharing package names and versions with OSV.dev and downloading the CISA KEV list.');
+        box.append(element('p', text));
+        if (approval.kind === 'scope') box.append(element('pre', approval.root + '\\n' + approval.files.join('\\n'), 'prompt-box'));
+        const button = element('button', t('Zatwierdź ten krok', 'Approve this step'), 'btn btn-primary');
+        button.type = 'button'; button.id = 'approve-workflow-btn';
+        button.onclick = async () => {
+          button.disabled = true;
+          await request('/api/workflows/approve', { runId: run.runId, approvalToken: approval.token });
+          await loadStatus();
+        };
+        box.append(button);
+      }
+      if (run.nextStep) box.append(element('p', run.nextStep, 'next-step-box'));
+      const links = element('div', undefined, 'reports-grid');
+      for (const report of run.reports || []) links.append(reportLink(report));
+      box.append(links);
     }
-
     function renderRunsHistory() {
       const box = document.getElementById('runs-history');
-      if (!state.runs.length) {
-        box.innerHTML = '';
-        return;
+      box.replaceChildren();
+      for (const run of state.runs.slice(0, 6)) {
+        const row = element('div', undefined, 'step-item');
+        const created = new Date(run.createdAt);
+        const timestamp = Number.isFinite(created.getTime()) ? created.toLocaleString(state.lang === 'pl' ? 'pl-PL' : 'en-GB') : run.runId;
+        const select = element('button', run.title + ' · ' + timestamp + (run.target ? ' · ' + run.target : '') + ' · ' + run.status, 'btn btn-secondary');
+        select.type = 'button'; select.onclick = () => { state.activeRunId = run.runId; renderActiveRun(); };
+        row.append(select);
+        if (['failed', 'cancelled'].includes(run.status)) {
+          const resume = element('button', t('Wznów', 'Resume'), 'btn btn-secondary');
+          resume.type = 'button'; resume.onclick = () => resumeRunById(run.runId); row.append(resume);
+        }
+        box.append(row);
       }
-      box.innerHTML = state.runs.slice(0, 6).map(r => {
-        const canResume = r.status === 'failed' || r.status === 'cancelled';
-        return '<div class="step-item" onclick="state.activeRunId=\\'' + r.runId + '\\';renderActiveRun();" style="cursor:pointer">' +
-          '<span><strong>' + r.title + '</strong> <small style="color:#94a3b8">(' + r.runId + ')</small></span>' +
-          '<span><span class="step-status">' + r.status.toUpperCase() + '</span>' +
-          (canResume ? ' <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();resumeRunById(\\'' + r.runId + '\\')">↻ Wznów</button>' : '') +
-          '</span></div>';
-      }).join('');
     }
-
     function renderAgentSessions() {
       const box = document.getElementById('agent-sessions-box');
-      if (!state.sessions.length) {
-        box.innerHTML = '';
-        return;
+      box.replaceChildren();
+      const session = state.sessions[0];
+      if (!session) return;
+      box.append(element('p', session.hostName + ' · ' + session.status));
+      if (session.authHint || session.error) box.append(element('p', session.authHint || session.error, 'status-warn'));
+      const output = element('pre', session.output || t('Oczekiwanie na wynik sesji.', 'Waiting for session output.'), 'console');
+      output.id = 'session-output'; output.style.maxHeight = '240px'; output.style.overflow = 'auto'; box.append(output);
+      if (!session.endedAt) {
+        const stop = element('button', t('Zatrzymaj sesję', 'Stop session'), 'btn btn-danger'); stop.type = 'button';
+        stop.onclick = async () => { await request('/api/agent-sessions/stop', { sessionId: session.sessionId }); await loadStatus(); };
+        box.append(stop);
       }
-      const s = state.sessions[0];
-      const cls = s.status === 'completed' || s.status === 'running' ? 'status-ok' : 'status-err';
-      box.innerHTML =
-        '<div class="step-item">' +
-          '<div><strong>Sesja: ' + s.hostName + ' (' + s.mission + ')</strong><br/><small style="color:#94a3b8">Plik: ' + s.executablePath + '</small>' +
-          (s.authHint ? '<div style="color:#fb7185;font-size:11.5px;margin-top:4px;">⚠️ ' + s.authHint + '</div>' : '') +
-          (s.error && !s.authHint ? '<div style="color:#fbbf24;font-size:11.5px;margin-top:4px;">ℹ️ ' + s.error + '</div>' : '') +
-          '</div>' +
-          '<span class="step-status ' + cls + '">' + s.status.toUpperCase() + '</span>' +
-        '</div>';
     }
-
     function renderReports(reports) {
-      const box = document.getElementById('reports-list');
-      box.innerHTML = '';
-      (reports || []).forEach(r => {
-        const a = document.createElement('a');
-        a.className = 'report-chip';
-        a.href = '/report/' + encodeURIComponent(r.name);
-        a.target = '_blank';
-        a.textContent = '📄 ' + r.name;
-        box.appendChild(a);
-      });
+      const box = document.getElementById('reports-list'); box.replaceChildren();
+      for (const report of reports) box.append(reportLink(report.name));
     }
-
     async function refreshBridge() {
-      const mission = document.getElementById('mission-select').value;
-      const target = document.getElementById('target-input').value;
-      const res = await fetch('/api/bridge?host=' + encodeURIComponent(state.host) + '&mission=' + encodeURIComponent(mission) + '&target=' + encodeURIComponent(target) + '&lang=' + encodeURIComponent(state.lang));
-      state.bridge = await res.json();
-      document.getElementById('bridge-command').textContent = state.bridge.cliCommand + '\\n\\n# Prompt:\\n' + state.bridge.prompt;
+      const sequence = ++bridgeRequest;
+      const params = new URLSearchParams({ host: state.host, mission: document.getElementById('mission-select').value, target: document.getElementById('target-input').value, lang: state.lang });
+      const data = await request('/api/bridge?' + params);
+      if (!data || sequence !== bridgeRequest) return;
+      state.bridge = data;
+      document.getElementById('bridge-command').textContent = data.cliCommand + '\\n\\n' + data.prompt;
     }
-
     async function copyCommand(kind) {
-      const text = kind === 'cli' ? state.bridge.cliCommand : state.bridge.prompt;
-      await navigator.clipboard.writeText(text);
-      document.getElementById('console-out').textContent = '✓ Skopiowano do schowka:\\n' + text;
+      try {
+        const text = kind === 'cli' ? state.bridge.cliCommand : state.bridge.prompt;
+        if (!text) return;
+        await navigator.clipboard.writeText(text);
+        message(t('Skopiowano do schowka.\\n', 'Copied to clipboard.\\n') + text);
+      } catch (error) { message(t('Błąd schowka. ', 'Clipboard error. ') + error.message); }
     }
-
     async function launchAgentTerminal() {
-      const out = document.getElementById('console-out');
-      out.textContent = '⏳ Uruchamianie sesji agenta...';
-      const res = await fetch('/api/launch-agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
-        body: JSON.stringify({
-          host: state.host,
-          mission: document.getElementById('mission-select').value,
-          target: document.getElementById('target-input').value,
-          lang: state.lang
-        })
-      });
-      const data = await res.json();
-      out.textContent = data.message || data.error || JSON.stringify(data, null, 2);
-      loadStatus();
+      const button = document.getElementById('launch-agent-btn'); button.disabled = true;
+      message(t('Uruchamianie sesji agenta…', 'Starting agent session…'));
+      const data = await request('/api/launch-agent', { host: state.host, mission: document.getElementById('mission-select').value, target: document.getElementById('target-input').value, lang: state.lang });
+      button.disabled = false;
+      if (data) message(data.message);
+      await loadStatus();
     }
-
     async function startWorkflow() {
-      const out = document.getElementById('console-out');
-      const consent = document.getElementById('consent-check').checked;
-      const target = document.getElementById('wf-target').value || document.getElementById('target-input').value;
-      out.textContent = '⏳ Rozpoczynanie prowadzonego audytu (' + state.workflow + ')...';
-      const res = await fetch('/api/workflows/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
-        body: JSON.stringify({ workflow: state.workflow, consent, target, lang: state.lang })
-      });
-      const data = await res.json();
-      if (!data.ok) {
-        out.textContent = '❌ ' + (data.error || 'Błąd uruchomienia audytu');
-        return;
-      }
-      state.activeRunId = data.run.runId;
-      out.textContent = '▶ Uruchomiono audyt: ' + data.run.runId + ' (' + data.run.title + ')';
-      loadStatus();
+      const button = document.getElementById('start-workflow-btn'); button.disabled = true;
+      const files = document.getElementById('wf-files').value.split('\\n').map(file => file.trim()).filter(Boolean);
+      const data = await request('/api/workflows/start', { workflow: state.workflow, consent: document.getElementById('consent-check').checked, target: document.getElementById('wf-target').value, files, lang: state.lang });
+      button.disabled = false;
+      if (data) { state.activeRunId = data.run.runId; message(t('Uruchomiono audyt ', 'Started audit ') + data.run.runId); }
+      await loadStatus();
     }
-
     async function cancelCurrentWorkflow() {
       if (!state.activeRunId) return;
-      const res = await fetch('/api/workflows/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
-        body: JSON.stringify({ runId: state.activeRunId })
-      });
-      const data = await res.json();
-      document.getElementById('console-out').textContent = data.ok ? ('⏹ Anulowano audyt: ' + state.activeRunId) : ('❌ ' + data.error);
-      loadStatus();
+      await request('/api/workflows/cancel', { runId: state.activeRunId }); await loadStatus();
     }
-
-    async function resumeCurrentWorkflow() {
-      if (!state.activeRunId) return;
-      await resumeRunById(state.activeRunId);
-    }
-
+    async function resumeCurrentWorkflow() { if (state.activeRunId) await resumeRunById(state.activeRunId); }
     async function resumeRunById(runId) {
-      const res = await fetch('/api/workflows/resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
-        body: JSON.stringify({ runId })
-      });
-      const data = await res.json();
-      state.activeRunId = runId;
-      document.getElementById('console-out').textContent = data.ok ? ('↻ Wznowiono audyt: ' + runId) : ('❌ ' + data.error);
-      loadStatus();
+      const data = await request('/api/workflows/resume', { runId });
+      if (data) state.activeRunId = runId;
+      await loadStatus();
     }
-
-    loadStatus();
-    refreshBridge();
+    selectWorkflow('pc'); loadStatus();
     setInterval(() => {
-      if (state.runs.some(r => r.status === 'running') || state.sessions.some(s => s.status === 'running')) {
-        loadStatus();
-      }
+      if (!document.hidden && (state.runs.some(run => run.status === 'running') || state.sessions.some(session => !session.endedAt))) loadStatus();
     }, 1500);
   </script>
 </body>
 </html>`;
+  const translations = {
+  "01 / PROWADZONY AUDYT KROK PO KROKU": "GUIDED AUDIT",
+  "Wybierz cel: Komputer, Projekt, Strona lub Demo": "Choose a computer, project, website or demo",
+  "Każde uruchomienie ma własny identyfikator, historię kroków, możliwość anulowania i wznowienia po błędzie.": "Track each run, review its steps, cancel it or resume after an error.",
+  "💻 Komputer": "💻 Computer",
+  "📁 Projekt": "📁 Project",
+  "🌐 Strona WWW": "🌐 Website",
+  "Inwentarz + CVE + Windows": "Inventory and vulnerability evidence",
+  "Scope + Kod v0.2 + Deps": "Scope, code and dependencies",
+  "Wykrycie → Fix → Retest": "Finding → Fix → Retest",
+  "Ścieżka projektu lub adres URL (dla Projekt / Strona WWW):": "Project directory or website URL",
+  "Pliki względne do katalogu projektu, po jednym w wierszu": "Files relative to the project directory, one per line",
+  "np. ./ lub https://twoja-strona.pl": "e.g. ./ or https://your-site.example",
+  "▶ Uruchom prowadzony audyt": "▶ Start guided audit",
+  "⏹ Anuluj bieżący audyt": "⏹ Cancel current audit",
+  "↻ Wznów od błędu / przerwania": "↻ Resume audit",
+  "📊 Otwórz Dashboard ↗": "📊 Open dashboard ↗",
+  "02 / MOSTEK CLAUDE CODE CLI & CODEX CLI": "CLAUDE CODE AND CODEX",
+  "Uruchomienie agenta ze stanem sesji": "Agent sessions",
+  "Przekazuje wybrane zadanie bezpośrednio do ujednoliconego pliku wykonywalnego CLI i monitoruje stan logowania.": "Send the selected task to your installed CLI and follow its output and session status.",
+  "Zadanie dla agenta": "Agent task",
+  "Szybkie Demo End-to-End": "Synthetic demo",
+  "Audyt kodu i zależności projektu": "Project code and dependencies",
+  "Audyt komputera (OSV + KEV + Windows)": "Computer vulnerability review",
+  "Pasywny audyt strony WWW": "Passive website check",
+  "Wygeneruj raport HTML/PDF + Dashboard": "Generate report and dashboard",
+  "Cel zadania (ścieżka / URL)": "Task target (directory or URL)",
+  "Ujednolicona komenda CLI i przekazywany prompt:": "CLI command and mission prompt",
+  "⚡ Uruchom agenta z tym zadaniem": "⚡ Start agent session",
+  "📋 Kopiuj komendę CLI": "📋 Copy CLI command",
+  "💬 Kopiuj sam prompt": "💬 Copy prompt",
+  "03 / HISTORIA URUCHOMIEŃ, KONSOLA I RAPORTY (.CDA/REPORTS)": "RUN HISTORY AND REPORTS",
+  "Gotowy. Wybierz prowadzony audyt lub uruchom sesję Claude Code / Codex CLI.": "Ready. Choose an audit or start an agent session.",
+  "Stworzone przez": "Created by",
+  "TYLKO ODCZYT": "READ ONLY"
+};
+  return initialLang === "en" ? Object.entries(translations).reduce((html, [polish, english]) => html.replaceAll(polish, english), markup) : markup;
 }
 
 /** Start the local Mini Interface server on 127.0.0.1. */
-export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true, rootDir = ROOT } = {}) {
+export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true, rootDir = ROOT, agentsMap = null } = {}) {
   const token = crypto.randomBytes(24).toString("hex");
+  let agents = agentsMap;
+  const getAgents = () => agents ||= detectAgents();
   const server = http.createServer(async (req, res) => {
     try {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Frame-Options", "DENY");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'");
       const actualPort = server.address()?.port || port;
       verifyLocalRequest(req, actualPort, {
         token,
@@ -1815,14 +1888,14 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       const url = new URL(req.url || "/", `http://127.0.0.1:${actualPort}`);
       if (req.method === "GET" && url.pathname === "/") {
         res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-        res.end(renderMiniUiHtml(token, lang));
+        res.end(renderMiniUiHtml(token, url.searchParams.get("lang") === "en" ? "en" : url.searchParams.get("lang") === "pl" ? "pl" : lang));
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/status") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(
           JSON.stringify({
-            agents: detectAgents(),
+            agents: getAgents(),
             reports: listReportsSummary(rootDir),
             runs: listGuidedAudits(rootDir),
             sessions: getAgentSessions(rootDir),
@@ -1833,13 +1906,14 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       if (req.method === "GET" && url.pathname === "/api/bridge") {
         const reqHost = url.searchParams.get("host") || "claude";
         validateAgentHost(reqHost);
-        const agents = detectAgents();
+        const agents = getAgents();
         const bridge = buildAgentBridge({
           host: reqHost,
           mission: url.searchParams.get("mission") || "demo",
           target: url.searchParams.get("target") || "",
           lang: url.searchParams.get("lang") || lang,
-          executablePath: agents[reqHost]?.executablePath || reqHost,
+          executablePath: agents[reqHost]?.commandPath || reqHost,
+          executableArgs: agents[reqHost]?.commandArgs || [],
         });
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify(bridge));
@@ -1871,8 +1945,19 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           ".json": "application/json; charset=utf-8",
           ".pdf": "application/pdf",
         };
-        res.writeHead(200, { "Content-Type": types[ext] || "text/plain; charset=utf-8" });
-        res.end(fs.readFileSync(filePath));
+        const descriptor = fs.openSync(filePath, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+        try {
+          const before = fs.fstatSync(descriptor);
+          if (before.nlink > 1 || before.size > 8 * 1024 * 1024) throw new Error("INVALID_REPORT_FILE");
+          const content = fs.readFileSync(descriptor);
+          const checkedPath = resolveContainedPath(resolveContainedPath(rootDir, ".cda", "reports"), rawSegment);
+          const current = fs.lstatSync(checkedPath);
+          if (current.dev !== before.dev || current.ino !== before.ino || current.mtimeMs !== before.mtimeMs || current.size !== before.size) throw new Error("REPORT_CHANGED_DURING_READ");
+          res.writeHead(200, { "Content-Type": types[ext] || "text/plain; charset=utf-8" });
+          res.end(content);
+        } finally {
+          fs.closeSync(descriptor);
+        }
         return;
       }
       if (req.method === "POST") {
@@ -1882,9 +1967,10 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           if (body.length > 16384) throw new Error("PAYLOAD_TOO_LARGE");
         }
         const payload = JSON.parse(body || "{}");
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("INVALID_PAYLOAD");
 
         if (url.pathname === "/api/launch-agent") {
-          const result = launchAgentSession(payload, { rootDir });
+          const result = launchAgentSession(payload, { rootDir, agentsMap: getAgents() });
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify(result));
           return;
@@ -1919,6 +2005,12 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           res.end(JSON.stringify({ ok: true, run }));
           return;
         }
+        if (url.pathname === "/api/workflows/approve") {
+          const run = await approveGuidedAudit(payload.runId, { rootDir, approvalToken: payload.approvalToken });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true, run }));
+          return;
+        }
         if (url.pathname === "/api/run") {
           const result = runBoundedAction(payload.action, payload);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -1936,6 +2028,7 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         code === "INVALID_SESSION_TOKEN" ||
         code === "PATH_OUTSIDE_BOUNDARY" ||
         code === "INVALID_AGENT_HOST"
+        || code === "STATE_LINK_BLOCKED"
           ? 403
           : 400;
       res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });

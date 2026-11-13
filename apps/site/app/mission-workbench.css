@@ -1,0 +1,35 @@
+/* A readable working brief, using the site's existing emerald palette. */
+.mission-workbench { display: grid; grid-template-columns: minmax(245px, .8fr) minmax(0, 1.6fr); border-block: 1px solid var(--line); }
+.mission-directory { padding: 26px 32px 26px 0; border-right: 1px solid var(--line); }
+.mission-directory button { display: flex; align-items: center; gap: 14px; width: 100%; padding: 19px 14px; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--muted); text-align: left; font-size: 15px; }
+.mission-directory button[aria-pressed="true"] { color: var(--text); background: var(--raised); box-shadow: inset 2px 0 var(--accent); }
+.mission-directory button:hover { color: var(--text); background: var(--surface); }
+.mission-directory button > svg { margin-left: auto; flex-shrink: 0; }
+.mission-number { font: 11px var(--mono); color: var(--accent); }
+.mission-local-note { margin-top: 26px; color: var(--muted); font-size: 13px; line-height: 1.7; }
+.mission-detail { min-width: 0; padding: 36px 0 30px 40px; }
+.mission-detail > .eyebrow { font-size: 10px; letter-spacing: .08em; }
+.mission-detail h3 { max-width: 22ch; margin: 14px 0 24px; font-size: clamp(25px, 2.8vw, 37px); line-height: 1.25; font-weight: 550; letter-spacing: -.035em; }
+.mission-evidence { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.mission-evidence li { display: flex; align-items: flex-start; gap: 12px; font-size: 15px; line-height: 1.7; }
+.mission-evidence svg { flex-shrink: 0; color: var(--accent); margin-top: 5px; }
+.mission-boundary { margin-top: 28px; padding-block: 20px; border-block: 1px solid var(--line); font-size: 13px; }
+.mission-boundary strong { font-weight: 600; }
+.mission-boundary p { margin-top: 6px; color: var(--muted); }
+.mission-sources { margin-top: 12px; color: var(--muted); font-size: 12px; }
+.mission-sources a { text-decoration: underline; text-underline-offset: 3px; }
+.mission-prompt-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-block: 24px 12px; }
+.mission-prompt-heading label { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.mission-prompt-heading select { background: var(--surface); color: var(--text); padding: 9px 26px 9px 10px; border: 1px solid var(--line); border-radius: 4px; font: inherit; }
+.mission-prompt { margin: 0; padding: 20px; max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface); color: #c6d4ca; font: 12px/1.85 var(--mono); border: 1px solid var(--line); border-radius: 4px; }
+.mission-detail-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; margin-top: 22px; font-size: 13px; }
+.mission-detail-footer a { display: inline-flex; align-items: center; gap: 7px; color: var(--accent); }
+@media (max-width: 767px) {
+  .mission-workbench { grid-template-columns: 1fr; }
+  .mission-directory { padding: 12px 0 24px; border-right: 0; border-bottom: 1px solid var(--line); }
+  .mission-directory button { padding: 15px 12px; }
+  .mission-detail { padding: 28px 0; }
+  .mission-detail h3 { max-width: 24ch; }
+  .mission-prompt { padding: 14px; }
+}
+.copy-fallback { display: block; max-width: 180px; margin-top: 6px; color: var(--accent); font: 12px/1.5 var(--mono); }

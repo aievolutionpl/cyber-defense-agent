@@ -19,15 +19,15 @@ export function ReportShowcase({ locale }: { locale: Locale }) {
         <div>
           <span className="eyebrow">{pl ? "04 / CO DOSTAJESZ" : "04 / WHAT YOU GET"}</span>
           <h2 id="deliver-title">
-            {pl ? "Zero ściany tekstu." : "Not a wall of text."}
+            {pl ? "Najważniejsze decyzje." : "The decisions that matter."}
             <br />
-            <span className="gradient-text">{pl ? "Raport PDF i panel live." : "A PDF report and live dashboard."}</span>
+            <span className="gradient-text">{pl ? "Dowody w jednym raporcie." : "Evidence in one report."}</span>
           </h2>
         </div>
         <p>
           {pl
-            ? "Każdy audyt kończy się przejrzystym plikiem HTML/PDF oraz panelem na żywo — zanim wdrożysz jakąkolwiek zmianę."
-            : "Every audit produces a clean HTML/PDF report and a live dashboard — before any changes are applied."}
+            ? "Przed zmianami dostajesz lokalny raport HTML z priorytetami i dowodami. PDF zapiszesz przez przeglądarkę lub po osobnej zgodzie na jej uruchomienie."
+            : "Before changes, you receive a local HTML report with priorities and evidence. Save a PDF through your browser, or give separate permission for automated printing."}
         </p>
       </div>
       <div className="deliver-grid">
@@ -62,7 +62,7 @@ export function ReportShowcase({ locale }: { locale: Locale }) {
           <div className="dash-mock" data-reveal data-agent-target="Builder" data-agent-label={pl ? "Budowanie panelu" : "Building the dashboard"} role="img" aria-label={pl ? "Przykładowy panel: 10 otwartych ustaleń, 3 potwierdzone poprawki, 842 sprawdzone paczki, 2 pomysły; lista ustaleń według priorytetu." : "Sample dashboard: 10 open findings, 3 confirmed fixes, 842 packages checked, 2 ideas; findings listed by priority."}>
             <div className="dash-bar">
               <span className="dash-live"><LayoutDashboard size={14} aria-hidden="true" />dashboard.html</span>
-              <span className="mono">{pl ? "odświeża się sam" : "refreshes itself"}</span>
+              <span className="mono">{pl ? "przykład · dane syntetyczne" : "example · synthetic data"}</span>
             </div>
             <div className="dash-tiles">
               {tiles.map(([value, label, tone]) => (

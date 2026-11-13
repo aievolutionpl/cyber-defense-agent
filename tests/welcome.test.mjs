@@ -269,7 +269,7 @@ test("Priority 3: guided audit workflow supports async steps, cancellation, resu
   };
 
   const firstRun = await startGuidedAudit(
-    { workflow: "pc", consent: true, lang: "pl" },
+    { workflow: "pc", consent: true, sharePackageNames: true, lang: "pl" },
     { rootDir: tmp, stepRunner, awaitCompletion: true },
   );
   assert.equal(firstRun.status, "failed");
@@ -307,49 +307,34 @@ test("Priority 3: guided audit workflow supports async steps, cancellation, resu
   assert.equal(listGuidedAudits(tmp).length, 2);
 });
 
-test("Priority 4: Windows vendor catalog verifies desktop software, fixed versions, and official download URLs", async () => {
-  const winRegistryOutput = JSON.stringify([
-    { DisplayName: "7-Zip 24.01 (x64)", DisplayVersion: "24.01", Publisher: "Igor Pavlov" },
-    { DisplayName: "PuTTY release 0.80 (64-bit)", DisplayVersion: "0.80.0.0", Publisher: "Simon Tatham" },
-    { DisplayName: "Git version 2.47.1.windows.1", DisplayVersion: "2.47.1.windows.1", Publisher: "The Git Development Community" },
-    { DisplayName: "Custom Internal ERP", DisplayVersion: "3.1.0", Publisher: "Internal Corp" },
-  ]);
+test("Windows update sources retain manual verification until advisory evidence is available", async () => {
   const inv = collectInventory({
     consent: true,
     platform: "win32",
-    run: (cmd) => (cmd === "powershell.exe" ? winRegistryOutput : ""),
+    run: (command) => command === "powershell.exe" ? JSON.stringify([
+      { DisplayName: "7-Zip 24.01 (x64)", DisplayVersion: "24.01", Publisher: "Igor Pavlov" },
+      { DisplayName: "PuTTY release 0.80 (64-bit)", DisplayVersion: "0.80", Publisher: "Simon Tatham" },
+      { DisplayName: "Git version 2.47.1.windows.1", DisplayVersion: "2.47.1.windows.1" },
+      { DisplayName: "Custom Internal ERP", DisplayVersion: "3.1.0" },
+    ]) : "",
   });
-
   assert.equal(inv.total, 4);
-  assert.equal(inv.verification.verifiedOsv, 0);
-  assert.equal(inv.verification.verifiedVendorCatalog, 3);
-  assert.equal(inv.verification.verifiedTotal, 3);
-  assert.equal(inv.verification.updateRequiredCount, 2);
-  assert.equal(inv.verification.needsManualCheck, 1);
-
-  const invMd = renderInventory(inv);
-  assert.match(invMd, /Verified total: 3/);
-  assert.match(invMd, /Windows vendor catalog verified: 3/);
-  assert.match(invMd, /Updates required: 2/);
-  assert.match(invMd, /Needs vendor\/NVD lookup: 1/);
-  assert.match(invMd, /24\.09/);
-  assert.match(invMd, /7-zip\.org\/download\.html/);
-  assert.match(invMd, /winget: 7zip\.7zip/);
-
-  const adv = await checkAdvisories(inv, {
+  assert.equal(inv.verification.verifiedTotal, 0);
+  assert.equal(inv.verification.officialUpdateSources, 3);
+  assert.equal(inv.verification.needsManualCheck, 4);
+  const inventory = renderInventory(inv);
+  assert.match(inventory, /Requires vendor verification/);
+  assert.match(inventory, /7-zip\.org\/download\.html/);
+  assert.doesNotMatch(inventory, /Verified current|CVE-2025-0411/);
+  const report = await checkAdvisories(inv, {
     consent: true,
     fetchImpl: async () => new Response(JSON.stringify({ vulnerabilities: [] }), { status: 200 }),
   });
-  assert.equal(adv.vendorCatalogChecked, 3);
-  assert.equal(adv.verifiedTotal, 3);
-  assert.equal(adv.manualLookup.total, 1);
-  assert.equal(adv.findings.length, 2);
-  assert.ok(adv.findings.some((f) => f.id === "CVE-2025-0411" && f.fixedIn.includes("24.09") && f.updateUrl.includes("7-zip.org")));
-  assert.ok(adv.findings.some((f) => f.id === "CVE-2024-31497" && f.fixedIn.includes("0.81") && f.priority === "P0"));
-
-  const advMd = renderAdvisories(adv);
-  assert.match(advMd, /Checked via Windows vendor catalog: 3/);
-  assert.match(advMd, /winget: PuTTY\.PuTTY/);
+  assert.equal(report.vendorCatalogChecked, 0);
+  assert.equal(report.verifiedTotal, 0);
+  assert.equal(report.manualLookup.total, 4);
+  assert.equal(report.findings.length, 0);
+  assert.match(renderAdvisories(report), /winget: PuTTY\.PuTTY/);
 });
 
 test("Priority 5: full user scenario (detection -> fix -> retest) and held-out detection benchmark", (t) => {

@@ -15,47 +15,24 @@ import { asset, github, type Locale } from "@/lib/config";
 export function Landing({ locale }: { locale: Locale }) {
   const pl = locale === "pl";
   const start = pl ? "Zobacz na GitHubie" : "Start on GitHub";
-  const faq = pl
-    ? [
-        [
-          "Co dokładnie potrafi agent z tym skillem?",
-          "Sprawdza komputer lub serwer (programy, znane luki, porty), stronę WWW (HTTPS, nagłówki, cookies, TLS), kod projektu (zależności, sekrety, reguły bezpieczeństwa), bazę danych i sieć. Wszystko w trybie tylko do odczytu, z dowodem i retestem.",
-        ],
-        [
-          "Co dostaję po audycie?",
-          "Czytelny raport HTML i PDF (werdykt, priorytety P0–P3, trzy rzeczy na start, gotowe poprawki) oraz lokalny panel dashboard.html odświeżany na żywo podczas pracy agenta.",
-        ],
-        [
-          "Co opuszcza mój komputer i czy agent sam coś zmienia?",
-          "Domyślnie nic nie opuszcza komputera, a narzędzia działają wyłącznie w trybie odczytu. Tylko komendy advisories (OSV.dev) i web (pasywne GET) używają sieci — zawsze po Twojej jawnej zgodzie. Poprawki wdrażasz sam.",
-        ],
-        [
-          "Ile to kosztuje i kto rozwija projekt?",
-          "Projekt jest w 100% darmowy i otwarty (licencja MIT), rozwijany przez AI Evolution Polska. Wymaga jedynie Node.js 22+ oraz Git.",
-        ],
-      ]
-    : [
-        [
-          "What exactly can my agent do with this skill?",
-          "Check a computer or server (installed apps, CVEs, open ports), a website (HTTPS, headers, cookies, TLS), project code (dependencies, secrets, security rules), databases and networks. All read-only, with evidence and retesting.",
-        ],
-        [
-          "What do I get after an audit?",
-          "A clean HTML and PDF report (verdict, P0–P3 priorities, top three actions, exact fixes) plus a live local dashboard.html that updates as your agent works.",
-        ],
-        [
-          "What leaves my machine, and does the agent change anything?",
-          "Nothing leaves by default, and tools are strictly read-only. Only advisories (OSV.dev) and web (passive GET) use the network — always after your explicit flag. You apply changes yourself.",
-        ],
-        [
-          "What does it cost and who builds it?",
-          "100% free and open source (MIT license), created and maintained by AI Evolution Polska. Requires only Node.js 22+ and Git.",
-        ],
-      ];
-
+  const faq = pl ? [
+    ["Co jest programem, a co skillem?", "Skill prowadzi rozmowę i analizę w Twoim agencie AI. Lokalny CLI zbiera wybrane dowody i buduje raporty. Ta strona prezentuje możliwości i pomaga przygotować brief; nie skanuje komputera ani nie przyjmuje plików."],
+    ["Co naprawdę zostaje sprawdzone?", "Zakres zależy od zatwierdzonej misji. CLI ma osiem lokalnych reguł, odczyt zależności, import raportów i pasywną kontrolę strony. Logika aplikacji, bazy danych oraz konfiguracja agentów wymagają przeglądu eksperckiego. Raport rozdziela dowody, ocenę modelu i brak danych."],
+    ["Co dostaję po przeglądzie?", "Lokalny raport HTML: najważniejsze ustalenia, ich znaczenie, dowody, plan naprawy i sposób weryfikacji. PDF powstaje po zgodzie na uruchomienie lokalnej przeglądarki lub przez Drukuj → Zapisz jako PDF. Panel pokazuje postęp i historię."],
+    ["Co opuszcza mój komputer?", "Lokalne polecenia CLI nie wywołują modelu. Odpytanie OSV wysyła nazwy, wersje i ekosystemy pakietów po osobnej zgodzie; kontrola WWW łączy się ze wskazaną stroną. Codex, Claude Code i inne hosty mogą przekazywać treść rozmowy swojemu dostawcy. Udostępniaj tylko niezbędny, sprawdzony materiał."],
+    ["Czy agent naprawi problem sam?", "Przygotuje propozycję zmiany i sposób jej cofnięcia. Wdrożenie wymaga Twojej decyzji. Retest potwierdza tylko to, co da się ponownie sprawdzić w tym samym zakresie; zniknięcie alertu z importowanego raportu nie jest dowodem naprawy."],
+    ["Ile to kosztuje?", "Kod projektu jest dostępny na licencji MIT. Lokalne CLI i syntetyczne demo wymagają Node.js 22+ oraz pobrania repozytorium, bez instalacji pakietów npm. Wybrany agent AI ma własne wymagania konta, limity i ewentualne opłaty."],
+  ] : [
+    ["Which part is the program, and which is the skill?", "The skill guides conversation and analysis in your AI agent. The local CLI collects selected evidence and builds reports. This website explains the capabilities and prepares a brief; it does not scan your computer or accept files."],
+    ["What is actually checked?", "Coverage depends on the approved mission. The CLI provides eight local rules, dependency inventories, report imports and a passive website check. Application logic, databases and agent configurations need expert review. Reports distinguish evidence, model judgment and missing data."],
+    ["What do I get after a review?", "A local HTML report with priorities, impact, evidence, a repair plan and verification steps. PDF export requires permission to start your local browser, or you can use Print → Save as PDF. The panel shows progress and run history."],
+    ["What leaves my machine?", "Local CLI commands do not call a model. OSV lookup shares package names, versions and ecosystems with separate consent; website checks contact the named site. Codex, Claude Code and other hosts may send conversation content to their provider. Share only the minimum reviewed material."],
+    ["Will the agent fix issues automatically?", "It prepares a proposed change and rollback. Applying it requires your decision. Retesting confirms only what can be checked again in the same scope; an alert disappearing from an imported report is not proof of a fix."],
+    ["What does it cost?", "The project is MIT licensed. The local CLI and synthetic demo need Node.js 22+ and a repository download, without npm package installation. Your chosen AI host has its own account requirements, limits and possible charges."],
+  ];
   const stats: [number, string][] = pl
-    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [72, "testy bezpieczeństwa CLI"], [0, "zmian bez Twojej zgody"]]
-    : [[9, "expert playbooks"], [6, "protection areas"], [72, "CLI security tests"], [0, "changes without consent"]];
+    ? [[8, "lokalnych reguł analizy"], [7, "scenariuszy przeglądu"], [2, "formaty raportu: HTML i PDF"], [0, "automatycznych napraw"]]
+    : [[8, "local analysis rules"], [7, "review scenarios"], [2, "report formats: HTML & PDF"], [0, "automatic remediations"]];
 
   return (
     <>
@@ -80,25 +57,25 @@ export function Landing({ locale }: { locale: Locale }) {
               <h1 id="hero-title">
                 {pl ? (
                   <>
-                    Twój agent AI,
+                    Wiesz, co poprawić.
                     <br />
-                    <span>teraz ekspert security.</span>
+                    <span>Masz na to dowód.</span>
                   </>
                 ) : (
                   <>
-                    Your AI agent,
+                    Know what to fix.
                     <br />
-                    <span>now a security expert.</span>
+                    <span>See the evidence.</span>
                   </>
                 )}
               </h1>
               <p className="hero-description">
                 {pl
-                  ? "Jeden skill uczy Twojego agenta sprawdzać kod, komputer, stronę WWW, bazę danych i sieć. Znajduje luki, tłumaczy je prostym językiem, przygotowuje poprawkę i weryfikuje wdrożenie — zawsze za Twoją zgodą."
-                  : "One skill teaches your agent to audit code, computers, websites, databases and networks. It finds gaps, explains them in plain language, prepares the fix and verifies the result — always with your consent."}
+                  ? "Kod, zależności, konfiguracja agentów AI. Zbierz dowody, ustal kolejność napraw i sprawdź wynik po zmianie. Cyber Defense prowadzi Cię przez cały przegląd, w zakresie, który zatwierdzisz."
+                  : "Code, dependencies, AI agent configuration. Gather evidence, decide what to fix first and check the result. Cyber Defense guides the review within the scope you approve."}
               </p>
               <div className="hero-ctas">
-                <GitHubLink>{start}</GitHubLink>
+                <a href="#missions" className="button button-primary">{pl ? "Wybierz swój przegląd" : "Plan your review"}<ArrowRight size={17} /></a>
                 <a href="#scan" className="button button-secondary">
                   {pl ? "Zobacz, jak działa" : "Watch it work"}
                   <ArrowDown size={16} />
@@ -107,8 +84,8 @@ export function Landing({ locale }: { locale: Locale }) {
               <div className="hero-assurance">
                 <LockKeyhole size={14} />
                 {pl
-                  ? "100% odczyt lokalny · Zgoda przed każdym krokiem · Raport HTML i PDF"
-                  : "100% read-only · Consent before every step · HTML & PDF report"}
+                  ? "Zatwierdzony zakres · Konkretne dowody · Plan naprawy"
+                  : "Approved scope · Concrete evidence · A repair plan"}
               </div>
               <div className="hero-terminal">
                 <span className="terminal-prompt">$</span>
@@ -146,15 +123,15 @@ export function Landing({ locale }: { locale: Locale }) {
             <h2>
               {pl ? (
                 <>
-                  Uruchom u siebie
+                  Uruchom lokalnie.
                   <br />
-                  <span className="gradient-text">w 60 sekund.</span>
+                  <span className="gradient-text">Zobacz pierwszy raport.</span>
                 </>
               ) : (
                 <>
-                  Run it locally
+                  Run it locally.
                   <br />
-                  <span className="gradient-text">in 60 seconds.</span>
+                  <span className="gradient-text">Start with a report.</span>
                 </>
               )}
             </h2>
@@ -167,12 +144,12 @@ export function Landing({ locale }: { locale: Locale }) {
               <LockKeyhole size={20} />
               <div>
                 <strong>
-                  {pl ? "Prywatność i pełna kontrola." : "Privacy and full control."}
+                  {pl ? "Wiesz, gdzie trafiają dane." : "Know where your data goes."}
                 </strong>
                 <p>
                   {pl
-                    ? "Narzędzia nie wysyłają Twoich plików. Sieci używają wyłącznie komendy advisories oraz web — tylko po podaniu jawnej flagi zgody."
-                    : "The tools never upload your files. Only the advisories and web commands touch the network — and only when you pass an explicit consent flag."}
+                    ? "CLI zbiera dowody lokalnie. Wyszukiwanie podatności i sprawdzanie strony wymagają osobnych zgód. Twój agent AI korzysta z zasad prywatności wybranego dostawcy."
+                    : "The CLI collects evidence locally. Advisory lookups and website checks require separate consent. Your AI host follows its provider’s data-handling settings."}
                 </p>
               </div>
             </div>
@@ -237,8 +214,8 @@ export function Landing({ locale }: { locale: Locale }) {
           </div>
           <span className="eyebrow">
             {pl
-              ? "MIT · DARMOWE · BEZ KONTA · NODE.JS 22+"
-              : "MIT · FREE · NO ACCOUNT · NODE.JS 22+"}
+              ? "MIT · LOKALNE CLI · NODE.JS 22+"
+              : "MIT · LOCAL CLI · NODE.JS 22+"}
           </span>
           <h2>
             {pl ? (
@@ -257,8 +234,8 @@ export function Landing({ locale }: { locale: Locale }) {
           </h2>
           <p>
             {pl
-              ? "Sklonuj repozytorium, uruchom demo i napisz agentowi: „sprawdź mój projekt”. Pierwszy raport zobaczysz w kilka minut."
-              : "Clone the repository, run the demo and tell your agent: “check my project”. You will have your first report in minutes."}
+              ? "Zacznij od przykładowego raportu na syntetycznych danych. Potem wybierz obszar, który chcesz sprawdzić, i ustal z agentem pierwszy zakres."
+              : "Start with a sample report built from synthetic data. Then choose an area to review and agree the first scope with your agent."}
           </p>
           <div className="final-cta-actions">
             <GitHubLink>{start}</GitHubLink>

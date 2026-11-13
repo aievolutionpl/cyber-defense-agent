@@ -1,6 +1,6 @@
 interface:
   display_name: "Cyber Defense Agent"
-  short_description: "Defensive security expert: PC, website, code, database, network"
-  default_prompt: "Use $cyber-defense to check what I want to protect; start with the bundled demo if I am new."
+  short_description: "Evidence-led reviews of code, AI agents and configuration"
+  default_prompt: "Use $cyber-defense to plan a scoped security review, explain the evidence needed and ask before accessing my assets."
 policy:
   allow_implicit_invocation: false

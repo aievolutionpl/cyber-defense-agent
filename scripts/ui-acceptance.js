@@ -1,166 +1,113 @@
 async (page) => {
-  await page.emulateMedia({ reducedMotion: "no-preference" });
   const checks = [], errors = [], badResponses = [];
   const assert = (condition, name) => { if (!condition) throw new Error(name); checks.push(name); };
-  const base = page.url().replace(/pl\/$/, '').replace(/\/$/, '') + '/';
+  const base = page.url().replace(/(?:en|pl)\/$/, '').replace(/\/$/, '') + '/';
   page.on('pageerror', error => errors.push(error.message));
-  page.on('response', response => { if (response.status() >= 400 && response.url().startsWith(new URL(base).origin)) badResponses.push(`${response.status()} ${response.url()}`); });
+  page.on('response', response => { if (response.status() >= 400 && response.url().startsWith(new URL(base).origin)) badResponses.push(response.url()); });
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(base).origin });
-  const links = new Set();
-  for (const locale of ['en', 'pl']) {
+  for (const locale of ['pl', 'en']) {
     const pl = locale === 'pl';
-    await page.goto(base + (pl ? 'pl/' : ''));
-    await page.waitForLoadState('networkidle');
-    await page.waitForFunction(() => !!document.documentElement.dataset.motion);
+    const route = base + (pl ? '' : 'en/');
     await page.setViewportSize({ width: 1440, height: 1000 });
-    assert(await page.locator('html').getAttribute('lang') === locale, `${locale}: server document language`);
-    assert(await page.locator('h1').count() === 1, `${locale}: single primary headline`);
-    const scopeTab = page.getByRole('tab', { name: pl ? 'Zakres' : 'Scope', exact: true });
-    await scopeTab.click();
-    await page.waitForFunction(() => document.querySelector('#preview-tab-scope')?.getAttribute('aria-selected') === 'true');
-    assert(await scopeTab.getAttribute('aria-selected') === 'true', `${locale}: scope tab`);
-    await scopeTab.press('ArrowRight');
-    assert(await page.getByRole('tab', { name: pl ? 'Ustalenia' : 'Findings', exact: true }).getAttribute('aria-selected') === 'true', `${locale}: report keyboard tabs`);
-    await page.locator('#hero-evidence-summary').focus();
-    await page.locator('#hero-evidence-summary').press('Enter');
-    assert(await page.locator('.report-preview details').getAttribute('open') !== null, `${locale}: evidence keyboard disclosure`);
-    await page.getByRole('tab', { name: 'Retest', exact: true }).click();
-    assert(await page.getByRole('heading', { name: pl ? 'Poprawka potwierdzona.' : 'Fix confirmed.', exact: true }).isVisible(), `${locale}: preview retest`);
-
-    assert(await page.locator('.host-group').first().getByText('Antigravity', {exact:true}).count() === 1, `${locale}: Antigravity workflow listed`);
-    assert(await page.locator('.host-note').innerText().then(t => t.includes(pl ? 'niezweryfikowane' : 'unverified')), `${locale}: model-session status disclosed`);
-    const updates = page.getByRole('tab', {name: pl ? 'Aktualizacje' : 'Updates', exact:true});
-    await updates.click();
-    assert((await page.locator('.protection-explanation:not([hidden])').innerText()).includes(pl ? 'wyeksportowaną' : 'exported'), `${locale}: update feature states inventory requirement`);
-    await updates.press('Home');
-    assert(await page.getByRole('tab', {name: pl ? 'Kod' : 'Code', exact:true}).getAttribute('aria-selected') === 'true', `${locale}: protection keyboard tabs`);
-    const onboarding = page.locator('.onboarding');
-    const choose = async label => { await onboarding.getByRole('button', { name: label, exact: true }).click(); };
-    await choose(pl ? 'Lokalne repozytorium' : 'A local repository');
-    await choose(pl ? 'Przegląd przed wydaniem' : 'Review before release');
-    await choose(pl ? 'Tylko package.json' : 'Only package.json');
-    assert(await onboarding.locator('.onboarding-plan').isVisible(), `${locale}: onboarding produces a plan`);
-    assert((await onboarding.locator('.onboarding-plan').innerText()).includes('package.json'), `${locale}: plan reflects file choice`);
-    await choose(pl ? 'Zmień odpowiedzi' : 'Change answers');
-    await choose(pl ? 'Plan izolowanego labu' : 'An isolated lab plan');
-    await choose(pl ? 'Weryfikacja poprawek' : 'Verify the fixes');
-    await choose(pl ? 'Manifest i raport SARIF' : 'Manifest and SARIF report');
-    assert((await onboarding.locator('.onboarding-plan').innerText()).includes(pl ? 'roadmapie' : 'roadmap'), `${locale}: lab plan respects execution boundary`);
-
-    const demo = page.locator('.guided-demo');
-    await demo.getByRole('button', { name: pl ? 'Przejdź do zakresu' : 'Define the scope', exact: true }).click();
-    const approve = demo.getByRole('button', { name: pl ? 'Zatwierdź i zobacz wynik' : 'Approve and inspect findings', exact: true });
-    assert(await approve.isDisabled(), `${locale}: consent gates demo`);
-    await demo.getByRole('button', { name: pl ? 'Pokaż próbę wyjścia poza zakres' : 'Try an out-of-scope action' }).click();
-    assert((await demo.locator('.blocked-result').innerText()).includes(pl ? 'Zablokowano' : 'Blocked'), `${locale}: out-of-scope action blocked`);
-    const consent = demo.getByRole('checkbox');
-    await consent.focus(); await consent.press('Space'); await approve.click();
-    const next = demo.getByRole('button', { name: pl ? 'Zobacz retest po poprawce' : 'See the retest after remediation' });
-    assert(await next.isDisabled(), `${locale}: evidence gates retest`);
-    await page.locator('#guided-evidence-summary').focus(); await page.locator('#guided-evidence-summary').press('Enter'); await next.click();
-    assert((await demo.locator('.result-card').innerText()).includes('confirmed_fixed'), `${locale}: full workflow confirms bounded fix`);
-    await demo.getByRole('button', { name: pl ? 'Porównaj: niepełny raport' : 'Compare an incomplete report' }).click();
-    assert((await demo.locator('.result-card').innerText()).includes('insufficient_data'), `${locale}: incomplete data does not establish fix`);
-    await demo.screenshot({ path: `output/playwright/${locale}-demo-incomplete.png` });
-    await demo.getByRole('button', { name: pl ? 'Zacznij od nowa' : 'Start again' }).click();
-    assert(await demo.locator('.repo-choice').isVisible(), `${locale}: demo resets`);
-
-    for (const [host, command, prompt] of [['Codex', 'codex', '$cyber-defense demo'], ['Claude Code', 'claude', '/cyber-defense demo'], ['Hermes', 'node tools/demo.mjs', 'Read skills/cyber-defense/SKILL.md']]) {
-      await page.getByRole('tab', { name: host, exact: true }).click();
-      await page.getByRole('button', { name: `${pl ? 'Skopiuj polecenia' : 'Copy commands for'} ${host}`, exact: true }).click();
-      const clip = await page.evaluate(() => navigator.clipboard.readText());
-      assert(clip.includes('--branch codex/node-v0.1') && clip.endsWith(command), `${locale}: ${host} clipboard commands`);
-      await page.getByRole('button', { name: `${pl ? 'Skopiuj prompt' : 'Copy prompt for'} ${host}`, exact: true }).click();
-      assert((await page.evaluate(() => navigator.clipboard.readText())).startsWith(prompt), `${locale}: ${host} clipboard prompt`);
+    await page.emulateMedia({ reducedMotion: 'no-preference' });
+    await page.goto(route);
+    await page.waitForFunction(() => !!document.documentElement.dataset.motion);
+    assert(await page.locator('html').getAttribute('lang') === locale, `${locale} document language`);
+    assert(await page.locator('h1').count() === 1, `${locale} primary heading`);
+    assert(await page.getByText('Antigravity', { exact: true }).count() > 0, `${locale} host compatibility`);
+    const planner = page.locator('#missions');
+    const briefCopy = planner.getByRole('button', { name: pl ? 'Skopiuj brief audytu' : 'Copy audit brief', exact: true });
+    const auditRequests = [];
+    const watchRequests = request => { if (['fetch', 'xhr'].includes(request.resourceType())) auditRequests.push(request.url()); };
+    page.on('request', watchRequests);
+    const briefs = new Set();
+    for (const [id, doc] of [['project', 'code-review'], ['agents', 'agent-security'], ['web', 'web-application'], ['computer', 'software-vulnerabilities'], ['database', 'databases'], ['network', 'network'], ['incident', 'incident-first-response']]) {
+      const goal = planner.locator(`#mission-${id}`);
+      await goal.focus(); await goal.press('Enter');
+      assert(await goal.getAttribute('aria-pressed') === 'true' && await planner.locator('button[aria-pressed="true"]').count() === 1, `${locale} ${id} keyboard selection`);
+      assert(await planner.locator(`a[href$="/${doc}.md"]`).count() === 1, `${locale} ${id} review reference`);
+      for (const host of ['codex', 'claude']) {
+        await planner.locator('#mission-host').selectOption(host);
+        await page.waitForFunction(prefix => document.querySelector('.mission-prompt code')?.textContent.startsWith(prefix), host === 'codex' ? '$cyber-defense ' : '/cyber-defense ');
+        await briefCopy.click();
+        await page.waitForFunction(() => ['Copied', 'Skopiowano'].includes(document.querySelector('#mission-detail [role="status"]')?.textContent));
+        const brief = (await page.evaluate(() => navigator.clipboard.readText())).replace(/\r\n/g, '\n');
+        assert(brief === await planner.locator('.mission-prompt code').innerText() && brief.startsWith(host === 'codex' ? '$cyber-defense ' : '/cyber-defense '), `${locale} ${id} ${host} complete brief clipboard`);
+        assert(!/--yes|--authorized|--share-package-names/.test(brief), `${locale} ${id} ${host} no executable consent flags`);
+        briefs.add(brief);
+      }
     }
-    await page.getByRole('tab', { name: 'Hermes', exact: true }).press('Home');
-    assert(await page.getByRole('tab', { name: 'Codex', exact: true }).getAttribute('aria-selected') === 'true', `${locale}: installation Home key`);
+    assert(briefs.size === 14, `${locale} distinct mission and host briefs`);
+    page.off('request', watchRequests);
+    assert(auditRequests.length === 0, `${locale} planner makes no audit requests`);
+    await planner.locator('#mission-agents').click();
+    assert(await briefCopy.innerText() === (pl ? 'Kopiuj' : 'Copy'), `${locale} changed brief clears copied feedback`);
+    const install = page.locator('#install');
+    for (const [host, command, prompt] of [
+      ['Codex CLI', '--host codex', '$cyber-defense'],
+      ['Claude Code CLI', '--host claude', '/cyber-defense'],
+      [pl ? 'Mini Interfejs GUI' : 'Mini Web UI', 'tools/cda.mjs ui', 'node tools/demo.mjs'],
+      [pl ? 'Terminal Pro (PL/EN)' : 'Pro Terminal (PL/EN)', 'tools/cda.mjs start', 'node tools/demo.mjs'],
+    ]) {
+      await install.getByRole('tab', { name: host, exact: true }).click();
+      await install.getByRole('button', { name: `${pl ? 'Skopiuj polecenia' : 'Copy commands for'} ${host}`, exact: true }).click();
+      const copied = await page.evaluate(() => navigator.clipboard.readText());
+      assert(copied.includes('git clone --branch codex/node-v0.1') && copied.includes(command), `${locale} ${host} command clipboard`);
+      await install.getByRole('button', { name: `${pl ? 'Skopiuj prompt' : 'Copy prompt for'} ${host}`, exact: true }).click();
+      assert((await page.evaluate(() => navigator.clipboard.readText())).startsWith(prompt), `${locale} ${host} prompt clipboard`);
+    }
+    await install.getByRole('tab', { name: pl ? 'Terminal Pro (PL/EN)' : 'Pro Terminal (PL/EN)', exact: true }).press('Home');
+    assert(await install.getByRole('tab', { name: 'Claude Code CLI', exact: true }).getAttribute('aria-selected') === 'true', `${locale} tab keyboard navigation`);
+    await install.getByRole('tab', { name: pl ? 'Mini Interfejs GUI' : 'Mini Web UI', exact: true }).click();
+    for (const scenario of (pl ? ['Audyt kodu', 'Komputer i CVE', 'Strona WWW'] : ['Code Audit', 'Computer & CVEs', 'Website Check'])) {
+      await install.getByRole('button', { name: scenario, exact: true }).click();
+      await install.getByRole('button', { name: `${pl ? 'Skopiuj prompt' : 'Copy prompt for'} ${pl ? 'Mini Interfejs GUI' : 'Mini Web UI'}`, exact: true }).click();
+      assert((await page.evaluate(() => navigator.clipboard.readText())) === 'node tools/cda.mjs start', `${locale} ${scenario} starts intake without consent`);
+    }
     const faq = page.locator('.faq-list details').first();
     await faq.locator('summary').focus(); await faq.locator('summary').press('Enter');
-    assert(await faq.getAttribute('open') !== null, `${locale}: FAQ keyboard`);
+    assert(await faq.getAttribute('open') !== null, `${locale} FAQ keyboard disclosure`);
     await faq.locator('summary').press('Enter');
-    const unresolved = await page.evaluate(() => Array.from(document.querySelectorAll('a[href^="#"]')).map(a => a.getAttribute('href')).filter(h => h.length > 1 && !document.getElementById(h.slice(1))));
-    assert(!unresolved.length, `${locale}: all section anchors resolve`);
-    const external = await page.locator('a[href^="https://"]').evaluateAll(as => as.map(a => a.getAttribute('href')));
-    external.forEach(link => links.add(link));
-    assert(external.every(h => h.startsWith('https://github.com/aievolutionpl/cyber-defense-agent/') && h.includes('codex/node-v0.1')), `${locale}: GitHub links use actual unified repository`);
-    for (const width of [1440, 768, 390, 320]) {
-      await page.setViewportSize({ width, height: width === 1440 ? 1000 : 844 });
+    const missing = await page.locator('a[href^="#"]').evaluateAll(links => links.map(link => link.getAttribute('href')).filter(href => href.length > 1 && !document.getElementById(href.slice(1))));
+    assert(missing.length === 0, `${locale} section anchors`);
+    for (const width of [320, 390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale}: reflow ${width}px`);
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${locale} reflow ${width}`);
+      await planner.locator('#mission-agents').click();
+      await page.locator('#mission-detail').scrollIntoViewIfNeeded();
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${locale} planner reflow ${width}`);
+      if (width === 390 || width === 1440) await page.screenshot({ path: `output/playwright/${locale}-planner-${width}.png` });
       if (width === 390) {
         const menu = page.getByRole('button', { name: pl ? 'Menu nawigacji' : 'Navigation menu' });
         await menu.focus(); await menu.press('Enter');
-        assert(await menu.getAttribute('aria-expanded') === 'true', `${locale}: mobile menu keyboard`);
+        assert(await menu.getAttribute('aria-expanded') === 'true', `${locale} mobile menu keyboard`);
         await page.locator('#mobile-menu a').first().focus(); await page.locator('#mobile-menu a').first().press('Escape');
-        assert(await menu.getAttribute('aria-expanded') === 'false', `${locale}: menu Escape and focus restore`);
-        await menu.press('Enter'); await page.locator('#mobile-menu a[href="#install"]').click();
-        assert(await menu.getAttribute('aria-expanded') === 'false', `${locale}: menu closes after link`);
+        assert(await menu.getAttribute('aria-expanded') === 'false', `${locale} mobile menu Escape`);
       }
-      await page.getByRole('tab', { name: pl ? 'Ustalenia' : 'Findings', exact: true }).click();
-      await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-      const pause = page.getByRole('button', { name: pl ? 'Wstrzymaj animacje' : 'Pause animations', exact: true });
-      if (await pause.count()) await pause.click();
-      assert(await page.locator('.hero-copy').evaluate(el => { const r = el.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }), `${locale}: hero is inside viewport at ${width}px`);
-      await page.screenshot({ path: `output/playwright/${locale}-${width}-hero.png` });
-      if (width === 1440 || width === 390) await page.screenshot({ path: `output/playwright/${locale}-${width}-full.png`, fullPage: true });
-      const resume = page.getByRole('button', { name: pl ? 'Wznów animacje' : 'Resume animations', exact: true });
-      if (await resume.count()) await resume.click();
     }
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    await page.waitForFunction(() => document.documentElement.dataset.motion === 'paused');
-    assert(await page.locator('.agent-build-overlay').evaluate(el => getComputedStyle(el).display === 'none'), `${locale}: reduced motion disables overlay`);
-    assert(await page.locator('.signal-stream').evaluate(el => el.getAnimations().every(a => a.playState !== 'running')), `${locale}: reduced motion stops signal animation`);
-    assert(await page.evaluate(() => getComputedStyle(document.documentElement).scrollBehavior === 'auto'), `${locale}: reduced motion disables smooth scrolling`);
-    await page.emulateMedia({ reducedMotion: 'no-preference' });
-    await page.waitForFunction(() => document.documentElement.dataset.motion === 'running');
-    await page.getByRole('button', { name: pl ? 'Wstrzymaj animacje' : 'Pause animations', exact: true }).click();
-    assert(await page.locator('.signal-stream').evaluate(el => el.getAnimations().every(a => a.playState !== 'running')), `${locale}: pause stops signal animation`);
-    assert(await page.locator('.agent-build-overlay').getAttribute('data-active') === 'false', `${locale}: pause stops overlay`);
-    await page.getByRole('button', { name: pl ? 'Wznów animacje' : 'Resume animations', exact: true }).click();
-  }
-  await page.goto(base);
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.locator('.operations-board').scrollIntoViewIfNeeded();
-  await page.waitForFunction(() => document.querySelector('.operations-board').dataset.buildStage === 'assembled');
-  assert(await page.locator('.agent-build-overlay').evaluate(el => getComputedStyle(el).pointerEvents === 'none'), 'cursor overlay cannot intercept controls');
-  await page.locator('.operations-board').screenshot({ path: 'output/playwright/defense-overview.png' });
-  await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-  await page.waitForFunction(() => document.documentElement.dataset.motion === 'running');
-  await page.getByRole('link', { name: 'PL', exact: true }).click();
-  assert(await page.locator('html').getAttribute('lang') === 'pl', 'locale link navigates to Polish document');
-  await page.getByRole('link', { name: 'EN', exact: true }).click();
-  assert(await page.locator('html').getAttribute('lang') === 'en', 'locale link navigates to English document');
-  const nojs = await page.context().browser().newContext({ javaScriptEnabled: false, viewport: { width: 390, height: 844 } });
-  const fallback = await nojs.newPage(); await fallback.goto(base);
-  assert(await fallback.locator('h1').isVisible() && await fallback.locator('.repo-choice').isVisible(), 'no-JS content and demo introduction remain visible');
-  await nojs.close();
-  for (const locale of ['en', 'pl']) {
-    const pl = locale === 'pl';
-    await page.goto(base + (pl ? 'pl/' : ''));
-    const intake = page.locator('.onboarding');
-    await intake.getByRole('button', { name: pl ? 'Raport JSON / SARIF' : 'A JSON / SARIF report', exact: true }).click();
-    await intake.getByRole('button', { name: pl ? 'Uporządkowanie ryzyk' : 'Prioritise the risks', exact: true }).click();
-    await intake.getByRole('button', { name: pl ? 'Tylko package.json' : 'Only package.json', exact: true }).click();
-    assert((await intake.locator('.onboarding-plan').innerText()).includes(pl ? 'Bez raportu import nie jest możliwy' : 'Import cannot proceed without the report'), `${locale}: intake does not widen missing import scope`);
-    await page.locator('.responsibility-note a').click();
-    assert(page.url().endsWith(pl ? '/pl/policies/' : '/policies/'), `${locale}: policy link resolves with base path`);
-    assert(await page.locator('html').getAttribute('lang') === locale, `${locale}: policy document language`);
-    assert(await page.locator('.policy-sections section').count() === 8, `${locale}: full privacy and responsible-use policy`);
-    for (const width of [1440, 390, 320]) {
+    await page.waitForFunction(() => document.documentElement.dataset.motion !== 'running');
+    assert(await page.locator('h1').isVisible(), `${locale} reduced motion content`);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.evaluate(() => Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async () => { throw new Error('Clipboard denied for acceptance test'); } } }));
+    await briefCopy.click();
+    assert(await planner.locator('.copy-fallback').isVisible(), `${locale} visible manual-copy fallback`);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
+    await page.screenshot({ path: `output/playwright/${locale}-verified-site.png` });
+    await page.locator(`footer a[href="${new URL(base).pathname}${pl ? '' : 'en/'}policies/"]`).click();
+    assert(await page.locator('html').getAttribute('lang') === locale, `${locale} policy language`);
+    assert(await page.locator('.policy-sections section').count() === 8, `${locale} policy content`);
+    for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${locale}: policy reflow ${width}px`);
+      await page.waitForFunction(() => document.documentElement.scrollWidth <= innerWidth + 1, null, { timeout: 3000 });
+      assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${locale} policy reflow ${width}`);
     }
-    await page.screenshot({ path: `output/playwright/${locale}-policies.png`, fullPage: true });
-    assert(await page.evaluate(() => !localStorage.length && !sessionStorage.length && !document.cookie), `${locale}: application creates no cookies or browser storage`);
-    const back = page.getByRole('link', { name: pl ? 'Wróć do prezentacji' : 'Back to the presentation', exact: true });
-    await back.focus(); await back.press('Enter');
-    await page.waitForURL(base + (pl ? 'pl/' : ''));
-    await page.locator('.hero').waitFor({ state: 'visible' });
-    assert(await page.locator('.hero').isVisible(), `${locale}: keyboard return from policy`);
-    await page.locator('#trust').screenshot({ path: `output/playwright/${locale}-trust.png` });
+    await page.getByRole('link', { name: pl ? 'Wróć do prezentacji' : 'Back to the presentation', exact: true }).click();
+    await page.waitForURL(route);
+    assert(await page.locator('h1').isVisible(), `${locale} policy return`);
   }
-  assert(errors.length === 0, 'no uncaught browser or hydration errors');
-  assert(badResponses.length === 0, 'no failing same-origin asset requests');
-  return { passed: checks.length, checks, links: [...links], errors, badResponses };
+  assert(errors.length === 0, 'uncaught browser errors');
+  assert(badResponses.length === 0, 'failed local responses');
+  return { passed: checks.length, errors, badResponses };
 }

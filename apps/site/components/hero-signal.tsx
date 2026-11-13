@@ -47,9 +47,9 @@ export function HeroSignal({ locale }: { locale: Locale }) {
           code: "LOCAL RULES / READ ONLY",
           node: "Analiza w toku",
           agent: "Scout",
-          agentAction: "Skanuje AST i manifesty bez egzekucji",
+          agentAction: "Sprawdza wzorce i manifesty bez wykonywania kodu",
           hash: "sha256:92c1…77e0",
-          xrayFile: "package.json · AST & Rules",
+          xrayFile: "package.json · Local rules",
           xrayStatus: "INSPECTING 08 RULES",
           xrayLines: [
             { ln: "11", text: '  "name": "acme-payments-api",', tone: "neutral" },
@@ -136,7 +136,7 @@ export function HeroSignal({ locale }: { locale: Locale }) {
           agent: "Scout",
           agentAction: "Runs static rules without code execution",
           hash: "sha256:92c1…77e0",
-          xrayFile: "package.json · AST & Rules",
+          xrayFile: "package.json · Local rules",
           xrayStatus: "INSPECTING 08 RULES",
           xrayLines: [
             { ln: "11", text: '  "name": "acme-payments-api",', tone: "neutral" },
@@ -673,7 +673,7 @@ export function HeroSignal({ locale }: { locale: Locale }) {
       </div>
       <p className="story-disclosure">
         {pl
-          ? "Grafika koncepcyjna. v0.2 analizuje lokalne pliki (8 reguł + ochrona konfiguracji AI). "
+          ? "Grafika koncepcyjna. v0.2 analizuje lokalne pliki (8 reguł, w tym sygnały w konfiguracji AI). "
           : "Concept illustration. v0.2 reviews local files (8 rules + AI config guard). "}
         <a href={github("/blob/main/docs/ROADMAP.md")}>
           {pl ? "Skanowanie sieci: roadmapa" : "Network scanning: roadmap"}
