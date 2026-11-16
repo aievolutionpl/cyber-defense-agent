@@ -269,7 +269,7 @@ test("Priority 3: guided audit workflow supports async steps, cancellation, resu
   };
 
   const firstRun = await startGuidedAudit(
-    { workflow: "pc", consent: true, lang: "pl" },
+    { workflow: "pc", consent: true, sharePackageNames: true, lang: "pl" },
     { rootDir: tmp, stepRunner, awaitCompletion: true },
   );
   assert.equal(firstRun.status, "failed");

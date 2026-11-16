@@ -172,3 +172,11 @@ Local lint, TypeScript and static export passed before final section tagging. Lo
 Source `d1e5f28faa9a355fa94f91477dd5b163b240b6f5` passed [Website motion acceptance 42887300281](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300281). Both languages passed 320/390/768/1440 Chromium viewport checks, anchor integrity, automatic stage changes, local pause with readable evidence, left-to-right host motion outside hover, keyboard stage selection, reduced-motion cleanup, cursor movement during construction and completed content restoration. Nine screenshots are attached to that run. Desktop and phone screenshots were visually reviewed; these are Chromium viewport checks, not physical iPhone/Safari tests.
 
 [Cross-platform CI 42887300297](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300297) passed Windows, macOS and Ubuntu. [Defensive PR review 42887300671](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300671) passed. Final refinements keep individual grid cards on the cursor timeline and reveal all text when playback stops. Both downloadable GIFs decode and have a six-second loop. The PR has not deployed a Pages artifact.
+
+## Control center refresh (2026-11-16)
+
+- `npm run check`: passed, including 85 Node tests, skill consistency, ESLint, TypeScript and static site build.
+- `npm run demo`: passed on bundled synthetic data. Confirmed local fix, insufficient-data paths and out-of-scope rejection observed; no target code or external network used.
+- Added regressions for separately consented advisory lookup, missing exact file scope at the HTTP boundary, generated client syntax, script-termination escaping and planning-only bridge missions.
+- Browser acceptance was attempted with Playwright and system Chromium. Chromium could not start: the environment denied its process-singleton socket (`Operation not permitted`). Therefore viewport, keyboard, clipboard, reduced-motion and visual behavior are **not browser-verified**. These are pending checks, not passes.
+- Existing static marketing site is unchanged. No model-backed Claude/Codex/Hermes session was launched, no OpenCodeReview review executed, and no real asset audited during this change.

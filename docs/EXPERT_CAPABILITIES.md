@@ -57,3 +57,9 @@ Unit tests cover consent gates, parsers, host allowlisting, alias merging, CVSS 
 The CLI now imports native Gitleaks, Trivy and OSV-Scanner JSON within the existing approved file scope. It compares stored snapshots and exports bounded SARIF locally. Project dashboards show current retest state and label returning findings. These commands make no outbound requests and start no scanners.
 
 The separate PR runner uses an explicitly authorized base-branch policy to read two checkouts and writes JSON, Markdown, HTML and SARIF. The shipped GitHub workflow installs Node and checks out repository content using pinned actions. It publishes an Actions summary, uses read-only contents permission and runs no candidate scripts. See [formats, coverage and limits](SCANNER_INTEGRATIONS.md).
+
+### Local control center update (2026-11-16)
+
+`node tools/cda.mjs ui` exposes the existing workflow engine through a bilingual dashboard with run history, report filters and agent-session controls. Computer workflows default to local inventory; `sharePackageNames: true` is separately required to include the existing OSV/CISA lookup. Project starts through the UI API require a nonempty target and exact file list. No new outbound destination or OS command is introduced.
+
+Agent missions `changes`, `retest` and `ocr` generate host prompts. `ocr` is planning only, not an installed scanner, execution adapter or evidence importer. See [implementation roadmap](CONTROL_CENTER_ROADMAP.md).

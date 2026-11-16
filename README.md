@@ -117,6 +117,14 @@ node tools/cda.mjs agent --host codex --mission pc --lang pl
   <img src="docs/assets/mini-interface-preview.png" alt="Cyber Defense Agent — Lokalny Mini Interfejs Graficzny i Mostek Claude Code CLI & Codex CLI" width="100%" />
 </p>
 
+### Centrum pracy agenta
+
+Lokalny panel `node tools/cda.mjs ui` prowadzi od wyboru zadania do raportu. Zawiera postęp kroków, historię, filtrowanie raportów, zatrzymanie sesji i podgląd promptu dla agenta. Interfejs obsługuje PL/EN oraz telefon.
+
+Audyt projektu wymaga podania dokładnej listy plików. Inwentaryzacja komputera jest domyślnie lokalna; zapytania o podatności włączasz osobną zgodą. Nowe zadania agentowe obejmują przegląd zmian, plan retestu i **plan** użycia OpenCodeReview. Integracja wykonująca OCR pozostaje w roadmapie.
+
+[Plan rozwoju, funkcje i kryteria odbioru](docs/CONTROL_CENTER_ROADMAP.md).
+
 ### Najważniejsze polecenia CLI (v0.2)
 
 ```sh
