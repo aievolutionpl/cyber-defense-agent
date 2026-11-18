@@ -1,118 +1,353 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-/** Presentation only: cursor arrival and part reveal share one timeline. */
+const subscribeReduced = (listener: () => void) => {
+  const query = window.matchMedia("(prefers-reduced-motion: reduce)");
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+};
+const getReduced = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const clamp = (value: number, min: number, max: number) =>
+  Math.max(min, Math.min(value, max));
+const between = (min: number, max: number) => min + Math.random() * (max - min);
+type Point = { x: number; y: number };
+const cubic = (a: Point, b: Point, c: Point, d: Point, t: number): Point => ({
+  x:
+    (1 - t) ** 3 * a.x +
+    3 * (1 - t) ** 2 * t * b.x +
+    3 * (1 - t) * t * t * c.x +
+    t ** 3 * d.x,
+  y:
+    (1 - t) ** 3 * a.y +
+    3 * (1 - t) ** 2 * t * b.y +
+    3 * (1 - t) * t * t * c.y +
+    t ** 3 * d.y,
+});
+
+/** Site copy of skills/agent-build-scroll. Visual construction only. Random local paths never click, inspect or edit user data. */
 export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
-  const root = useRef<HTMLDivElement>(null);
   const [paused, setPaused] = useState(false);
+  const reduced = useSyncExternalStore(
+    subscribeReduced,
+    getReduced,
+    () => true,
+  );
+  const overlay = useRef<HTMLDivElement>(null);
+  const pl = locale === "pl";
+
+  // The site header owns the visible pause control; it toggles motion through this event.
   useEffect(() => {
-    const toggle = () => setPaused(value => !value);
+    const toggle = () => setPaused((value) => !value);
     window.addEventListener("cda:toggle-motion", toggle);
     return () => window.removeEventListener("cda:toggle-motion", toggle);
   }, []);
+
   useEffect(() => {
-    const media = matchMedia("(prefers-reduced-motion: reduce)");
-    const desktop = matchMedia("(min-width: 1000px) and (pointer: fine)");
-    const overlay = root.current!;
-    const cursors = Array.from(overlay.querySelectorAll<HTMLElement>(".build-cursor"));
-    const targets = Array.from(document.querySelectorAll<HTMLElement>("main > section[data-build-section]"));
-    const regions = Array.from(document.querySelectorAll<HTMLElement>("[data-motion-region]"));
-    const built = new WeakSet<HTMLElement>();
-    const fallbacks: number[] = [];
-    const visible = new Set<HTMLElement>();
-    let raf = 0;
-    let current: HTMLElement | null = null;
-    let parts: HTMLElement[] = [];
-    const clear = (all = false) => {
-      cancelAnimationFrame(raf); raf = 0;
-      parts.forEach(part => { part.style.removeProperty("opacity"); part.style.removeProperty("transform"); });
-      (all ? targets : current ? [current] : []).forEach(target => { delete target.dataset.buildPending; delete target.dataset.buildStage; });
-      overlay.dataset.active = "false"; overlay.style.opacity = "0";
-      current = null;
-    };
-    const enabled = () => !paused && !media.matches && !document.hidden;
-    const sync = () => {
-      document.documentElement.dataset.motion = enabled() ? "running" : "paused";
-      window.dispatchEvent(new Event("agent-build:motion"));
-      if (!enabled() || !desktop.matches) clear(true);
-    };
-    sync();
-    if (enabled() && desktop.matches) targets.forEach(t => {
-      if (t.getBoundingClientRect().top > innerHeight) t.dataset.buildPending = "true";
+    const disabled = paused || reduced;
+    document.documentElement.dataset.motion = disabled ? "paused" : "running";
+    window.dispatchEvent(new Event("agent-build:motion"));
+    if (disabled || !overlay.current) return;
+    const layer = overlay.current;
+    const cursors = Array.from(
+      layer.querySelectorAll<HTMLElement>(".build-cursor"),
+    );
+    const frame = layer.querySelector<HTMLElement>(".build-outline")!;
+    const caption = layer.querySelector<HTMLElement>(".build-caption")!;
+    const blueprints = Array.from(
+      layer.querySelectorAll<HTMLElement>(".blueprint-line"),
+    );
+    const targets = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-agent-target]"),
+    );
+    const regions = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-motion-region]"),
+    );
+    // Sections still below the fold start as an empty frame; agents then assemble them.
+    // Content already on screen is never hidden, so nothing flickers on load.
+    targets.forEach((target) => {
+      if (target.getBoundingClientRect().top > innerHeight * 0.92)
+        target.dataset.buildPending = "true";
     });
-    const build = (target: HTMLElement) => {
-      if (!enabled() || !desktop.matches || built.has(target)) return;
-      built.add(target); current = target;
+    const reveal = (target: HTMLElement) => {
+      if (target.dataset.buildPending !== "true") return;
       delete target.dataset.buildPending;
-      const containers = Array.from(target.children).flatMap(child => child.classList.contains("section-shell") ? Array.from(child.children) : [child]);
-      parts = containers.flatMap(child => child.matches(".missions-grid, .capabilities-grid, .blueprint-composition") ? Array.from(child.children) : [child])
-        .filter((el): el is HTMLElement => el instanceof HTMLElement);
-      parts.forEach(p => { p.style.opacity = "0"; });
-      overlay.dataset.active = "true"; overlay.style.opacity = "1";
-      const start = performance.now();
+      target.dataset.buildStage = "assembled";
+      Array.from(target.children).forEach((child, index) =>
+        (child as HTMLElement).animate?.(
+          [{ opacity: 0, transform: "translateY(10px)" }, { opacity: 1, transform: "none" }],
+          { duration: 520, delay: Math.min(index, 8) * 60, easing: "cubic-bezier(.2,.8,.2,1)", fill: "backwards" },
+        ),
+      );
+    };
+    const waiting = new Map<HTMLElement, number>();
+    const active = new Set<HTMLElement>();
+    const builtAt = new WeakMap<HTMLElement, number>();
+    let raf = 0,
+      current: HTMLElement | null = null,
+      lastScroll = window.scrollY;
+    let animations: Animation[] = [];
+    const stop = () => {
+      cancelAnimationFrame(raf);
+      raf = 0;
+      animations.forEach((animation) => animation.cancel());
+      animations = [];
+      layer.dataset.active = "false";
+      layer.style.opacity = "0";
+      if (current) current.dataset.buildStage = "assembled";
+    };
+    const build = (target: HTMLElement) => {
+      if (document.hidden || target.contains(document.activeElement)) {
+        reveal(target);
+        return;
+      }
+      stop();
+      window.clearTimeout(waiting.get(target));
+      delete target.dataset.buildPending;
+      current = target;
+      const compact =
+        window.matchMedia("(pointer: coarse)").matches || innerWidth < 700;
+      const duration = compact ? 1200 : between(2200, 2800);
+      const started = performance.now();
+      builtAt.set(target, started);
+      target.dataset.buildStage = "drafting";
+      layer.dataset.active = "true";
+      caption.textContent =
+        target.dataset.agentLabel ?? "Building the next section";
+      const parts = Array.from(target.children)
+        .filter(
+          (el): el is HTMLElement =>
+            el instanceof HTMLElement &&
+            !["SCRIPT", "STYLE"].includes(el.tagName),
+        )
+        .slice(0, 12);
+      // Empty frame first, then the agents place each part. Effects are temporary:
+      // focus, pause, resize or reduced motion cancel them and show the content at once.
+      const hold = duration * 0.3;
+      animations = parts.map((part, index) =>
+        part.animate(
+          [
+            { opacity: 0, transform: "translateY(14px) scale(.985)", filter: "blur(5px)" },
+            { opacity: 1, transform: "translateY(0) scale(1)", filter: "blur(0)" },
+          ],
+          {
+            duration: compact ? 420 : 640,
+            delay: hold + index * (compact ? 55 : 95),
+            easing: "cubic-bezier(.2,.8,.2,1)",
+            fill: "backwards",
+          },
+        ),
+      );
+      const paths = cursors.map((_, i) => {
+        const start = { x: between(0.06, 0.94), y: between(0.05, 0.95) };
+        const end = { x: between(0.12, 0.88), y: between(0.16, 0.84) };
+        return {
+          start,
+          end,
+          bend1: { x: between(0.04, 0.96), y: between(0.02, 0.8) },
+          bend2: { x: between(0.1, 0.9), y: between(0.2, 0.98) },
+          delay: i * between(70, 150),
+          pace: between(0.72, 1),
+          pause: between(0.35, 0.58),
+        };
+      });
       const tick = (now: number) => {
-        const elapsed = now - start;
-        const bounds = target.getBoundingClientRect();
-        if (!enabled() || bounds.bottom < 90 || bounds.top > innerHeight || target.contains(document.activeElement)) {
-          clear();
-          const next = [...visible].find(candidate => !built.has(candidate));
-          if (next) build(next);
+        const progress = clamp((now - started) / duration, 0, 1);
+        const r = target.getBoundingClientRect();
+        const x = Math.max(12, r.left - 6),
+          y = Math.max(86, r.top - 6);
+        const w = Math.min(r.right + 6, innerWidth - 12) - x,
+          h = Math.min(r.bottom + 6, innerHeight - 70) - y;
+        if (w < 35 || h < 35 || document.hidden) {
+          stop();
           return;
         }
-        target.dataset.buildStage = elapsed < 350 ? "drafting" : "assembling";
-        parts.forEach((part, index) => {
-          const arrival = 350 + index * 420;
-          const progress = Math.max(0, Math.min(1, (elapsed - arrival) / 450));
-          part.style.opacity = String(progress);
-          part.style.transform = `translateY(${(1 - progress) * 18}px)`;
+        frame.style.transform = `translate3d(${x}px,${y}px,0)`;
+        frame.style.width = `${w}px`;
+        frame.style.height = `${h}px`;
+        frame.style.opacity = String(
+          Math.min(1, progress * 7) * Math.min(1, (1 - progress) * 5),
+        );
+        frame.dataset.phase =
+          progress < 0.32 ? "layout" : progress < 0.7 ? "content" : "verified";
+        target.dataset.buildStage =
+          progress < 0.32
+            ? "drafting"
+            : progress < 0.8
+              ? "assembling"
+              : "assembled";
+        blueprints.forEach((line, i) => {
+          const rect = parts[i]?.getBoundingClientRect();
+          line.hidden = !rect || compact;
+          if (!rect) return;
+          line.style.transform = `translate3d(${clamp(rect.left, x, x + w)}px,${clamp(rect.top, y, y + h)}px,0)`;
+          line.style.width = `${Math.max(0, Math.min(rect.width, x + w - rect.left))}px`;
+          line.style.height = `${Math.max(0, Math.min(rect.height, y + h - rect.top))}px`;
+          line.style.opacity = String(
+            Math.max(0, 0.65 - progress * (1.3 + i * 0.15)),
+          );
         });
-        cursors.forEach((cursor, agent) => {
-          const index = Math.min(parts.length - 1, Math.max(agent, Math.floor((elapsed - 350) / 420) + agent));
-          const rect = parts[index]?.getBoundingClientRect() ?? bounds;
-          const arrival = 350 + index * 420;
-          const approach = Math.max(0, Math.min(1, (elapsed - arrival + 350) / 350));
-          const x = Math.min(innerWidth - 165, Math.max(20, rect.left + 20 + agent * 80));
-          const y = Math.min(innerHeight - 65, Math.max(105, rect.top + 20));
-          cursor.style.transform = `translate3d(${x + (1 - approach) * 80}px,${y - (1 - approach) * 40}px,0)`;
-          cursor.dataset.clicking = elapsed >= arrival && elapsed < arrival + 200 ? "true" : "false";
-          cursor.style.opacity = rect.top < innerHeight && rect.bottom > 100 ? "1" : "0";
+        cursors.forEach((cursor, i) => {
+          cursor.hidden = compact && i > 0;
+          const path = paths[i];
+          const raw = clamp(
+            (now - started - path.delay) / duration / path.pace,
+            0,
+            1,
+          );
+          // Ease, pause briefly over a detail, then continue to another work point.
+          const held =
+            raw < path.pause
+              ? raw
+              : raw < path.pause + 0.09
+                ? path.pause
+                : raw - 0.09;
+          const t = clamp(held / 0.91, 0, 1);
+          const eased = t * t * (3 - 2 * t);
+          const point = cubic(
+            path.start,
+            path.bend1,
+            path.bend2,
+            path.end,
+            eased,
+          );
+          const px = clamp(x + w * point.x, 12, innerWidth - 38),
+            py = clamp(y + h * point.y, 88, innerHeight - 80);
+          cursor.style.transform = `translate3d(${px}px,${py}px,0)`;
+          cursor.dataset.side = px > innerWidth - 160 ? "left" : "right";
+          cursor.dataset.clicking =
+            raw >= path.pause && raw < path.pause + 0.09 ? "true" : "false";
+          const label = cursor.querySelector("span")!;
+          const action =
+            progress < 0.32
+              ? pl
+                ? "układ"
+                : "layout"
+              : progress < 0.7
+                ? pl
+                  ? "składanie"
+                  : "building"
+                : pl
+                  ? "kontrola"
+                  : "checking";
+          const lead = target.dataset.agentTarget || "Scout";
+          const role = [lead, ...["Scout", "Builder", "Verifier"].filter((name) => name !== lead)][i];
+          const nextLabel = `${role} · ${action}`;
+          if (label.textContent !== nextLabel) label.textContent = nextLabel;
         });
-        if (elapsed < 800 + parts.length * 420) raf = requestAnimationFrame(tick);
-        else { clear(); const next = [...visible].find(t => !built.has(t)); if (next) build(next); }
+        layer.style.opacity = String(
+          Math.min(1, progress * 10) * Math.min(1, (1 - progress) * 7),
+        );
+        if (progress < 1) raf = requestAnimationFrame(tick);
+        else {
+          stop();
+          const next = [...active].find((candidate) => !builtAt.has(candidate));
+          if (next) build(next);
+        }
       };
       raf = requestAnimationFrame(tick);
     };
-    const observer = new IntersectionObserver(entries => {
-      entries.forEach(entry => {
-        const target = entry.target as HTMLElement;
-        if (entry.isIntersecting) {
-          visible.add(target);
-          fallbacks.push(window.setTimeout(() => { delete target.dataset.buildPending; }, 1800));
-        } else visible.delete(target);
-      });
-      if (!current) { const next = [...visible].find(t => !built.has(t)); if (next) build(next); }
-    }, { threshold: 0, rootMargin: "-100px 0px -20% 0px" });
-    targets.forEach(t => observer.observe(t));
-    const regionObserver = new IntersectionObserver(entries => entries.forEach(e => { (e.target as HTMLElement).dataset.inView = String(e.isIntersecting); }));
-    regions.forEach(r => regionObserver.observe(r));
-    const focus = () => { if (targets.some(t => t.contains(document.activeElement))) clear(true); };
-    const resize = () => clear(true);
-    media.addEventListener("change", sync); desktop.addEventListener("change", sync);
-    document.addEventListener("visibilitychange", sync);
-    document.addEventListener("focusin", focus);
-    window.addEventListener("resize", resize);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          const target = entry.target as HTMLElement;
+          if (entry.isIntersecting) {
+            active.add(target);
+            // Never leave a section empty because the agents are busy elsewhere.
+            if (target.dataset.buildPending === "true" && !waiting.has(target))
+              waiting.set(target, window.setTimeout(() => { if (current !== target || !raf) reveal(target); }, 1300));
+          } else active.delete(target);
+        }
+        const target = [...active].find((t) => !builtAt.has(t));
+        if (target && !raf) build(target);
+      },
+      { threshold: 0.15, rootMargin: "-12% 0px -14% 0px" },
+    );
+    targets.forEach((target) => observer.observe(target));
+    const regionObserver = new IntersectionObserver((entries) =>
+      entries.forEach((entry) => {
+        (entry.target as HTMLElement).dataset.inView = entry.isIntersecting
+          ? "true"
+          : "false";
+      }),
+    );
+    regions.forEach((region) => regionObserver.observe(region));
+    const onScroll = () => {
+      const downward = scrollY > lastScroll;
+      lastScroll = scrollY;
+      if (!downward || document.hidden) return;
+      const target = [...active]
+        .filter((t) => performance.now() - (builtAt.get(t) ?? -Infinity) > 8000)
+        .sort(
+          (a, b) =>
+            Math.abs(a.getBoundingClientRect().top - innerHeight * 0.35) -
+            Math.abs(b.getBoundingClientRect().top - innerHeight * 0.35),
+        )[0];
+      if (
+        target &&
+        (!raf || (current && current.getBoundingClientRect().bottom < 100))
+      )
+        build(target);
+    };
+    const onVisibility = () => {
+      document.documentElement.dataset.motion = document.hidden
+        ? "paused"
+        : "running";
+      if (document.hidden) stop();
+    };
+    const onFocus = () => {
+      if (current?.contains(document.activeElement)) stop();
+      const pending = (document.activeElement as HTMLElement | null)?.closest?.<HTMLElement>('[data-build-pending="true"]');
+      if (pending) reveal(pending);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", stop, { passive: true });
+    document.addEventListener("visibilitychange", onVisibility);
+    document.addEventListener("focusin", onFocus);
     return () => {
-      clear(true); fallbacks.forEach(id => clearTimeout(id)); observer.disconnect(); regionObserver.disconnect();
-      media.removeEventListener("change", sync); desktop.removeEventListener("change", sync);
-      document.removeEventListener("visibilitychange", sync); document.removeEventListener("focusin", focus);
-      window.removeEventListener("resize", resize);
+      stop();
+      observer.disconnect();
+      regionObserver.disconnect();
+      regions.forEach((r) => delete r.dataset.inView);
+      waiting.forEach((id) => window.clearTimeout(id));
+      targets.forEach((t) => delete t.dataset.buildPending);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", stop);
+      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("focusin", onFocus);
       delete document.documentElement.dataset.motion;
     };
-  }, [paused]);
-  return <div ref={root} className="agent-build-overlay" aria-hidden="true" data-active="false">
-    {["Scout", "Builder", "Verifier"].map((name, index) => <div key={name} className={`build-cursor cursor-${index}`}>
-      <svg width="22" height="26" viewBox="0 0 22 26"><path d="M2 2v20l5-6 5 9 4-2-5-8h8L2 2Z" fill="currentColor" stroke="#080c18" strokeWidth="1.5" /></svg>
-      <span>{name} · {locale === "pl" ? "buduje" : "building"}</span>
-    </div>)}
-  </div>;
+  }, [paused, reduced, pl]);
+
+  return (
+    <>
+      <div
+        className="agent-build-overlay"
+        ref={overlay}
+        aria-hidden="true"
+        data-active="false"
+      >
+        <div className="build-outline">
+          <span className="build-caption" />
+          <span className="build-phase" />
+        </div>
+        {Array.from({ length: 6 }, (_, i) => (
+          <div className="blueprint-line" key={i} />
+        ))}
+        {["Scout", "Builder", "Verifier"].map((name, i) => (
+          <div className={`build-cursor cursor-${i}`} key={name}>
+            <svg width="22" height="26" viewBox="0 0 22 26" fill="none">
+              <path
+                d="M2 2v20l5-6 5 9 4-2-5-8h8L2 2Z"
+                fill="currentColor"
+                stroke="#080c18"
+                strokeWidth="1.5"
+              />
+            </svg>
+            <span>{name}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  );
 }

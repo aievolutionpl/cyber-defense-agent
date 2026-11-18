@@ -4,6 +4,21 @@ import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  detectProviders,
+  saveModelConfig,
+  loadModelConfig,
+  callModel,
+  systemPrompt,
+  buildBrief,
+  briefPrompt,
+  renderExplanation,
+  validateProvider,
+} from "./providers.mjs";
+import { buildOverview, chatWithModel, readStoredReports } from "./panel-api.mjs";
+import { StateStore } from "./scope.mjs";
+import { writeStateFile, readStateFile, ensureRealDir } from "./safe-write.mjs";
+import { runDoctor } from "./doctor.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -314,15 +329,13 @@ export function detectAgentAuthError(text, host = "claude", lang = "pl") {
 const activeAgentProcesses = new Map();
 
 function sessionsDir(rootDir = ROOT) {
-  const dir = resolveContainedPath(rootDir, ".cda", "sessions");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+  return ensureRealDir(rootDir, resolveContainedPath(rootDir, ".cda", "sessions"));
 }
 
 function saveSessionState(session, rootDir = ROOT) {
   const dir = sessionsDir(rootDir);
   const file = resolveContainedPath(dir, `${session.sessionId}.json`);
-  fs.writeFileSync(file, JSON.stringify(session, null, 2), "utf8");
+  writeStateFile(rootDir, file, JSON.stringify(session, null, 2));
   return session;
 }
 
@@ -336,7 +349,7 @@ export function getAgentSessions(rootDir = ROOT) {
       .filter((f) => f.endsWith(".json"))
       .map((f) => {
         try {
-          return JSON.parse(fs.readFileSync(resolveContainedPath(dir, f), "utf8"));
+          return JSON.parse(readStateFile(rootDir, resolveContainedPath(dir, f)));
         } catch {
           return null;
         }
@@ -356,7 +369,7 @@ export function stopAgentSession(sessionId, rootDir = ROOT) {
   const dir = sessionsDir(rootDir);
   const file = resolveContainedPath(dir, `${cleanId}.json`);
   if (!fs.existsSync(file)) throw new Error("SESSION_NOT_FOUND");
-  const session = JSON.parse(fs.readFileSync(file, "utf8"));
+  const session = JSON.parse(readStateFile(rootDir, file));
   const proc = activeAgentProcesses.get(cleanId);
   if (proc) {
     try {
@@ -402,16 +415,15 @@ export function launchAgentSession(
     executablePath: hostInfo.executablePath || safeHost,
   });
 
-  const cdaDir = resolveContainedPath(rootDir, ".cda");
-  fs.mkdirSync(cdaDir, { recursive: true });
+  const cdaDir = ensureRealDir(rootDir, resolveContainedPath(rootDir, ".cda"));
   const promptFile = resolveContainedPath(cdaDir, `last-agent-prompt-${safeHost}.txt`);
-  fs.writeFileSync(promptFile, bridge.prompt, "utf8");
+  writeStateFile(rootDir, promptFile, bridge.prompt);
 
   const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
   const sessionId = `agent-${safeHost}-${stamp}-${crypto.randomBytes(3).toString("hex")}`;
   const sDir = sessionsDir(rootDir);
   const sessionPromptFile = resolveContainedPath(sDir, `${sessionId}-prompt.txt`);
-  fs.writeFileSync(sessionPromptFile, bridge.prompt, "utf8");
+  writeStateFile(rootDir, sessionPromptFile, bridge.prompt);
 
   const session = {
     sessionId,
@@ -454,7 +466,8 @@ export function launchAgentSession(
   }
 
   try {
-    const args = safeHost === "claude" ? ["-p", bridge.prompt] : [bridge.prompt];
+    // Non-interactive forms: `claude -p` and `codex exec` (plain `codex <prompt>` opens a TUI that needs a terminal).
+    const args = safeHost === "claude" ? ["-p", bridge.prompt] : safeHost === "codex" ? ["exec", "--skip-git-repo-check", bridge.prompt] : [bridge.prompt];
     const useCmdShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(session.executablePath);
     const proc = useCmdShim
       ? spawnImpl("cmd.exe", ["/d", "/s", "/c", session.executablePath, ...args], {
@@ -575,16 +588,14 @@ export function listReportsSummary(rootDir = ROOT) {
 const activeWorkflowChildren = new Map();
 
 function runsDir(rootDir = ROOT) {
-  const dir = resolveContainedPath(rootDir, ".cda", "runs");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+  return ensureRealDir(rootDir, resolveContainedPath(rootDir, ".cda", "runs"));
 }
 
 function saveRunState(run, rootDir = ROOT) {
   run.updatedAt = new Date().toISOString();
   const dir = runsDir(rootDir);
   const file = resolveContainedPath(dir, `${run.runId}.json`);
-  fs.writeFileSync(file, JSON.stringify(run, null, 2), "utf8");
+  writeStateFile(rootDir, file, JSON.stringify(run, null, 2));
   return run;
 }
 
@@ -593,7 +604,7 @@ export function getGuidedAudit(runId, rootDir = ROOT) {
   if (!cleanId) throw new Error("INVALID_RUN_ID");
   const file = resolveContainedPath(runsDir(rootDir), `${cleanId}.json`);
   if (!fs.existsSync(file)) throw new Error("RUN_NOT_FOUND");
-  return JSON.parse(fs.readFileSync(file, "utf8"));
+  return JSON.parse(readStateFile(rootDir, file));
 }
 
 export function listGuidedAudits(rootDir = ROOT) {
@@ -605,7 +616,7 @@ export function listGuidedAudits(rootDir = ROOT) {
       .filter((f) => f.endsWith(".json"))
       .map((f) => {
         try {
-          return JSON.parse(fs.readFileSync(resolveContainedPath(dir, f), "utf8"));
+          return JSON.parse(readStateFile(rootDir, resolveContainedPath(dir, f)));
         } catch {
           return null;
         }
@@ -1113,692 +1124,50 @@ export function runBoundedAction(action, params = {}) {
   throw new Error("UNSUPPORTED_ACTION");
 }
 
+/**
+ * Explain stored reports with the connected model from the Mini UI.
+ * Requires payload.consent === true (the operator ticked the send-summary box) and the session token.
+ */
+export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, call = callModel } = {}) {
+  if (payload.consent !== true) throw Object.assign(new Error("CONSENT_REQUIRED"), { code: "CONSENT_REQUIRED" });
+  const lang = payload.lang === "en" ? "en" : "pl";
+  const config = loadModelConfig(rootDir);
+  const provider = validateProvider(payload.provider || config.provider || "");
+  // A string (even empty) is the operator's explicit choice; only an omitted field falls back to the saved model.
+  const model = typeof payload.model === "string" ? payload.model.trim() || null : config.provider === provider ? config.model : null;
+  const requested = Array.isArray(payload.reports) ? payload.reports.filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n)) : [];
+  // Reads go through StateStore (no symlinked or hard-linked state). Without an explicit selection,
+  // explain the 20 most recently written reports and say how many were left out.
+  const available = readStoredReports(rootDir, 500, requested.length ? requested : null);
+  const named = available.slice(0, 20).map(([n, r]) => [n, r]);
+  const names = named.map(([n]) => n);
+  const excludedReports = available.length - named.length;
+  const brief = buildBrief(named);
+  if (!brief.coverage.sources) throw Object.assign(new Error("NO_SUPPORTED_REPORTS"), { code: "NO_SUPPORTED_REPORTS" });
+  const question = String(payload.question || "").slice(0, 800);
+  const res = await call({ provider, model, system: systemPrompt(lang), messages: [{ role: "user", content: briefPrompt(brief, lang, question) }], consent: true, rootDir });
+  const md = renderExplanation({ provider: res.provider, model: res.model, text: res.text, brief, sources: names, lang, question });
+  const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+  // StateStore.write refuses linked targets and ancestors and replaces the file atomically.
+  const file = new StateStore(rootDir).write("reports", `explain-${stamp}`, md, "md");
+  return { ok: true, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, reportsUsed: names, excludedReports, rawEvidenceSent: false, report: path.basename(file), text: md };
+}
+
+const PANEL_DIR = path.join(ROOT, "tools", "panel");
+const PANEL_FILES = Object.freeze({
+  "/panel.css": ["panel.css", "text/css; charset=utf-8"],
+  "/panel.js": ["panel.js", "text/javascript; charset=utf-8"],
+  "/panel-icon.svg": [null, "image/svg+xml"],
+});
+const PANEL_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#0b1310"/><path d="M12 3.5 5.5 6v5c0 4.2 2.8 7.8 6.5 9 3.7-1.2 6.5-4.8 6.5-9V6L12 3.5Z" fill="none" stroke="#5eead4" stroke-width="1.6"/><path d="m9 12 2 2 4-4" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+/** Strict policy: only this origin's own script and style files, no inline code, no framing. */
+const PANEL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
 function renderMiniUiHtml(token, initialLang = "pl") {
-  return `<!doctype html>
-<html lang="${initialLang}">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cyber Defense Agent v0.2 — Command Center & Guided Audit</title>
-  <style>
-    :root {
-      --bg: #07090e;
-      --surface: #0d121b;
-      --raised: #131b28;
-      --line: rgba(255, 255, 255, 0.09);
-      --line-emerald: rgba(52, 211, 153, 0.38);
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #34d399;
-      --accent-dark: #10b981;
-      --cyan: #38bdf8;
-      --amber: #fbbf24;
-      --rose: #fb7185;
-      --mono: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
-      --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: radial-gradient(ellipse at 80% 0%, rgba(16, 185, 129, 0.12), transparent 55%), var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      line-height: 1.6;
-      min-height: 100vh;
-      padding-bottom: 60px;
-    }
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: rgba(7, 9, 14, 0.86);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--line);
-      padding: 14px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 700;
-      font-size: 18px;
-      letter-spacing: -0.03em;
-    }
-    .brand-shield {
-      width: 34px;
-      height: 34px;
-      border-radius: 9px;
-      background: rgba(52, 211, 153, 0.12);
-      border: 1px solid var(--line-emerald);
-      display: grid;
-      place-items: center;
-      color: var(--accent);
-      font-weight: 800;
-    }
-    .brand small {
-      display: block;
-      font: 10px var(--mono);
-      color: var(--accent);
-      letter-spacing: 0.16em;
-    }
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .badge {
-      font: 11px var(--mono);
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: rgba(52, 211, 153, 0.1);
-      border: 1px solid rgba(52, 211, 153, 0.28);
-      color: #6ee7b7;
-    }
-    .lang-switch {
-      display: inline-flex;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 2px;
-      background: var(--surface);
-    }
-    .lang-switch button {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      font: 600 11px var(--mono);
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .lang-switch button.active {
-      background: rgba(52, 211, 153, 0.18);
-      color: #6ee7b7;
-    }
-    .shell {
-      max-width: 1280px;
-      margin: 26px auto 0;
-      padding: 0 24px;
-      display: grid;
-      gap: 22px;
-    }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 22px;
-    }
-    @media (max-width: 960px) {
-      .grid-2 { grid-template-columns: 1fr; }
-    }
-    .card {
-      background: linear-gradient(180deg, #0e141f 0%, #090d14 100%);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 22px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 40px -16px rgba(0,0,0,0.6);
-    }
-    .eyebrow {
-      font: 600 10px var(--mono);
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 6px;
-      display: block;
-    }
-    h2 {
-      font-size: 20px;
-      letter-spacing: -0.03em;
-      margin-bottom: 6px;
-    }
-    .sub {
-      color: var(--muted);
-      font-size: 13px;
-      margin-bottom: 16px;
-    }
-    .agents-row, .workflow-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .workflow-row {
-      grid-template-columns: repeat(4, 1fr);
-    }
-    .agent-pill, .wf-pill {
-      padding: 11px 13px;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
-      cursor: pointer;
-      transition: all 0.18s;
-    }
-    .agent-pill.active, .wf-pill.active {
-      border-color: var(--accent);
-      background: rgba(52, 211, 153, 0.09);
-    }
-    .agent-pill strong, .wf-pill strong {
-      display: block;
-      font-size: 13.5px;
-    }
-    .agent-pill small, .wf-pill small {
-      font: 10.5px var(--mono);
-      color: var(--muted);
-      display: block;
-      margin-top: 2px;
-    }
-    .status-ok { color: #6ee7b7 !important; }
-    .status-warn { color: var(--amber) !important; }
-    .status-err { color: var(--rose) !important; }
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    label {
-      display: block;
-      font: 600 11px var(--mono);
-      color: #cbd5e1;
-      margin-bottom: 6px;
-    }
-    select, input[type="text"] {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: #070a10;
-      color: var(--text);
-      font: 13px var(--sans);
-    }
-    .prompt-box {
-      background: #06080d;
-      border: 1px solid rgba(52, 211, 153, 0.25);
-      border-radius: 10px;
-      padding: 12px 14px;
-      font: 12px/1.55 var(--mono);
-      color: #d1fae5;
-      margin-bottom: 14px;
-      word-break: break-word;
-    }
-    .btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 15px;
-      border-radius: 9px;
-      font: 650 12.5px var(--sans);
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: transform 0.15s, border-color 0.15s;
-      text-decoration: none;
-    }
-    .btn-primary {
-      background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
-      color: #03140d;
-      border-color: rgba(167, 243, 208, 0.55);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 6px 18px -4px rgba(16,185,129,0.4);
-    }
-    .btn-secondary {
-      background: rgba(255,255,255,0.04);
-      border-color: var(--line);
-      color: var(--text);
-    }
-    .btn-secondary:hover {
-      border-color: var(--line-emerald);
-      background: rgba(52, 211, 153, 0.07);
-    }
-    .btn-danger {
-      background: rgba(251, 113, 133, 0.12);
-      border-color: rgba(251, 113, 133, 0.4);
-      color: #fecdd3;
-    }
-    .consent-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      background: rgba(251, 191, 36, 0.07);
-      border: 1px solid rgba(251, 191, 36, 0.25);
-      color: #fde68a;
-      font-size: 12px;
-      margin-bottom: 14px;
-    }
-    .steps-list {
-      display: grid;
-      gap: 8px;
-      margin: 14px 0;
-    }
-    .step-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 9px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.015);
-      font-size: 12.5px;
-    }
-    .step-status {
-      font: 600 11px var(--mono);
-      padding: 2px 8px;
-      border-radius: 99px;
-    }
-    .next-step-box {
-      padding: 12px 14px;
-      border-radius: 9px;
-      border-left: 3px solid var(--accent);
-      background: rgba(52, 211, 153, 0.06);
-      font-size: 12.5px;
-      margin-top: 10px;
-    }
-    .console {
-      background: #05070b;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 14px;
-      font: 12px/1.6 var(--mono);
-      color: #a7f3d0;
-      min-height: 150px;
-      max-height: 280px;
-      overflow: auto;
-      white-space: pre-wrap;
-    }
-    .reports-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .report-chip {
-      font: 11px var(--mono);
-      padding: 6px 10px;
-      border-radius: 7px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
-      color: #e2e8f0;
-      text-decoration: none;
-    }
-    .report-chip:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-    .history-list {
-      display: grid;
-      gap: 8px;
-      margin-top: 12px;
-      max-height: 220px;
-      overflow: auto;
-    }
-    .footer-credit {
-      text-align: center;
-      margin-top: 28px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .footer-credit a { color: var(--accent); font-weight: 600; text-decoration: none; }
-  </style>
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-shield">🛡️</div>
-      <div>
-        <span>cyber<span style="color:#94a3b8;font-weight:400">defense</span> · command center</span>
-        <small>AI EVOLUTION POLSKA · V0.2</small>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <span class="badge" id="guard-badge">127.0.0.1 · TYLKO ODCZYT · HOST/ORIGIN GUARD</span>
-      <div class="lang-switch">
-        <button type="button" id="lang-pl" class="active" onclick="setLang('pl')">PL</button>
-        <button type="button" id="lang-en" onclick="setLang('en')">EN</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="shell">
-    <div class="grid-2">
-      <!-- GUIDED AUDIT WORKFLOW (PRIORITY 3) -->
-      <section class="card">
-        <span class="eyebrow">01 / PROWADZONY AUDYT KROK PO KROKU</span>
-        <h2>Wybierz cel: Komputer, Projekt, Strona lub Demo</h2>
-        <p class="sub">Każde uruchomienie ma własny identyfikator, historię kroków, możliwość anulowania i wznowienia po błędzie.</p>
-
-        <div class="workflow-row">
-          <div class="wf-pill active" id="wf-pc" onclick="selectWorkflow('pc')">
-            <strong>💻 Komputer</strong>
-            <small>Inwentarz + CVE + Windows</small>
-          </div>
-          <div class="wf-pill" id="wf-project" onclick="selectWorkflow('project')">
-            <strong>📁 Projekt</strong>
-            <small>Scope + Kod v0.2 + Deps</small>
-          </div>
-          <div class="wf-pill" id="wf-web" onclick="selectWorkflow('web')">
-            <strong>🌐 Strona WWW</strong>
-            <small>HTTPS / CSP / Cookies / TLS</small>
-          </div>
-          <div class="wf-pill" id="wf-demo" onclick="selectWorkflow('demo')">
-            <strong>🚀 Demo</strong>
-            <small>Wykrycie → Fix → Retest</small>
-          </div>
-        </div>
-
-        <div style="margin-bottom: 12px;">
-          <label for="wf-target">Ścieżka projektu lub adres URL (dla Projekt / Strona WWW):</label>
-          <input type="text" id="wf-target" placeholder="np. ./ lub https://twoja-strona.pl" oninput="syncTarget(this.value)" />
-        </div>
-
-        <label class="consent-bar">
-          <input type="checkbox" id="consent-check" />
-          <span>Zatwierdzam zakres i wyrażam świadomą zgodę na odczyt (--yes / --share-package-names / --authorized).</span>
-        </label>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" type="button" onclick="startWorkflow()">▶ Uruchom prowadzony audyt</button>
-          <button class="btn btn-danger" type="button" id="cancel-wf-btn" onclick="cancelCurrentWorkflow()" style="display:none">⏹ Anuluj bieżący audyt</button>
-          <button class="btn btn-secondary" type="button" id="resume-wf-btn" onclick="resumeCurrentWorkflow()" style="display:none">↻ Wznów od błędu / przerwania</button>
-          <a class="btn btn-secondary" href="/report/dashboard.html" target="_blank">📊 Otwórz Dashboard ↗</a>
-        </div>
-
-        <div id="active-run-box" style="margin-top:16px;"></div>
-      </section>
-
-      <!-- AGENT BRIDGE & SESSION TRACKER (PRIORITY 1 & 2) -->
-      <section class="card">
-        <span class="eyebrow">02 / MOSTEK CLAUDE CODE CLI & CODEX CLI</span>
-        <h2>Uruchomienie agenta ze stanem sesji</h2>
-        <p class="sub">Przekazuje wybrane zadanie bezpośrednio do ujednoliconego pliku wykonywalnego CLI i monitoruje stan logowania.</p>
-
-        <div class="agents-row" id="agents-row"></div>
-
-        <div class="form-row">
-          <div>
-            <label for="mission-select">Zadanie dla agenta</label>
-            <select id="mission-select" onchange="refreshBridge()">
-              <option value="demo">🚀 Szybkie Demo End-to-End</option>
-              <option value="code">🔍 Audyt kodu i zależności projektu</option>
-              <option value="pc">💻 Audyt komputera (OSV + KEV + Windows)</option>
-              <option value="web">🌐 Pasywny audyt strony WWW</option>
-              <option value="report">📄 Wygeneruj raport HTML/PDF + Dashboard</option>
-            </select>
-          </div>
-          <div>
-            <label for="target-input">Cel zadania (ścieżka / URL)</label>
-            <input type="text" id="target-input" placeholder="np. ./ lub https://twoja-strona.pl" oninput="refreshBridge()" />
-          </div>
-        </div>
-
-        <label>Ujednolicona komenda CLI i przekazywany prompt:</label>
-        <div class="prompt-box" id="bridge-command"></div>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" type="button" onclick="launchAgentTerminal()">⚡ Uruchom agenta z tym zadaniem</button>
-          <button class="btn btn-secondary" type="button" onclick="copyCommand('cli')">📋 Kopiuj komendę CLI</button>
-          <button class="btn btn-secondary" type="button" onclick="copyCommand('prompt')">💬 Kopiuj sam prompt</button>
-        </div>
-
-        <div id="agent-sessions-box" style="margin-top:16px;"></div>
-      </section>
-    </div>
-
-    <!-- CONSOLE, RUN HISTORY & REPORTS -->
-    <section class="card">
-      <span class="eyebrow">03 / HISTORIA URUCHOMIEŃ, KONSOLA I RAPORTY (.CDA/REPORTS)</span>
-      <div class="console" id="console-out">Gotowy. Wybierz prowadzony audyt lub uruchom sesję Claude Code / Codex CLI.</div>
-      <div class="history-list" id="runs-history"></div>
-      <div class="reports-grid" id="reports-list"></div>
-    </section>
-
-    <div class="footer-credit">
-      Cyber Defense Agent v0.2 · Stworzone przez <a href="https://github.com/aievolutionpl" target="_blank">AI Evolution Polska</a> · MIT Open Source
-    </div>
-  </main>
-
-  <script>
-    const TOKEN = ${JSON.stringify(token)};
-    let state = {
-      lang: ${JSON.stringify(initialLang)},
-      host: 'claude',
-      workflow: 'pc',
-      activeRunId: null,
-      agents: {},
-      bridge: {},
-      runs: [],
-      sessions: []
-    };
-
-    function syncTarget(val) {
-      document.getElementById('target-input').value = val;
-      refreshBridge();
-    }
-
-    function selectWorkflow(wf) {
-      state.workflow = wf;
-      ['pc', 'project', 'web', 'demo'].forEach(id => {
-        document.getElementById('wf-' + id).classList.toggle('active', id === wf);
-      });
-      const mapMission = { pc: 'pc', project: 'code', web: 'web', demo: 'demo' };
-      document.getElementById('mission-select').value = mapMission[wf] || 'demo';
-      refreshBridge();
-    }
-
-    function setLang(lang) {
-      state.lang = lang;
-      document.getElementById('lang-pl').classList.toggle('active', lang === 'pl');
-      document.getElementById('lang-en').classList.toggle('active', lang === 'en');
-      refreshBridge();
-      loadStatus();
-    }
-
-    async function loadStatus() {
-      const res = await fetch('/api/status');
-      const data = await res.json();
-      state.agents = data.agents || {};
-      state.runs = data.runs || [];
-      state.sessions = data.sessions || [];
-      if (!state.activeRunId && state.runs.length) {
-        state.activeRunId = state.runs[0].runId;
-      }
-      renderAgents();
-      renderActiveRun();
-      renderRunsHistory();
-      renderAgentSessions();
-      renderReports(data.reports || []);
-    }
-
-    function renderAgents() {
-      const row = document.getElementById('agents-row');
-      row.innerHTML = '';
-      for (const [id, info] of Object.entries(state.agents)) {
-        const div = document.createElement('div');
-        div.className = 'agent-pill' + (state.host === id ? ' active' : '');
-        div.onclick = () => { state.host = id; renderAgents(); refreshBridge(); };
-        const statusText = info.installed
-          ? ('✓ ' + (info.version || 'CLI'))
-          : (info.entryExists ? '○ Skill gotowy (brak CLI)' : '—');
-        div.innerHTML =
-          '<strong>' + info.name + '</strong>' +
-          '<small class="' + (info.installed ? 'status-ok' : 'status-warn') + '">' + statusText + '</small>' +
-          (info.executablePath ? '<small>' + info.executablePath + '</small>' : '');
-        row.appendChild(div);
-      }
-    }
-
-    function renderActiveRun() {
-      const box = document.getElementById('active-run-box');
-      const cancelBtn = document.getElementById('cancel-wf-btn');
-      const resumeBtn = document.getElementById('resume-wf-btn');
-      const run = state.runs.find(r => r.runId === state.activeRunId) || state.runs[0];
-      if (!run) {
-        box.innerHTML = '';
-        cancelBtn.style.display = 'none';
-        resumeBtn.style.display = 'none';
-        return;
-      }
-      state.activeRunId = run.runId;
-      cancelBtn.style.display = run.status === 'running' ? 'inline-flex' : 'none';
-      resumeBtn.style.display = (run.status === 'failed' || run.status === 'cancelled') ? 'inline-flex' : 'none';
-
-      const stepsHtml = (run.steps || []).map(s => {
-        const cls = s.status === 'completed' ? 'status-ok' : s.status === 'running' ? 'status-warn' : s.status === 'failed' || s.status === 'cancelled' ? 'status-err' : '';
-        return '<div class="step-item"><span>' + s.label + '</span><span class="step-status ' + cls + '">' + s.status.toUpperCase() + '</span></div>';
-      }).join('');
-
-      const reportsLinks = (run.reports || []).map(r => '<a class="report-chip" href="/report/' + encodeURIComponent(r) + '" target="_blank">📄 ' + r + '</a>').join(' ');
-
-      box.innerHTML =
-        '<div style="font:600 12px var(--mono);color:#94a3b8;margin-bottom:6px;">AKTYWNE URUCHOMIENIE: ' + run.runId + ' [' + run.status.toUpperCase() + ']</div>' +
-        '<div class="steps-list">' + stepsHtml + '</div>' +
-        (run.nextStep ? '<div class="next-step-box"><strong>Następny krok:</strong> ' + run.nextStep + '</div>' : '') +
-        (reportsLinks ? '<div class="reports-grid">' + reportsLinks + '</div>' : '');
-    }
-
-    function renderRunsHistory() {
-      const box = document.getElementById('runs-history');
-      if (!state.runs.length) {
-        box.innerHTML = '';
-        return;
-      }
-      box.innerHTML = state.runs.slice(0, 6).map(r => {
-        const canResume = r.status === 'failed' || r.status === 'cancelled';
-        return '<div class="step-item" onclick="state.activeRunId=\\'' + r.runId + '\\';renderActiveRun();" style="cursor:pointer">' +
-          '<span><strong>' + r.title + '</strong> <small style="color:#94a3b8">(' + r.runId + ')</small></span>' +
-          '<span><span class="step-status">' + r.status.toUpperCase() + '</span>' +
-          (canResume ? ' <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();resumeRunById(\\'' + r.runId + '\\')">↻ Wznów</button>' : '') +
-          '</span></div>';
-      }).join('');
-    }
-
-    function renderAgentSessions() {
-      const box = document.getElementById('agent-sessions-box');
-      if (!state.sessions.length) {
-        box.innerHTML = '';
-        return;
-      }
-      const s = state.sessions[0];
-      const cls = s.status === 'completed' || s.status === 'running' ? 'status-ok' : 'status-err';
-      box.innerHTML =
-        '<div class="step-item">' +
-          '<div><strong>Sesja: ' + s.hostName + ' (' + s.mission + ')</strong><br/><small style="color:#94a3b8">Plik: ' + s.executablePath + '</small>' +
-          (s.authHint ? '<div style="color:#fb7185;font-size:11.5px;margin-top:4px;">⚠️ ' + s.authHint + '</div>' : '') +
-          (s.error && !s.authHint ? '<div style="color:#fbbf24;font-size:11.5px;margin-top:4px;">ℹ️ ' + s.error + '</div>' : '') +
-          '</div>' +
-          '<span class="step-status ' + cls + '">' + s.status.toUpperCase() + '</span>' +
-        '</div>';
-    }
-
-    function renderReports(reports) {
-      const box = document.getElementById('reports-list');
-      box.innerHTML = '';
-      (reports || []).forEach(r => {
-        const a = document.createElement('a');
-        a.className = 'report-chip';
-        a.href = '/report/' + encodeURIComponent(r.name);
-        a.target = '_blank';
-        a.textContent = '📄 ' + r.name;
-        box.appendChild(a);
-      });
-    }
-
-    async function refreshBridge() {
-      const mission = document.getElementById('mission-select').value;
-      const target = document.getElementById('target-input').value;
-      const res = await fetch('/api/bridge?host=' + encodeURIComponent(state.host) + '&mission=' + encodeURIComponent(mission) + '&target=' + encodeURIComponent(target) + '&lang=' + encodeURIComponent(state.lang));
-      state.bridge = await res.json();
-      document.getElementById('bridge-command').textContent = state.bridge.cliCommand + '\\n\\n# Prompt:\\n' + state.bridge.prompt;
-    }
-
-    async function copyCommand(kind) {
-      const text = kind === 'cli' ? state.bridge.cliCommand : state.bridge.prompt;
-      await navigator.clipboard.writeText(text);
-      document.getElementById('console-out').textContent = '✓ Skopiowano do schowka:\\n' + text;
-    }
-
-    async function launchAgentTerminal() {
-      const out = document.getElementById('console-out');
-      out.textContent = '⏳ Uruchamianie sesji agenta...';
-      const res = await fetch('/api/launch-agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
-        body: JSON.stringify({
-          host: state.host,
-          mission: document.getElementById('mission-select').value,
-          target: document.getElementById('target-input').value,
-          lang: state.lang
-        })
-      });
-      const data = await res.json();
-      out.textContent = data.message || data.error || JSON.stringify(data, null, 2);
-      loadStatus();
-    }
-
-    async function startWorkflow() {
-      const out = document.getElementById('console-out');
-      const consent = document.getElementById('consent-check').checked;
-      const target = document.getElementById('wf-target').value || document.getElementById('target-input').value;
-      out.textContent = '⏳ Rozpoczynanie prowadzonego audytu (' + state.workflow + ')...';
-      const res = await fetch('/api/workflows/start', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
-        body: JSON.stringify({ workflow: state.workflow, consent, target, lang: state.lang })
-      });
-      const data = await res.json();
-      if (!data.ok) {
-        out.textContent = '❌ ' + (data.error || 'Błąd uruchomienia audytu');
-        return;
-      }
-      state.activeRunId = data.run.runId;
-      out.textContent = '▶ Uruchomiono audyt: ' + data.run.runId + ' (' + data.run.title + ')';
-      loadStatus();
-    }
-
-    async function cancelCurrentWorkflow() {
-      if (!state.activeRunId) return;
-      const res = await fetch('/api/workflows/cancel', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
-        body: JSON.stringify({ runId: state.activeRunId })
-      });
-      const data = await res.json();
-      document.getElementById('console-out').textContent = data.ok ? ('⏹ Anulowano audyt: ' + state.activeRunId) : ('❌ ' + data.error);
-      loadStatus();
-    }
-
-    async function resumeCurrentWorkflow() {
-      if (!state.activeRunId) return;
-      await resumeRunById(state.activeRunId);
-    }
-
-    async function resumeRunById(runId) {
-      const res = await fetch('/api/workflows/resume', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
-        body: JSON.stringify({ runId })
-      });
-      const data = await res.json();
-      state.activeRunId = runId;
-      document.getElementById('console-out').textContent = data.ok ? ('↻ Wznowiono audyt: ' + runId) : ('❌ ' + data.error);
-      loadStatus();
-    }
-
-    loadStatus();
-    refreshBridge();
-    setInterval(() => {
-      if (state.runs.some(r => r.status === 'running') || state.sessions.some(s => s.status === 'running')) {
-        loadStatus();
-      }
-    }, 1500);
-  </script>
-</body>
-</html>`;
+  const html = fs.readFileSync(path.join(PANEL_DIR, "index.html"), "utf8");
+  return html
+    .replace("__CDA_TOKEN__", String(token).replace(/[^a-f0-9]/gi, ""))
+    .replace("__CDA_LANG__", initialLang === "en" ? "en" : "pl");
 }
 
 /** Start the local Mini Interface server on 127.0.0.1. */
@@ -1813,9 +1182,26 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       });
 
       const url = new URL(req.url || "/", `http://127.0.0.1:${actualPort}`);
+      const secure = { "Cache-Control": "no-store", "Content-Security-Policy": PANEL_CSP, "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
       if (req.method === "GET" && url.pathname === "/") {
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", ...secure });
         res.end(renderMiniUiHtml(token, lang));
+        return;
+      }
+      if (req.method === "GET" && Object.hasOwn(PANEL_FILES, url.pathname)) {
+        const [file, type] = PANEL_FILES[url.pathname];
+        res.writeHead(200, { "Content-Type": type, ...secure });
+        res.end(file ? fs.readFileSync(path.join(PANEL_DIR, file)) : PANEL_ICON);
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/overview") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(buildOverview(rootDir)));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/doctor") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(runDoctor({ rootDir })));
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/status") {
@@ -1845,6 +1231,11 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         res.end(JSON.stringify(bridge));
         return;
       }
+      if (req.method === "GET" && url.pathname === "/api/providers") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(detectProviders({ rootDir })));
+        return;
+      }
       if (req.method === "GET" && url.pathname === "/api/workflows") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ ok: true, runs: listGuidedAudits(rootDir) }));
@@ -1859,7 +1250,10 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         const rawSegment = decodeURIComponent(url.pathname.slice("/report/".length));
         const reportsDir = resolveContainedPath(rootDir, ".cda", "reports");
         const filePath = resolveContainedPath(reportsDir, rawSegment);
-        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        // Same rule as StateStore: no symlinked or hard-linked report files and no linked state directories.
+        const linked = [path.join(rootDir, ".cda"), reportsDir].some((d) => fs.existsSync(d) && fs.lstatSync(d).isSymbolicLink());
+        const stat = !linked && fs.existsSync(filePath) ? fs.lstatSync(filePath) : null;
+        if (!stat || !stat.isFile() || stat.nlink > 1) {
           res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
           res.end("Report not found. Run Demo or Guided Audit first.");
           return;
@@ -1879,7 +1273,7 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         let body = "";
         for await (const chunk of req) {
           body += chunk;
-          if (body.length > 16384) throw new Error("PAYLOAD_TOO_LARGE");
+          if (body.length > (url.pathname === "/api/model/chat" ? 131072 : 16384)) throw new Error("PAYLOAD_TOO_LARGE");
         }
         const payload = JSON.parse(body || "{}");
 
@@ -1919,6 +1313,24 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           res.end(JSON.stringify({ ok: true, run }));
           return;
         }
+        if (url.pathname === "/api/model/config") {
+          const config = saveModelConfig({ provider: payload.provider, model: payload.model || null, lang: payload.lang }, rootDir);
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true, config }));
+          return;
+        }
+        if (url.pathname === "/api/model/chat") {
+          const result = await chatWithModel(payload, { rootDir });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify(result));
+          return;
+        }
+        if (url.pathname === "/api/model/explain") {
+          const result = await explainReportsWithModel(payload, { rootDir });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify(result));
+          return;
+        }
         if (url.pathname === "/api/run") {
           const result = runBoundedAction(payload.action, payload);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -1935,11 +1347,12 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         code === "INVALID_ORIGIN" ||
         code === "INVALID_SESSION_TOKEN" ||
         code === "PATH_OUTSIDE_BOUNDARY" ||
-        code === "INVALID_AGENT_HOST"
+        code === "INVALID_AGENT_HOST" ||
+        code === "CONSENT_REQUIRED"
           ? 403
           : 400;
       res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: false, error: code }));
+      res.end(JSON.stringify({ ok: false, error: code, ...(error.detail ? { detail: String(error.detail).slice(0, 200) } : {}) }));
     }
   });
 

@@ -37,15 +37,20 @@ try {
   await page.setViewportSize({ width: 1440, height: 1000 });
   await page.goto('http://127.0.0.1:3107/');
   await page.waitForFunction(() => document.documentElement.dataset.motion === 'running');
+  // Restored agent-build-scroll contract: the [data-agent-target] block inside a section is drafted,
+  // assembled by three cursors and left as "assembled" with its real content fully visible.
+  const target = '#missions [data-agent-target]';
   await page.locator('#missions').scrollIntoViewIfNeeded();
-  await page.waitForFunction(() => document.querySelector('#missions').dataset.buildStage === 'assembling');
+  await page.waitForFunction(sel => ['drafting', 'assembling'].includes(document.querySelector(sel).dataset.buildStage), target);
+  assert.equal(await page.locator('.agent-build-overlay').getAttribute('data-active'), 'true', 'overlay active during construction');
+  assert.equal(await page.locator('.build-cursor:not([hidden])').count(), 3, 'three cursors on desktop');
   const cursorStart = await page.locator('.build-cursor').nth(1).evaluate(el => el.style.transform);
   await page.waitForTimeout(250);
   const cursorEnd = await page.locator('.build-cursor').nth(1).evaluate(el => el.style.transform);
   assert.notEqual(cursorStart, cursorEnd, 'cursor moves during section assembly');
   await page.screenshot({ path: 'output/site-review/desktop-construction.png' });
-  await page.waitForFunction(() => !document.querySelector('#missions').dataset.buildStage);
-  assert.equal(await page.locator('#missions > div').first().evaluate(el => el.style.opacity), '', 'assembly restores content');
+  await page.waitForFunction(sel => document.querySelector(sel).dataset.buildStage === 'assembled', target);
+  await page.waitForFunction(sel => [...document.querySelector(sel).children].every(el => el.getAnimations().length === 0 && getComputedStyle(el).opacity === '1'), target);
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.locator('#scan').scrollIntoViewIfNeeded();
   await page.waitForTimeout(300);

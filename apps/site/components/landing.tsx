@@ -9,6 +9,7 @@ import { ConsentLadder } from "./skill-story";
 import { ExpertEffects } from "./expert-effects";
 import { ScanTheater } from "./scan-theater";
 import { ReportShowcase } from "./report-showcase";
+import { ModelConnect } from "./model-connect";
 import { GitHubLink, Mark } from "./ui";
 import { asset, github, type Locale } from "@/lib/config";
 
@@ -27,7 +28,11 @@ export function Landing({ locale }: { locale: Locale }) {
         ],
         [
           "Co opuszcza mój komputer i czy agent sam coś zmienia?",
-          "Domyślnie nic nie opuszcza komputera, a narzędzia działają wyłącznie w trybie odczytu. Tylko komendy advisories (OSV.dev) i web (pasywne GET) używają sieci — zawsze po Twojej jawnej zgodzie. Poprawki wdrażasz sam.",
+          "Domyślnie nic nie opuszcza komputera, a narzędzia działają wyłącznie w trybie odczytu. Sieci używają tylko advisories (OSV.dev), web (pasywne GET) i opcjonalne połączenie z modelem — zawsze po Twojej jawnej zgodzie. Poprawki wdrażasz sam.",
+        ],
+        [
+          "Czy mogę użyć swojej subskrypcji Claude lub ChatGPT?",
+          "Tak. Agent działa jako skill w Claude Code, Codex czy Cursorze, a także jako samodzielny program: podłącz zalogowane CLI Claude Code lub Codex (Twoja subskrypcja), klucz OpenRouter / Anthropic / OpenAI albo lokalną Ollamę. Model dostaje tylko zredagowany skrót ustaleń — bez plików i narzędzi.",
         ],
         [
           "Ile to kosztuje i kto rozwija projekt?",
@@ -45,7 +50,11 @@ export function Landing({ locale }: { locale: Locale }) {
         ],
         [
           "What leaves my machine, and does the agent change anything?",
-          "Nothing leaves by default, and tools are strictly read-only. Only advisories (OSV.dev) and web (passive GET) use the network — always after your explicit flag. You apply changes yourself.",
+          "Nothing leaves by default, and tools are strictly read-only. Only advisories (OSV.dev), web (passive GET) and the optional model connection use the network — always after your explicit flag. You apply changes yourself.",
+        ],
+        [
+          "Can I use my Claude or ChatGPT subscription?",
+          "Yes. It runs as a skill inside Claude Code, Codex or Cursor, and as a standalone program: connect the logged-in Claude Code or Codex CLI (your subscription), an OpenRouter / Anthropic / OpenAI key, or a local Ollama model. The model receives only a redacted brief of findings — no files, no tools.",
         ],
         [
           "What does it cost and who builds it?",
@@ -54,8 +63,8 @@ export function Landing({ locale }: { locale: Locale }) {
       ];
 
   const stats: [number, string][] = pl
-    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [72, "testy bezpieczeństwa CLI"], [0, "zmian bez Twojej zgody"]]
-    : [[9, "expert playbooks"], [6, "protection areas"], [72, "CLI security tests"], [0, "changes without consent"]];
+    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [118, "testy bezpieczeństwa CLI"], [0, "zmian bez Twojej zgody"]]
+    : [[9, "expert playbooks"], [6, "protection areas"], [118, "CLI security tests"], [0, "changes without consent"]];
 
   return (
     <>
@@ -74,8 +83,8 @@ export function Landing({ locale }: { locale: Locale }) {
               <div className="eyebrow hero-eyebrow">
                 <span className="status-dot" />
                 {pl
-                  ? "POLSKI SKILL OPEN SOURCE · V0.2 · AI EVOLUTION POLSKA"
-                  : "OPEN-SOURCE AI SKILL · V0.2 · BY AI EVOLUTION POLSKA"}
+                  ? "POLSKI SKILL I PROGRAM OPEN SOURCE · V0.3 · AI EVOLUTION POLSKA"
+                  : "OPEN-SOURCE AI SKILL & PROGRAM · V0.3 · BY AI EVOLUTION POLSKA"}
               </div>
               <h1 id="hero-title">
                 {pl ? (
@@ -137,11 +146,12 @@ export function Landing({ locale }: { locale: Locale }) {
         <ScanTheater locale={locale} />
         <ReportShowcase locale={locale} />
         <ConsentLadder locale={locale} />
+        <ModelConnect locale={locale} />
 
         <section data-build-section className="install-section section-shell" id="install">
           <div className="install-intro">
             <span className="eyebrow">
-              06 / {pl ? "SZYBKI START" : "QUICK START"}
+              07 / {pl ? "SZYBKI START" : "QUICK START"}
             </span>
             <h2>
               {pl ? (
@@ -171,8 +181,8 @@ export function Landing({ locale }: { locale: Locale }) {
                 </strong>
                 <p>
                   {pl
-                    ? "Narzędzia nie wysyłają Twoich plików. Sieci używają wyłącznie komendy advisories oraz web — tylko po podaniu jawnej flagi zgody."
-                    : "The tools never upload your files. Only the advisories and web commands touch the network — and only when you pass an explicit consent flag."}
+                    ? "Narzędzia nie wysyłają Twoich plików. Sieci używają tylko advisories, web i opcjonalne połączenie z modelem (explain, ask, chat) — zawsze po jawnej fladze zgody."
+                    : "The tools never upload your files. Only advisories, web and the optional model connection (explain, ask, chat) touch the network — always behind an explicit consent flag."}
                 </p>
               </div>
             </div>
@@ -189,7 +199,7 @@ export function Landing({ locale }: { locale: Locale }) {
 
         <section className="faq-section section-shell" id="faq">
           <div>
-            <span className="eyebrow">07 / FAQ</span>
+            <span className="eyebrow">08 / FAQ</span>
             <h2>
               {pl ? (
                 <>
