@@ -445,6 +445,13 @@ function callCli(provider, model, system, messages, { spawnImpl, execImpl, timeo
       }
       resolve({ text, usage: null, model: model || "cli-default" });
     });
+    // A CLI that exits before reading its prompt makes stdin emit EPIPE; route it to a provider error
+    // instead of letting an unhandled stream error terminate the caller (and the panel server).
+    child.stdin?.on?.("error", () => {
+      clearTimeout(timer);
+      killTree(child);
+      reject(new ProviderError("CLI_FAILED", "stdin closed early"));
+    });
     child.stdin?.end(prompt);
   });
 }

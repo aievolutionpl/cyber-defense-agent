@@ -346,3 +346,17 @@ test("timeouts kill the whole provider process tree on Windows", async () => {
   killTree({ pid: 1, kill: () => { killed = true; } }, { platform: "linux", run: () => { throw new Error("unused"); } });
   assert.equal(killed, true);
 });
+
+test("a CLI that closes stdin early yields a provider error instead of crashing", async (t) => {
+  const execImpl = (bin) => { if (bin.startsWith("claude")) return "2.1.0 (Claude Code)"; throw new Error("no"); };
+  const spawnImpl = () => {
+    const child = new EventEmitter();
+    child.stdout = new EventEmitter();
+    child.stderr = new EventEmitter();
+    child.kill = () => {};
+    child.stdin = new EventEmitter();
+    child.stdin.end = () => setImmediate(() => child.stdin.emit("error", Object.assign(new Error("write EPIPE"), { code: "EPIPE" })));
+    return child;
+  };
+  await assert.rejects(callModel({ provider: "claude-code", system: "S", messages: [{ role: "user", content: "q" }], consent: true, rootDir: tmp(t), spawnImpl, execImpl }), /CLI_FAILED/);
+});

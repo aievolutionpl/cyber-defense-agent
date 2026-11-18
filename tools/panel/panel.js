@@ -72,7 +72,7 @@ const state = {
   lang: (() => { try { return localStorage.getItem("cda.lang"); } catch { return null; } })() || document.querySelector('meta[name="cda-lang"]').content || "pl",
   view: "overview", overview: null, status: null, providers: null, config: null,
   provider: null, wf: "demo", runId: null, host: "claude", bridge: null,
-  filter: { p: "all", area: "all", q: "" }, open: new Set(), chat: [], busy: false, lastRunStatus: {},
+  filter: { p: "all", area: "all", q: "" }, open: new Set(), chat: [], chatEpoch: 0, busy: false, lastRunStatus: {},
 };
 const t = (key, vars = {}) => (I18N[state.lang][key] ?? I18N.pl[key] ?? key).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? "");
 
@@ -355,8 +355,11 @@ async function send(text, { focus = null, attach = false } = {}) {
   const attachReports = attach || $("#ex-attach").checked;
   state.chat.push({ role: "user", content: text, display: focus ? `${text}\n\n▸ [${focus.priority}] ${focus.title}` : attachReports ? `${text}\n\n▸ +reports` : text });
   state.busy = true; renderChat(); $("#chat-send").disabled = true;
+  const epoch = state.chatEpoch;
   const history = boundedHistory(state.chat.filter((m) => !m.error).map(({ role, content }) => ({ role, content })));
   const data = await api("/api/model/chat", { provider: state.provider, model: $("#ex-model").value.trim(), messages: history, consent: true, lang: state.lang, focus, attachReports });
+  // The conversation was cleared or the provider changed while this request was pending: drop the reply.
+  if (epoch !== state.chatEpoch) return;
   state.busy = false; $("#chat-send").disabled = false; $("#ex-attach").checked = false;
   if (data.ok) {
     if (data.sentContent) state.chat.at(-1).content = data.sentContent;
@@ -419,7 +422,7 @@ document.addEventListener("click", async (e) => {
       // A new destination needs its own consent; earlier messages were approved only for the old one.
       $("#ex-model").value = ""; $("#ex-model").dataset.touched = "1";
       const hadSomething = state.chat.length || $("#ex-consent").checked;
-      $("#ex-consent").checked = false; state.chat = []; renderChat();
+      $("#ex-consent").checked = false; resetChat();
       if (hadSomething) toast(t("t.provider"));
     }
     state.provider = d.provider; renderExpert();
@@ -443,7 +446,14 @@ $("#ex-save").addEventListener("click", async () => {
   const data = await api("/api/model/config", { provider: state.provider, model: $("#ex-model").value.trim(), lang: state.lang });
   if (data.ok) { toast(t("t.saved"), "ok"); refresh(); } else toast(`❌ ${data.error}`, "err");
 });
-$("#ex-clear").addEventListener("click", () => { state.chat = []; renderChat(); });
+function resetChat() {
+  state.chatEpoch += 1;
+  state.chat = [];
+  state.busy = false;
+  $("#chat-send").disabled = false;
+  renderChat();
+}
+$("#ex-clear").addEventListener("click", resetChat);
 $("#chat-form").addEventListener("submit", (e) => { e.preventDefault(); const v = $("#chat-text").value; $("#chat-text").value = ""; send(v); });
 $("#chat-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#chat-form").requestSubmit(); } });
 $("#ag-mission").addEventListener("change", refreshBridge);
