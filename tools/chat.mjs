@@ -25,6 +25,8 @@ const T = {
     briefConsent: (n, t) => `Wyślę skrócony opis ${n} z ${t} ustaleń (priorytet, obszar, tytuł, wskazówka naprawy; bez plików i dowodów). Wysłać? [t/N] `,
     noReports: "Brak raportów w .cda/reports. Uruchom najpierw: node tools/demo.mjs",
     you: "ty",
+    kept: (p) => `Bez zmian: nadal ${p}.`,
+    cleared: "historia rozmowy wyczyszczona",
   },
   en: {
     title: "CYBER DEFENSE AGENT — SECURITY EXPERT CHAT",
@@ -35,8 +37,26 @@ const T = {
     briefConsent: (n, t) => `I will send a bounded brief of ${n} of ${t} findings (priority, area, title, fix hint; no files or evidence). Send? [y/N] `,
     noReports: "No reports in .cda/reports. Run first: node tools/demo.mjs",
     you: "you",
+    kept: (p) => `Unchanged: still ${p}.`,
+    cleared: "conversation history cleared",
   },
 };
+
+const HISTORY_BUDGET = 45000;
+
+/** Keep the newest complete turns that fit the transport's character budget; start on a user turn. */
+export function fitHistory(history, budget = HISTORY_BUDGET) {
+  const kept = [];
+  let size = 0;
+  for (let i = history.length - 1; i >= 0 && kept.length < 20; i -= 1) {
+    const len = String(history[i].content).length;
+    if (size + len > budget && kept.length) break;
+    kept.unshift(history[i]);
+    size += len;
+  }
+  while (kept.length > 1 && kept[0].role !== "user") kept.shift();
+  return kept;
+}
 
 const yes = (answer) => /^(t|tak|y|yes)$/i.test(String(answer).trim());
 
@@ -56,7 +76,7 @@ export async function chatTerminal({ provider, model, lang = "pl", store, rl: in
       history.push({ role: "user", content });
       say(c.dim(t.thinking));
       try {
-        const res = await call({ provider: current.provider, model: current.model, system: systemPrompt(lang), messages: history.slice(-20), consent: true });
+        const res = await call({ provider: current.provider, model: current.model, system: systemPrompt(lang), messages: fitHistory(history), consent: true });
         const text = sanitizeModelMarkdown(res.text);
         history.push({ role: "assistant", content: text });
         sent += 1;
@@ -79,7 +99,14 @@ export async function chatTerminal({ provider, model, lang = "pl", store, rl: in
         continue;
       }
       if (line.startsWith("/provider ")) {
-        try { current = { provider: validateProvider(line.slice(10).trim()), model: null }; say(`✓ ${label()}`); } catch { say(Object.keys(PROVIDERS).join(" · ")); }
+        let next;
+        try { next = validateProvider(line.slice(10).trim()); } catch { say(Object.keys(PROVIDERS).join(" · ")); continue; }
+        const previous = current;
+        current = { provider: next, model: null };
+        // A new destination needs its own consent; earlier messages were approved only for the old one.
+        if (!yes(await rl.question(c.am(t.consent(label()))))) { current = previous; say(t.kept(label())); continue; }
+        history.length = 0;
+        say(`✓ ${label()} · ${t.cleared}`);
         continue;
       }
       if (line.startsWith("/model ")) {

@@ -47,7 +47,7 @@ The key goes to `~/.config/cyber-defense-agent/credentials.json` (`%APPDATA%` on
 - verdict and P0–P3 counts, number of sources, packages checked / not checked, incomplete sources;
 - up to 60 findings sorted by priority, each with `priority`, `area`, a redacted `title` (≤160 chars), a redacted `fixHint` (≤240 chars) and `basis` (tool evidence or model judgment).
 
-It never includes evidence lines, file contents, absolute paths, cookie values, query strings, hostnames or user names. Secrets matched by the redactor are replaced before sending. The brief is wrapped in `<cda-data>` and the system prompt tells the model that everything inside is untrusted data, not instructions.
+It never includes evidence lines, file contents, file paths, URLs, IPs, internal hostnames, cookie values, query strings, hostnames or user names. Secrets matched by the redactor are replaced before sending. The brief is wrapped in `<cda-data>` and the system prompt tells the model that everything inside is untrusted data, not instructions.
 
 `ask` and `chat` send the text you type. In `chat`, `/explain` asks for a separate yes before each brief.
 
@@ -55,7 +55,9 @@ It never includes evidence lines, file contents, absolute paths, cookie values, 
 
 - One exit point (`callModel`) that refuses without `consent: true`.
 - Fixed URL allowlist; `redirect: "error"`; 180 s timeout; 512 KB response cap; 60 000-character prompt cap; model names validated against a strict pattern.
-- CLI providers run with fixed arguments, no shell, prompt on stdin, in a fresh empty `.cda/model-sandbox/<random>` directory that is deleted afterwards. Codex runs `exec --sandbox read-only`.
+- CLI providers run with fixed arguments, no shell, prompt on stdin, in a fresh empty directory in the OS temp area (outside every repository) that is deleted afterwards. Claude Code runs with `--tools ""` (all built-in tools disabled) and `--strict-mcp-config` (no MCP servers). Codex runs `exec --sandbox read-only`; it has no switch to disable its shell tool, so prefer Claude Code, an API provider or Ollama when you need the narrowest surface.
+- Free-text titles and fix hints are scrubbed of URLs, e-mail addresses, IPs, file paths and internal hostnames before sending.
+- In `chat`, switching provider asks for consent again and clears the conversation, so earlier messages never reach a new destination. History is trimmed to the transport's size budget.
 - Model output is untrusted: control and bidi characters and raw HTML tags are stripped, secrets redacted, length capped, and the file is labelled **model judgment**. It can never close a finding — only a retest with local evidence can.
 - Errors map to stable codes (`API_KEY_MISSING`, `PROVIDER_AUTH_FAILED`, `MODEL_NOT_FOUND`, `PROVIDER_RATE_LIMITED`, `CLI_NOT_INSTALLED`, `MODEL_REFUSED`, …) and never echo keys.
 

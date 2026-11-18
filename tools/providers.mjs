@@ -255,7 +255,24 @@ export function systemPrompt(lang = "pl") {
   ].join("\n");
 }
 
-const clip = (value, n) => redact(String(value ?? "")).replace(/\s+/g, " ").trim().slice(0, n);
+/**
+ * Free text in titles and fix hints can still name private locations. Replace URLs, e-mail
+ * addresses, IP addresses, absolute and relative file paths and multi-label hostnames before
+ * anything leaves the machine. Package names such as `lodash.template` (one dot) are kept.
+ */
+export function scrubIdentifiers(text) {
+  return String(text ?? "")
+    .replace(/\b[a-z][a-z0-9+.-]*:\/\/[^\s"'<>)]+/gi, "[url]")
+    .replace(/\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b/g, "[email]")
+    .replace(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, "[ip]")
+    .replace(/\b[a-z]:[\\/][^\s"'<>|]*/gi, "[path]")
+    .replace(/(^|[\s("'=])(?:~|\.{1,2})?\/[^\s"'<>|)]+/g, "$1[path]")
+    .replace(/\b[\w.-]+(?:[\\/][\w.-]+)+/g, "[path]")
+    .replace(/\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.){2,}[a-z]{2,24}\b/gi, "[host]")
+    .replace(/\b[a-z0-9-]+\.(?:local|lan|internal|corp|home|intranet|localdomain)\b/gi, "[host]");
+}
+
+const clip = (value, n) => scrubIdentifiers(redact(String(value ?? ""))).replace(/\s+/g, " ").trim().slice(0, n);
 
 /**
  * Bounded brief from stored reports. Contains priority, area, title and fix hint per finding,
@@ -281,9 +298,9 @@ export function buildBrief(named, { rootKey, maxFindings = 60 } = {}) {
     verdict: data.verdict,
     counts: data.counts,
     coverage: { sources: data.sources.length, packagesInventoried: data.stats?.packages ?? 0, checked: data.stats?.checked ?? 0, notChecked: data.stats?.notChecked ?? 0, incompleteSources: (data.incomplete ?? []).length },
-    total: data.findings.length,
+    total: data.total ?? data.findings.length,
     included: findings.length,
-    omitted: Math.max(0, data.findings.length - findings.length),
+    omitted: Math.max(0, (data.total ?? data.findings.length) - findings.length),
     findings,
     policy: { mode: "advisory-only", modelHasTools: false, rawEvidenceIncluded: false },
   };
@@ -377,21 +394,20 @@ function flatten(system, messages) {
   return `${system}\n\n${convo}\n\nASSISTANT:`;
 }
 
-/** Empty working directory so a CLI agent has nothing of the operator's to look at. */
-function sandboxDir(rootDir) {
-  const dir = path.join(rootDir, ".cda", "model-sandbox", crypto.randomBytes(6).toString("hex"));
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+/** Fresh empty working directory in the OS temp area, outside every repository. */
+function sandboxDir() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), `cda-model-${crypto.randomBytes(3).toString("hex")}-`));
 }
 
-function callCli(provider, model, system, messages, { rootDir, spawnImpl, execImpl, timeoutMs }) {
+function callCli(provider, model, system, messages, { spawnImpl, execImpl, timeoutMs }) {
   const spec = PROVIDERS[provider];
   const cli = probeCli(spec.bin, execImpl);
   if (!cli.installed) fail("CLI_NOT_INSTALLED", spec.install);
-  const cwd = sandboxDir(rootDir);
+  const cwd = sandboxDir();
   const lastMessage = path.join(cwd, "last-message.txt");
   const args = provider === "claude-code"
-    ? ["-p", "--output-format", "text", ...(model ? ["--model", model] : [])]
+    ? // --tools "" disables every built-in tool; --strict-mcp-config without --mcp-config loads no MCP servers.
+      ["-p", "--output-format", "text", "--tools", "", "--strict-mcp-config", ...(model ? ["--model", model] : [])]
     : ["exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", "--output-last-message", lastMessage, ...(model ? ["-m", model] : []), "-"];
   const prompt = flatten(system, messages);
   const useShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(cli.executablePath);
@@ -452,7 +468,7 @@ export async function callModel({
   if (size > MAX_PROMPT_CHARS) fail("PROMPT_TOO_LARGE");
   const started = Date.now();
   const result = spec.kind === "cli"
-    ? await callCli(provider, chosen, system, clean, { rootDir, spawnImpl, execImpl, timeoutMs })
+    ? await callCli(provider, chosen, system, clean, { spawnImpl, execImpl, timeoutMs })
     : await callHttp(provider, chosen, system, clean, { env, fetchImpl, timeoutMs });
   const text = String(result.text || "").trim();
   if (!text) fail("EMPTY_MODEL_RESPONSE");

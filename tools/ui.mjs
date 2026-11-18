@@ -1704,7 +1704,12 @@ function renderMiniUiHtml(token, initialLang = "pl") {
           (p.ready ? '' : '<small>→ ' + esc(p.setup) + '</small>') +
         '</button>';
       }).join('');
-      grid.querySelectorAll('[data-provider]').forEach(btn => btn.onclick = () => { state.provider = btn.dataset.provider; renderProviders(); });
+      grid.querySelectorAll('[data-provider]').forEach(btn => btn.onclick = () => {
+        // A model name belongs to one provider; never carry it to another.
+        if (state.provider !== btn.dataset.provider) document.getElementById('model-input').value = '';
+        state.provider = btn.dataset.provider;
+        renderProviders();
+      });
     }
 
     async function saveModelChoice() {

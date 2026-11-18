@@ -123,9 +123,10 @@ test("CLI provider runs in an empty sandbox with fixed arguments and prompt on s
   const execImpl = (bin) => { if (bin.startsWith("claude")) return "2.1.0 (Claude Code)"; throw new Error("no"); };
   const res = await callModel({ provider: "claude-code", system: "SYS", messages: [{ role: "user", content: "question" }], consent: true, rootDir: root, spawnImpl, execImpl });
   assert.equal(res.text, "Model says hi");
-  assert.deepEqual(seen.args, ["-p", "--output-format", "text"]);
+  assert.deepEqual(seen.args, ["-p", "--output-format", "text", "--tools", "", "--strict-mcp-config"]);
   assert.deepEqual(seen.files, []);
-  assert.ok(seen.cwd.includes(path.join(".cda", "model-sandbox")));
+  assert.ok(seen.cwd.startsWith(fs.realpathSync(os.tmpdir())) || seen.cwd.startsWith(os.tmpdir()), "sandbox is outside the repository");
+  assert.ok(!seen.cwd.startsWith(root));
   assert.match(seen.stdin, /SYS[\s\S]*question/);
   assert.ok(!fs.existsSync(seen.cwd), "sandbox is removed after the call");
 });
@@ -256,4 +257,41 @@ test("CLI explain previews with --dry-run and refuses to send without --send-sum
   } finally {
     fs.rmSync(path.join(reports, `${name}.json`), { force: true });
   }
+});
+
+test("brief scrubs paths, hostnames, URLs and IPs from free text and reports the true total", async () => {
+  const { expertFinding } = await import("../tools/visual.mjs");
+  const expert = expertFinding(null, { name: "x", priority: "P1", area: "database", title: "Key in /home/alice/private/client-acme/.env reaches internal-db.acme.corp", fix: "Rotate it; see https://wiki.acme.corp/x and 10.0.0.5" });
+  const raw = JSON.stringify(buildBrief([["expert", expert]]));
+  for (const leak of ["/home/alice", "client-acme", "internal-db.acme.corp", "wiki.acme.corp", "10.0.0.5"]) assert.ok(!raw.includes(leak), leak);
+  const many = { ...webReport, findings: Array.from({ length: 450 }, (_, i) => ({ id: `W-${i}`, priority: "P1", title: `Header ${i}`, evidence: "e", fix: "f" })) };
+  const brief = buildBrief([["many", many]]);
+  assert.equal(brief.total, 450);
+  assert.equal(brief.included, 60);
+  assert.equal(brief.omitted, 390);
+});
+
+test("switching the chat provider needs fresh consent and does not carry history", async () => {
+  const { chatTerminal } = await import("../tools/chat.mjs");
+  const sent = [];
+  const answers = ["t", "prywatne pytanie", "/provider anthropic", "n", "/provider anthropic", "t", "drugie pytanie", "/exit"];
+  const rl = { question: async () => answers.shift() ?? "/exit", close() {} };
+  await chatTerminal({ provider: "ollama", rl, store: { list: () => [] }, call: async (req) => { sent.push(req); return { text: "ok", provider: req.provider, model: "m", ms: 1 }; } });
+  assert.equal(sent.length, 2);
+  assert.equal(sent[1].provider, "anthropic");
+  assert.ok(!JSON.stringify(sent[1].messages).includes("prywatne"));
+});
+
+test("chat history is trimmed to the transport budget and starts on a user turn", async () => {
+  const { fitHistory } = await import("../tools/chat.mjs");
+  const big = "x".repeat(24000);
+  const history = [
+    { role: "user", content: "q1" }, { role: "assistant", content: big },
+    { role: "user", content: "q2" }, { role: "assistant", content: big },
+    { role: "user", content: "q3" },
+  ];
+  const kept = fitHistory(history);
+  assert.equal(kept[0].role, "user");
+  assert.ok(kept.reduce((n, m) => n + m.content.length, 0) <= 45000);
+  assert.equal(kept.at(-1).content, "q3");
 });

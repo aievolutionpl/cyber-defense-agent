@@ -15,7 +15,7 @@ Date: 18 November 2026. Scope: CLI (`tools/`), local panel (`tools/ui.mjs`), age
 
 ## Verified
 
-- `npm test`: all unit tests pass, including 13 new provider tests (consent, missing key, URL/headers per provider, refusal mapping, key never echoed in errors, CLI sandbox + fixed args, Codex read-only exec, brief redaction, output sanitising, credentials outside the repo with 0600, doctor, panel consent).
+- `npm test`: all unit tests pass, including 19 new provider tests (consent, missing key, URL/headers per provider, refusal mapping, key never echoed in errors, CLI sandbox + fixed args, Codex read-only exec, brief redaction, output sanitising, credentials outside the repo with 0600, doctor, panel consent).
 - `node tools/demo.mjs`, then `explain --dry-run` and a live `explain --send-summary` through the logged-in Claude Code CLI on synthetic demo data: a Polish plain-language plan was written to `.cda/reports/` labelled model judgment.
 - Panel: Playwright at 1440 px, no console errors, six provider cards render.
 - Site: static export, Playwright at 1440 px (three cursors active on load, distinct routes, frame tracks sections, pause sets `data-motion=paused`) and 390 px touch (one cursor, no horizontal overflow).
