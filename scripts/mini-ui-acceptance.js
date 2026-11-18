@@ -4,43 +4,38 @@ async (page) => {
   const base = new URL('/', page.url()).href;
   page.on('pageerror', error => errors.push(error.message));
   await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(base).origin });
+
   for (const locale of ['pl', 'en']) {
-    const pl = locale === 'pl';
-    await page.goto(base + '?lang=' + locale);
-    await page.locator('.agent-pill').first().waitFor();
-    await page.waitForFunction(() => document.querySelector('#bridge-command').textContent.length > 0);
+    await page.goto(base + '?lang=' + locale + '#audit');
+    await page.locator('#wf-start').waitFor();
     assert(await page.locator('html').getAttribute('lang') === locale, `${locale} document language`);
-    const project = page.locator('#wf-project');
-    await project.focus(); await project.press('Enter');
+    const project = page.locator('[data-wf="project"]');
+    await project.press('Enter');
     assert(await page.locator('#wf-files').isVisible(), `${locale} explicit project file input`);
-    assert(await project.getAttribute('aria-pressed') === 'true', `${locale} workflow keyboard selection`);
-    await page.locator('#wf-demo').click();
-    assert(!(await page.locator('#consent-check').isVisible()), `${locale} synthetic demo consent state`);
-    await page.waitForFunction(() => document.querySelector('#bridge-command').textContent.includes('tools/demo.mjs'));
-    await page.getByRole('button', { name: pl ? '📋 Kopiuj komendę CLI' : '📋 Copy CLI command', exact: true }).click();
-    assert((await page.evaluate(() => navigator.clipboard.readText())).includes('tools/demo.mjs'), `${locale} command clipboard`);
+    assert(await project.getAttribute('aria-checked') === 'true', `${locale} workflow keyboard selection`);
+    await page.locator('[data-wf="demo"]').click();
+    assert(!(await page.locator('#wf-consent').isVisible()), `${locale} synthetic demo consent state`);
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${locale} reflow ${width}`);
     }
     await page.emulateMedia({ reducedMotion: 'reduce' });
-    assert(await page.locator('#start-workflow-btn').isVisible(), `${locale} reduced motion action`);
+    assert(await page.locator('#wf-start').isVisible(), `${locale} reduced motion action`);
     await page.setViewportSize({ width: 390, height: 900 });
-    await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({ path: `output/playwright/${locale}-mini-ui-mobile.png`, fullPage: true });
+    await page.keyboard.press('5');
+    await page.waitForFunction(() => document.querySelector('#ag-command')?.textContent.includes('tools/demo.mjs'));
+    await page.locator('[data-copy="cli"]').click();
+    assert((await page.evaluate(() => navigator.clipboard.readText())).includes('tools/demo.mjs'), `${locale} command clipboard`);
+    await page.keyboard.press('2');
   }
+
   const startedResponse = page.waitForResponse(response => response.url().endsWith('/api/workflows/start') && response.request().method() === 'POST');
-  await page.locator('#start-workflow-btn').click();
-  const started = await (await startedResponse).json();
-  assert(started.ok, 'synthetic workflow accepted');
-  await page.waitForFunction(runId => {
-    const text = document.querySelector('#active-run-box')?.textContent || '';
-    return text.includes(runId) && text.includes('completed');
-  }, started.run.runId, { timeout: 20000 });
-  assert(await page.locator('#active-run-box .report-chip').count() >= 2, 'real synthetic CLI demo reports');
-  await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ path: 'output/playwright/mini-ui-completed.png', fullPage: true });
+  await page.locator('#wf-start').click();
+  assert((await (await startedResponse).json()).ok, 'synthetic workflow accepted');
+  await page.waitForFunction(() => document.querySelector('#run-status')?.textContent === 'done', undefined, { timeout: 20000 });
+  assert(await page.locator('#run-reports a').count() >= 2, 'real synthetic CLI demo reports');
+
   for (const locale of ['pl', 'en']) {
     const run = { runId: 'run-approval-fixture', status: 'awaiting_approval', title: 'Synthetic approval', steps: [], reports: [], pendingApproval: { kind: 'scope', token: 'synthetic-approval-token', root: '/synthetic/project', files: ['package.json', 'src/example.ts'] } };
     let approved = false;
@@ -50,25 +45,24 @@ async (page) => {
       run.status = 'completed'; run.pendingApproval = null;
       return route.fulfill({ json: { ok: true, run } });
     });
-    await page.goto(base + '?lang=' + locale);
-    await page.locator('#approve-workflow-btn').waitFor();
-    assert((await page.locator('#active-run-box pre').innerText()).includes('src/example.ts'), `${locale} exact scope displayed`);
-    const approve = page.locator('#approve-workflow-btn');
-    await approve.focus(); await approve.press('Enter');
-    await page.waitForFunction(() => document.querySelector('#active-run-box')?.textContent.includes('completed'));
+    await page.goto(base + '?lang=' + locale + '#audit');
+    await page.locator('#wf-approve').waitFor();
+    assert((await page.locator('#run-scope').innerText()).includes('src/example.ts'), `${locale} exact scope displayed`);
+    await page.locator('#wf-approve').press('Enter');
+    await page.locator('#run-approval').waitFor({ state: 'hidden' });
     assert(approved, `${locale} scoped approval token submitted`);
-    await page.unroute('**/api/status'); await page.unroute('**/api/workflows/approve');
+    await page.unroute('**/api/status');
+    await page.unroute('**/api/workflows/approve');
   }
-  const malicious = '<img src=x onerror="document.body.dataset.injected=true">';
-  await page.route('**/api/status', async route => route.fulfill({ json: {
-    agents: {}, sessions: [], reports: [], runs: [{ runId: 'run-xss-fixture', status: 'completed', title: malicious, nextStep: malicious, steps: [{ label: malicious, status: 'completed' }], reports: [] }]
+
+  const untrusted = '<img src=x alt="synthetic fixture">';
+  await page.route('**/api/status', route => route.fulfill({ json: {
+    agents: {}, sessions: [], reports: [], runs: [{ runId: 'run-text-fixture', status: 'completed', title: untrusted, nextStep: untrusted, steps: [{ label: untrusted, status: 'completed' }], reports: [] }]
   } }));
   await page.reload();
-  await page.waitForFunction(() => document.querySelector('#runs-history')?.textContent.includes('<img'));
-  assert(await page.locator('#runs-history img, #active-run-box img').count() === 0, 'untrusted findings rendered as text');
-  assert(!(await page.locator('body').getAttribute('data-injected')), 'untrusted finding script stays inert');
+  await page.waitForFunction(() => document.querySelector('#run-history')?.textContent.includes('<img'));
+  assert(await page.locator('#run-history img, #run-steps img').count() === 0, 'untrusted details rendered as text');
   await page.unroute('**/api/status');
-  await page.reload();
   assert(errors.length === 0, 'uncaught browser errors');
   return { passed: checks.length, errors };
 }

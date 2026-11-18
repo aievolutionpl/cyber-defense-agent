@@ -9,6 +9,7 @@ import { ConsentLadder } from "./skill-story";
 import { ExpertEffects } from "./expert-effects";
 import { ScanTheater } from "./scan-theater";
 import { ReportShowcase } from "./report-showcase";
+import { ModelConnect } from "./model-connect";
 import { GitHubLink, Mark } from "./ui";
 import { asset, github, type Locale } from "@/lib/config";
 
@@ -19,14 +20,14 @@ export function Landing({ locale }: { locale: Locale }) {
     ["Co jest programem, a co skillem?", "Skill prowadzi rozmowę i analizę w Twoim agencie AI. Lokalny CLI zbiera wybrane dowody i buduje raporty. Ta strona prezentuje możliwości i pomaga przygotować brief; nie skanuje komputera ani nie przyjmuje plików."],
     ["Co naprawdę zostaje sprawdzone?", "Zakres zależy od zatwierdzonej misji. CLI ma osiem lokalnych reguł, odczyt zależności, import raportów i pasywną kontrolę strony. Logika aplikacji, bazy danych oraz konfiguracja agentów wymagają przeglądu eksperckiego. Raport rozdziela dowody, ocenę modelu i brak danych."],
     ["Co dostaję po przeglądzie?", "Lokalny raport HTML: najważniejsze ustalenia, ich znaczenie, dowody, plan naprawy i sposób weryfikacji. PDF powstaje po zgodzie na uruchomienie lokalnej przeglądarki lub przez Drukuj → Zapisz jako PDF. Panel pokazuje postęp i historię."],
-    ["Co opuszcza mój komputer?", "Lokalne polecenia CLI nie wywołują modelu. Odpytanie OSV wysyła nazwy, wersje i ekosystemy pakietów po osobnej zgodzie; kontrola WWW łączy się ze wskazaną stroną. Codex, Claude Code i inne hosty mogą przekazywać treść rozmowy swojemu dostawcy. Udostępniaj tylko niezbędny, sprawdzony materiał."],
+    ["Co opuszcza mój komputer?", "CLI zbiera dowody bez wywoływania modelu. Odpytanie OSV wysyła nazwy, wersje i ekosystemy pakietów po osobnej zgodzie; kontrola WWW łączy się ze wskazaną stroną. Codex, Claude Code i inne hosty mogą przekazywać treść rozmowy swojemu dostawcy. Udostępniaj tylko niezbędny, sprawdzony materiał."],
     ["Czy agent naprawi problem sam?", "Przygotuje propozycję zmiany i sposób jej cofnięcia. Wdrożenie wymaga Twojej decyzji. Retest potwierdza tylko to, co da się ponownie sprawdzić w tym samym zakresie; zniknięcie alertu z importowanego raportu nie jest dowodem naprawy."],
     ["Ile to kosztuje?", "Kod projektu jest dostępny na licencji MIT. Lokalne CLI i syntetyczne demo wymagają Node.js 22+ oraz pobrania repozytorium, bez instalacji pakietów npm. Wybrany agent AI ma własne wymagania konta, limity i ewentualne opłaty."],
   ] : [
     ["Which part is the program, and which is the skill?", "The skill guides conversation and analysis in your AI agent. The local CLI collects selected evidence and builds reports. This website explains the capabilities and prepares a brief; it does not scan your computer or accept files."],
     ["What is actually checked?", "Coverage depends on the approved mission. The CLI provides eight local rules, dependency inventories, report imports and a passive website check. Application logic, databases and agent configurations need expert review. Reports distinguish evidence, model judgment and missing data."],
     ["What do I get after a review?", "A local HTML report with priorities, impact, evidence, a repair plan and verification steps. PDF export requires permission to start your local browser, or you can use Print → Save as PDF. The panel shows progress and run history."],
-    ["What leaves my machine?", "Local CLI commands do not call a model. OSV lookup shares package names, versions and ecosystems with separate consent; website checks contact the named site. Codex, Claude Code and other hosts may send conversation content to their provider. Share only the minimum reviewed material."],
+    ["What leaves my machine?", "The CLI collects evidence without calling a model. OSV lookup shares package names, versions and ecosystems with separate consent; website checks contact the named site. Codex, Claude Code and other hosts may send conversation content to their provider. Share only the minimum reviewed material."],
     ["Will the agent fix issues automatically?", "It prepares a proposed change and rollback. Applying it requires your decision. Retesting confirms only what can be checked again in the same scope; an alert disappearing from an imported report is not proof of a fix."],
     ["What does it cost?", "The project is MIT licensed. The local CLI and synthetic demo need Node.js 22+ and a repository download, without npm package installation. Your chosen AI host has its own account requirements, limits and possible charges."],
   ];
@@ -51,8 +52,8 @@ export function Landing({ locale }: { locale: Locale }) {
               <div className="eyebrow hero-eyebrow">
                 <span className="status-dot" />
                 {pl
-                  ? "POLSKI SKILL OPEN SOURCE · V0.2 · AI EVOLUTION POLSKA"
-                  : "OPEN-SOURCE AI SKILL · V0.2 · BY AI EVOLUTION POLSKA"}
+                  ? "POLSKI SKILL I PROGRAM OPEN SOURCE · V0.3 · AI EVOLUTION POLSKA"
+                  : "OPEN-SOURCE AI SKILL & PROGRAM · V0.3 · BY AI EVOLUTION POLSKA"}
               </div>
               <h1 id="hero-title">
                 {pl ? (
@@ -114,11 +115,12 @@ export function Landing({ locale }: { locale: Locale }) {
         <ScanTheater locale={locale} />
         <ReportShowcase locale={locale} />
         <ConsentLadder locale={locale} />
+        <ModelConnect locale={locale} />
 
         <section data-build-section className="install-section section-shell" id="install">
           <div className="install-intro">
             <span className="eyebrow">
-              06 / {pl ? "SZYBKI START" : "QUICK START"}
+              07 / {pl ? "SZYBKI START" : "QUICK START"}
             </span>
             <h2>
               {pl ? (
@@ -148,8 +150,8 @@ export function Landing({ locale }: { locale: Locale }) {
                 </strong>
                 <p>
                   {pl
-                    ? "CLI zbiera dowody lokalnie. Wyszukiwanie podatności i sprawdzanie strony wymagają osobnych zgód. Twój agent AI korzysta z zasad prywatności wybranego dostawcy."
-                    : "The CLI collects evidence locally. Advisory lookups and website checks require separate consent. Your AI host follows its provider’s data-handling settings."}
+                    ? "CLI zbiera dowody lokalnie. Sprawdzanie podatności, pasywna kontrola strony i opcjonalne wysłanie skrótu do modelu wymagają osobnych zgód."
+                    : "The CLI collects evidence locally. Advisory lookups, passive website checks, and optionally sending a brief to a model each require consent."}
                 </p>
               </div>
             </div>
@@ -166,7 +168,7 @@ export function Landing({ locale }: { locale: Locale }) {
 
         <section className="faq-section section-shell" id="faq">
           <div>
-            <span className="eyebrow">07 / FAQ</span>
+            <span className="eyebrow">08 / FAQ</span>
             <h2>
               {pl ? (
                 <>

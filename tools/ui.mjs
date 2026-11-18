@@ -4,8 +4,21 @@ import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  detectProviders,
+  saveModelConfig,
+  loadModelConfig,
+  callModel,
+  systemPrompt,
+  buildBrief,
+  briefPrompt,
+  renderExplanation,
+  validateProvider,
+} from "./providers.mjs";
+import { buildOverview, chatWithModel, readStoredReports } from "./panel-api.mjs";
 import { StateStore, scopeDigest } from "./scope.mjs";
 import { redact } from "./redact.mjs";
+import { runDoctor } from "./doctor.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -411,7 +424,7 @@ export function launchAgentSession(
     rootDir = ROOT,
     agentsMap = null,
     spawnImpl = spawn,
-    } = {},
+  } = {},
 ) {
   const rawHost = payload.host === undefined ? "claude" : payload.host;
   const safeHost = validateAgentHost(typeof rawHost === "string" ? rawHost.toLowerCase() : "");
@@ -1143,728 +1156,50 @@ export function runBoundedAction(action, params = {}) {
   throw new Error("UNSUPPORTED_ACTION");
 }
 
+/**
+ * Explain stored reports with the connected model from the Mini UI.
+ * Requires payload.consent === true (the operator ticked the send-summary box) and the session token.
+ */
+export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, call = callModel } = {}) {
+  if (payload.consent !== true) throw Object.assign(new Error("CONSENT_REQUIRED"), { code: "CONSENT_REQUIRED" });
+  const lang = payload.lang === "en" ? "en" : "pl";
+  const config = loadModelConfig(rootDir);
+  const provider = validateProvider(payload.provider || config.provider || "");
+  // A string (even empty) is the operator's explicit choice; only an omitted field falls back to the saved model.
+  const model = typeof payload.model === "string" ? payload.model.trim() || null : config.provider === provider ? config.model : null;
+  const requested = Array.isArray(payload.reports) ? payload.reports.filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n)) : [];
+  // Reads go through StateStore (no symlinked or hard-linked state). Without an explicit selection,
+  // explain the 20 most recently written reports and say how many were left out.
+  const available = readStoredReports(rootDir, 500, requested.length ? requested : null);
+  const named = available.slice(0, 20).map(([n, r]) => [n, r]);
+  const names = named.map(([n]) => n);
+  const excludedReports = available.length - named.length;
+  const brief = buildBrief(named);
+  if (!brief.coverage.sources) throw Object.assign(new Error("NO_SUPPORTED_REPORTS"), { code: "NO_SUPPORTED_REPORTS" });
+  const question = String(payload.question || "").slice(0, 800);
+  const res = await call({ provider, model, system: systemPrompt(lang), messages: [{ role: "user", content: briefPrompt(brief, lang, question) }], consent: true, rootDir });
+  const md = renderExplanation({ provider: res.provider, model: res.model, text: res.text, brief, sources: names, lang, question });
+  const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+  // StateStore.write refuses linked targets and ancestors and replaces the file atomically.
+  const file = new StateStore(rootDir).write("reports", `explain-${stamp}`, md, "md");
+  return { ok: true, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, reportsUsed: names, excludedReports, rawEvidenceSent: false, report: path.basename(file), text: md };
+}
+
+const PANEL_DIR = path.join(ROOT, "tools", "panel");
+const PANEL_FILES = Object.freeze({
+  "/panel.css": ["panel.css", "text/css; charset=utf-8"],
+  "/panel.js": ["panel.js", "text/javascript; charset=utf-8"],
+  "/panel-icon.svg": [null, "image/svg+xml"],
+});
+const PANEL_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#0b1310"/><path d="M12 3.5 5.5 6v5c0 4.2 2.8 7.8 6.5 9 3.7-1.2 6.5-4.8 6.5-9V6L12 3.5Z" fill="none" stroke="#5eead4" stroke-width="1.6"/><path d="m9 12 2 2 4-4" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+/** Strict policy: only this origin's own script and style files, no inline code, no framing. */
+const PANEL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
 function renderMiniUiHtml(token, initialLang = "pl") {
-  const markup = `<!doctype html>
-<html lang="${initialLang}">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Cyber Defense Agent v0.2 — Command Center & Guided Audit</title>
-  <style>
-    :root {
-      --bg: #07090e;
-      --surface: #0d121b;
-      --raised: #131b28;
-      --line: rgba(255, 255, 255, 0.09);
-      --line-emerald: rgba(52, 211, 153, 0.38);
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --accent: #34d399;
-      --accent-dark: #10b981;
-      --cyan: #38bdf8;
-      --amber: #fbbf24;
-      --rose: #fb7185;
-      --mono: "IBM Plex Mono", "Cascadia Code", Consolas, monospace;
-      --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: radial-gradient(ellipse at 80% 0%, rgba(16, 185, 129, 0.12), transparent 55%), var(--bg);
-      color: var(--text);
-      font-family: var(--sans);
-      line-height: 1.6;
-      min-height: 100vh;
-      padding-bottom: 60px;
-    }
-    .topbar {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: rgba(7, 9, 14, 0.86);
-      backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--line);
-      padding: 14px 28px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      font-weight: 700;
-      font-size: 18px;
-      letter-spacing: -0.03em;
-    }
-    .brand-shield {
-      width: 34px;
-      height: 34px;
-      border-radius: 9px;
-      background: rgba(52, 211, 153, 0.12);
-      border: 1px solid var(--line-emerald);
-      display: grid;
-      place-items: center;
-      color: var(--accent);
-      font-weight: 800;
-    }
-    .brand small {
-      display: block;
-      font: 10px var(--mono);
-      color: var(--accent);
-      letter-spacing: 0.16em;
-    }
-    .topbar-right {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-    .badge {
-      font: 11px var(--mono);
-      padding: 5px 10px;
-      border-radius: 999px;
-      background: rgba(52, 211, 153, 0.1);
-      border: 1px solid rgba(52, 211, 153, 0.28);
-      color: #6ee7b7;
-    }
-    .lang-switch {
-      display: inline-flex;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 2px;
-      background: var(--surface);
-    }
-    .lang-switch button {
-      border: 0;
-      background: transparent;
-      color: var(--muted);
-      font: 600 11px var(--mono);
-      padding: 6px 10px;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    .lang-switch button.active {
-      background: rgba(52, 211, 153, 0.18);
-      color: #6ee7b7;
-    }
-    .shell {
-      max-width: 1280px;
-      margin: 26px auto 0;
-      padding: 0 24px;
-      display: grid;
-      gap: 22px;
-    }
-    .grid-2 {
-      display: grid;
-      grid-template-columns: 1.1fr 0.9fr;
-      gap: 22px;
-    }
-    @media (max-width: 960px) {
-      .grid-2 { grid-template-columns: 1fr; }
-    }
-    .card {
-      background: linear-gradient(180deg, #0e141f 0%, #090d14 100%);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 22px;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 18px 40px -16px rgba(0,0,0,0.6);
-    }
-    .eyebrow {
-      font: 600 10px var(--mono);
-      letter-spacing: 0.14em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin-bottom: 6px;
-      display: block;
-    }
-    h2 {
-      font-size: 20px;
-      letter-spacing: -0.03em;
-      margin-bottom: 6px;
-    }
-    .sub {
-      color: var(--muted);
-      font-size: 13px;
-      margin-bottom: 16px;
-    }
-    .agents-row, .workflow-row {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-    .wf-pill, .agent-pill { color: inherit; font: inherit; text-align: left; }
-    .workflow-row {
-      grid-template-columns: repeat(4, 1fr);
-    }
-    .agent-pill, .wf-pill {
-      padding: 11px 13px;
-      border-radius: 10px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.02);
-      cursor: pointer;
-      transition: all 0.18s;
-    }
-    .agent-pill.active, .wf-pill.active {
-      border-color: var(--accent);
-      background: rgba(52, 211, 153, 0.09);
-    }
-    .agent-pill strong, .wf-pill strong {
-      display: block;
-      font-size: 13.5px;
-    }
-    .agent-pill small, .wf-pill small {
-      font: 10.5px var(--mono);
-      color: var(--muted);
-      display: block;
-      margin-top: 2px;
-    }
-    .status-ok { color: #6ee7b7 !important; }
-    .status-warn { color: var(--amber) !important; }
-    .status-err { color: var(--rose) !important; }
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      margin-bottom: 14px;
-    }
-    label {
-      display: block;
-      font: 600 11px var(--mono);
-      color: #cbd5e1;
-      margin-bottom: 6px;
-    }
-    select, input[type="text"], textarea {
-      width: 100%;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: #070a10;
-      color: var(--text);
-      font: 13px var(--sans);
-    }
-    .prompt-box {
-      background: #06080d;
-      border: 1px solid rgba(52, 211, 153, 0.25);
-      border-radius: 10px;
-      padding: 12px 14px;
-      font: 12px/1.55 var(--mono);
-      color: #d1fae5;
-      margin-bottom: 14px;
-      word-break: break-word;
-    }
-    .btn-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 9px 15px;
-      border-radius: 9px;
-      font: 650 12.5px var(--sans);
-      cursor: pointer;
-      border: 1px solid transparent;
-      transition: transform 0.15s, border-color 0.15s;
-      text-decoration: none;
-    }
-    .btn-primary {
-      background: linear-gradient(180deg, #34d399 0%, #10b981 100%);
-      color: #03140d;
-      border-color: rgba(167, 243, 208, 0.55);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), 0 6px 18px -4px rgba(16,185,129,0.4);
-    }
-    .btn-secondary {
-      background: rgba(255,255,255,0.04);
-      border-color: var(--line);
-      color: var(--text);
-    }
-    .btn-secondary:hover {
-      border-color: var(--line-emerald);
-      background: rgba(52, 211, 153, 0.07);
-    }
-    .btn-danger {
-      background: rgba(251, 113, 133, 0.12);
-      border-color: rgba(251, 113, 133, 0.4);
-      color: #fecdd3;
-    }
-    .consent-bar {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      background: rgba(251, 191, 36, 0.07);
-      border: 1px solid rgba(251, 191, 36, 0.25);
-      color: #fde68a;
-      font-size: 12px;
-      margin-bottom: 14px;
-    }
-    .steps-list {
-      display: grid;
-      gap: 8px;
-      margin: 14px 0;
-    }
-    .step-item {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 9px 12px;
-      border-radius: 8px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.015);
-      font-size: 12.5px;
-    }
-    .step-status {
-      font: 600 11px var(--mono);
-      padding: 2px 8px;
-      border-radius: 99px;
-    }
-    .next-step-box {
-      padding: 12px 14px;
-      border-radius: 9px;
-      border-left: 3px solid var(--accent);
-      background: rgba(52, 211, 153, 0.06);
-      font-size: 12.5px;
-      margin-top: 10px;
-    }
-    .console {
-      background: #05070b;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      padding: 14px;
-      font: 12px/1.6 var(--mono);
-      color: #a7f3d0;
-      min-height: 150px;
-      max-height: 280px;
-      overflow: auto;
-      white-space: pre-wrap;
-    }
-    .reports-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 12px;
-    }
-    .report-chip {
-      font: 11px var(--mono);
-      padding: 6px 10px;
-      border-radius: 7px;
-      border: 1px solid var(--line);
-      background: rgba(255,255,255,0.03);
-      color: #e2e8f0;
-      text-decoration: none;
-    }
-    .report-chip:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-    }
-    .history-list {
-      display: grid;
-      gap: 8px;
-      margin-top: 12px;
-      max-height: 220px;
-      overflow: auto;
-    }
-    .footer-credit {
-      text-align: center;
-      margin-top: 28px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .footer-credit a { color: var(--accent); font-weight: 600; text-decoration: none; }
-    [hidden] { display: none !important; }
-    .shell, .grid-2, .card, .form-row > div { min-width: 0; }
-    .grid-2 { align-items: start; }
-    .agent-pill { align-self: start; }
-    .grid-2 { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); }
-    .agents-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-    .workflow-row { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-    .agent-pill, .wf-pill, .report-chip { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
-    .step-item > *, .next-step-box { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
-    .prompt-box { white-space: pre-wrap; max-width: 100%; }
-    .form-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    .brand, .brand > div { min-width: 0; }
-    .brand-shield, .lang-switch { flex-shrink: 0; }
-    @media (max-width: 960px) {
-      .grid-2 { grid-template-columns: minmax(0, 1fr); }
-    }
-    @media (max-width: 640px) {
-      .topbar { padding: 12px 16px; }
-      .badge { display: none; }
-      .brand { font-size: 15px; }
-      .shell { padding: 0 12px; }
-      .card { padding: 16px; }
-      .agents-row, .workflow-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .form-row { grid-template-columns: minmax(0, 1fr); }
-    }
-  </style>
-</head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <div class="brand-shield">🛡️</div>
-      <div>
-        <span>cyber<span style="color:#94a3b8;font-weight:400">defense</span> · command center</span>
-        <small>AI EVOLUTION POLSKA · V0.2</small>
-      </div>
-    </div>
-    <div class="topbar-right">
-      <span class="badge" id="guard-badge">127.0.0.1 · TYLKO ODCZYT · HOST/ORIGIN GUARD</span>
-      <div class="lang-switch">
-        <button type="button" id="lang-pl" class="${initialLang === "pl" ? "active" : ""}" onclick="setLang('pl')">PL</button>
-        <button type="button" id="lang-en" class="${initialLang === "en" ? "active" : ""}" onclick="setLang('en')">EN</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="shell">
-    <div class="grid-2">
-      <!-- GUIDED AUDIT WORKFLOW (PRIORITY 3) -->
-      <section class="card">
-        <span class="eyebrow">01 / PROWADZONY AUDYT KROK PO KROKU</span>
-        <h2>Wybierz cel: Komputer, Projekt, Strona lub Demo</h2>
-        <p class="sub">Każde uruchomienie ma własny identyfikator, historię kroków, możliwość anulowania i wznowienia po błędzie.</p>
-
-        <div class="workflow-row">
-          <button type="button" class="wf-pill active" id="wf-pc" onclick="selectWorkflow('pc')">
-            <strong>💻 Komputer</strong>
-            <small>Inwentarz + CVE + Windows</small>
-          </button>
-          <button type="button" class="wf-pill" id="wf-project" onclick="selectWorkflow('project')">
-            <strong>📁 Projekt</strong>
-            <small>Scope + Kod v0.2 + Deps</small>
-          </button>
-          <button type="button" class="wf-pill" id="wf-web" onclick="selectWorkflow('web')">
-            <strong>🌐 Strona WWW</strong>
-            <small>HTTPS / CSP / Cookies / TLS</small>
-          </button>
-          <button type="button" class="wf-pill" id="wf-demo" onclick="selectWorkflow('demo')">
-            <strong>🚀 Demo</strong>
-            <small>Wykrycie → Fix → Retest</small>
-          </button>
-        </div>
-
-        <div style="margin-bottom: 12px;">
-          <label for="wf-target">Ścieżka projektu lub adres URL (dla Projekt / Strona WWW):</label>
-          <input type="text" id="wf-target" placeholder="np. ./ lub https://twoja-strona.pl" oninput="syncTarget(this.value)" />
-        </div>
-
-        <div id="wf-files-group" hidden style="margin-bottom:12px;">
-          <label for="wf-files">Pliki względne do katalogu projektu, po jednym w wierszu</label>
-          <textarea id="wf-files" rows="4" placeholder="package.json&#10;package-lock.json"></textarea>
-        </div>
-        <label class="consent-bar" id="workflow-consent">
-          <input type="checkbox" id="consent-check" />
-          <span id="consent-label">Zgadzam się na lokalny odczyt listy programów i portów.</span>
-        </label>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" type="button" id="start-workflow-btn" onclick="startWorkflow()">▶ Uruchom prowadzony audyt</button>
-          <button class="btn btn-danger" type="button" id="cancel-wf-btn" onclick="cancelCurrentWorkflow()" style="display:none">⏹ Anuluj bieżący audyt</button>
-          <button class="btn btn-secondary" type="button" id="resume-wf-btn" onclick="resumeCurrentWorkflow()" style="display:none">↻ Wznów od błędu / przerwania</button>
-          <a class="btn btn-secondary" href="/report/dashboard.html" target="_blank">📊 Otwórz Dashboard ↗</a>
-        </div>
-
-        <div id="active-run-box" style="margin-top:16px;"></div>
-      </section>
-
-      <!-- AGENT BRIDGE & SESSION TRACKER (PRIORITY 1 & 2) -->
-      <section class="card">
-        <span class="eyebrow">02 / MOSTEK CLAUDE CODE CLI & CODEX CLI</span>
-        <h2>Uruchomienie agenta ze stanem sesji</h2>
-        <p class="sub">Przekazuje wybrane zadanie bezpośrednio do ujednoliconego pliku wykonywalnego CLI i monitoruje stan logowania.</p>
-
-        <div class="agents-row" id="agents-row"></div>
-
-        <div class="form-row">
-          <div>
-            <label for="mission-select">Zadanie dla agenta</label>
-            <select id="mission-select" onchange="refreshBridge()">
-              <option value="demo">🚀 Szybkie Demo End-to-End</option>
-              <option value="code">🔍 Audyt kodu i zależności projektu</option>
-              <option value="pc">💻 Audyt komputera (OSV + KEV + Windows)</option>
-              <option value="web">🌐 Pasywny audyt strony WWW</option>
-              <option value="report">📄 Wygeneruj raport HTML/PDF + Dashboard</option>
-            </select>
-          </div>
-          <div>
-            <label for="target-input">Cel zadania (ścieżka / URL)</label>
-            <input type="text" id="target-input" placeholder="np. ./ lub https://twoja-strona.pl" oninput="refreshBridge()" />
-          </div>
-        </div>
-
-        <label>Ujednolicona komenda CLI i przekazywany prompt:</label>
-        <div class="prompt-box" id="bridge-command"></div>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" type="button" id="launch-agent-btn" onclick="launchAgentTerminal()">⚡ Uruchom agenta z tym zadaniem</button>
-          <button class="btn btn-secondary" type="button" onclick="copyCommand('cli')">📋 Kopiuj komendę CLI</button>
-          <button class="btn btn-secondary" type="button" onclick="copyCommand('prompt')">💬 Kopiuj sam prompt</button>
-        </div>
-
-        <div id="agent-sessions-box" style="margin-top:16px;"></div>
-      </section>
-    </div>
-
-    <!-- CONSOLE, RUN HISTORY & REPORTS -->
-    <section class="card">
-      <span class="eyebrow">03 / HISTORIA URUCHOMIEŃ, KONSOLA I RAPORTY (.CDA/REPORTS)</span>
-      <div class="console" id="console-out" role="status" aria-live="polite">Gotowy. Wybierz prowadzony audyt lub uruchom sesję Claude Code / Codex CLI.</div>
-      <div class="history-list" id="runs-history"></div>
-      <div class="reports-grid" id="reports-list"></div>
-    </section>
-
-    <div class="footer-credit">
-      Cyber Defense Agent v0.2 · Stworzone przez <a href="https://github.com/aievolutionpl" target="_blank">AI Evolution Polska</a> · MIT Open Source
-    </div>
-  </main>
-
-  <script>
-    const TOKEN = ${JSON.stringify(token)};
-    const state = { lang: ${JSON.stringify(initialLang)}, host: 'claude', workflow: 'pc', activeRunId: null, agents: {}, bridge: {}, runs: [], sessions: [] };
-    const t = (pl, en) => state.lang === 'en' ? en : pl;
-    let loadingStatus = false;
-    let bridgeRequest = 0;
-    function element(tag, text, className) {
-      const node = document.createElement(tag);
-      if (text !== undefined) node.textContent = String(text);
-      if (className) node.className = className;
-      return node;
-    }
-    function message(text) { document.getElementById('console-out').textContent = text; }
-    async function request(url, payload) {
-      try {
-        const response = await fetch(url, payload === undefined ? {} : {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN }, body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        if (!response.ok || data.ok === false) throw new Error(data.error || data.message || 'REQUEST_FAILED');
-        return data;
-      } catch (error) {
-        message(t('Błąd operacji. ', 'Operation failed. ') + error.message);
-        return null;
-      }
-    }
-    function syncTarget(value) { document.getElementById('target-input').value = value; refreshBridge(); }
-    function setLang(lang) { window.location.search = '?lang=' + encodeURIComponent(lang); }
-    function selectWorkflow(workflow) {
-      state.workflow = workflow;
-      for (const id of ['pc', 'project', 'web', 'demo']) {
-        const button = document.getElementById('wf-' + id);
-        button.classList.toggle('active', id === workflow);
-        button.setAttribute('aria-pressed', String(id === workflow));
-      }
-      document.getElementById('wf-files-group').hidden = workflow !== 'project';
-      document.getElementById('workflow-consent').hidden = workflow === 'demo';
-      document.getElementById('consent-check').checked = false;
-      const labels = {
-        pc: t('Zgadzam się na lokalny odczyt listy programów i portów.', 'I approve a local inventory of installed programs and listening ports.'),
-        project: t('Zgadzam się na przygotowanie zakresu dla wskazanych plików.', 'I approve preparing a scope for the listed files.'),
-        web: t('Potwierdzam uprawnienia do tej strony i zatwierdzam jej pasywne sprawdzenie.', 'I am authorized to assess this website and approve passive checks.')
-      };
-      document.getElementById('consent-label').textContent = labels[workflow] || '';
-      document.getElementById('mission-select').value = { pc: 'pc', project: 'code', web: 'web', demo: 'demo' }[workflow];
-      refreshBridge();
-    }
-    async function loadStatus() {
-      if (loadingStatus) return;
-      loadingStatus = true;
-      try {
-        const data = await request('/api/status');
-        if (!data) return;
-        state.agents = data.agents || {};
-        state.runs = data.runs || [];
-        state.sessions = data.sessions || [];
-        if (!state.activeRunId && state.runs.length) state.activeRunId = state.runs[0].runId;
-        renderAgents(); renderActiveRun(); renderRunsHistory(); renderAgentSessions(); renderReports(data.reports || []);
-      } finally { loadingStatus = false; }
-    }
-    function renderAgents() {
-      const row = document.getElementById('agents-row');
-      row.replaceChildren();
-      for (const [id, info] of Object.entries(state.agents)) {
-        const button = element('button', undefined, 'agent-pill' + (state.host === id ? ' active' : ''));
-        button.type = 'button';
-        button.setAttribute('aria-pressed', String(state.host === id));
-        button.append(element('strong', info.name), element('small', info.installed ? info.version : t('Skill gotowy', 'Skill available'), info.installed ? 'status-ok' : 'status-warn'));
-        if (info.executablePath) button.append(element('small', info.executablePath));
-        if (info.versionWarning) {
-          const warning = element('small', t('Kilka wersji CLI', 'Multiple CLI versions'), 'status-warn');
-          warning.title = info.versionWarning;
-          button.append(warning);
-        }
-        button.onclick = () => { state.host = id; renderAgents(); refreshBridge(); };
-        row.append(button);
-      }
-    }
-    function reportLink(name) {
-      const link = element('a', name, 'report-chip');
-      link.href = '/report/' + encodeURIComponent(name);
-      link.target = '_blank'; link.rel = 'noopener';
-      return link;
-    }
-    function renderActiveRun() {
-      const box = document.getElementById('active-run-box');
-      const run = state.runs.find(item => item.runId === state.activeRunId) || state.runs[0];
-      document.getElementById('cancel-wf-btn').style.display = run && ['running', 'awaiting_approval'].includes(run.status) ? 'inline-flex' : 'none';
-      document.getElementById('resume-wf-btn').style.display = run && ['failed', 'cancelled'].includes(run.status) ? 'inline-flex' : 'none';
-      box.replaceChildren();
-      if (!run) return;
-      state.activeRunId = run.runId;
-      box.append(element('p', run.runId + ' · ' + run.status));
-      const steps = element('div', undefined, 'steps-list');
-      for (const step of run.steps || []) {
-        const row = element('div', undefined, 'step-item');
-        row.append(element('span', step.label), element('span', step.status, 'step-status'));
-        steps.append(row);
-      }
-      box.append(steps);
-      if (run.pendingApproval) {
-        const approval = run.pendingApproval;
-        const text = approval.kind === 'scope'
-          ? t('Zatwierdź odczyt dokładnie tego zakresu.', 'Approve reading this exact scope.')
-          : t('Zatwierdź wysłanie nazw i wersji pakietów do OSV.dev oraz pobranie listy CISA KEV.', 'Approve sharing package names and versions with OSV.dev and downloading the CISA KEV list.');
-        box.append(element('p', text));
-        if (approval.kind === 'scope') box.append(element('pre', approval.root + '\\n' + approval.files.join('\\n'), 'prompt-box'));
-        const button = element('button', t('Zatwierdź ten krok', 'Approve this step'), 'btn btn-primary');
-        button.type = 'button'; button.id = 'approve-workflow-btn';
-        button.onclick = async () => {
-          button.disabled = true;
-          await request('/api/workflows/approve', { runId: run.runId, approvalToken: approval.token });
-          await loadStatus();
-        };
-        box.append(button);
-      }
-      if (run.nextStep) box.append(element('p', run.nextStep, 'next-step-box'));
-      const links = element('div', undefined, 'reports-grid');
-      for (const report of run.reports || []) links.append(reportLink(report));
-      box.append(links);
-    }
-    function renderRunsHistory() {
-      const box = document.getElementById('runs-history');
-      box.replaceChildren();
-      for (const run of state.runs.slice(0, 6)) {
-        const row = element('div', undefined, 'step-item');
-        const created = new Date(run.createdAt);
-        const timestamp = Number.isFinite(created.getTime()) ? created.toLocaleString(state.lang === 'pl' ? 'pl-PL' : 'en-GB') : run.runId;
-        const select = element('button', run.title + ' · ' + timestamp + (run.target ? ' · ' + run.target : '') + ' · ' + run.status, 'btn btn-secondary');
-        select.type = 'button'; select.onclick = () => { state.activeRunId = run.runId; renderActiveRun(); };
-        row.append(select);
-        if (['failed', 'cancelled'].includes(run.status)) {
-          const resume = element('button', t('Wznów', 'Resume'), 'btn btn-secondary');
-          resume.type = 'button'; resume.onclick = () => resumeRunById(run.runId); row.append(resume);
-        }
-        box.append(row);
-      }
-    }
-    function renderAgentSessions() {
-      const box = document.getElementById('agent-sessions-box');
-      box.replaceChildren();
-      const session = state.sessions[0];
-      if (!session) return;
-      box.append(element('p', session.hostName + ' · ' + session.status));
-      if (session.authHint || session.error) box.append(element('p', session.authHint || session.error, 'status-warn'));
-      const output = element('pre', session.output || t('Oczekiwanie na wynik sesji.', 'Waiting for session output.'), 'console');
-      output.id = 'session-output'; output.style.maxHeight = '240px'; output.style.overflow = 'auto'; box.append(output);
-      if (!session.endedAt) {
-        const stop = element('button', t('Zatrzymaj sesję', 'Stop session'), 'btn btn-danger'); stop.type = 'button';
-        stop.onclick = async () => { await request('/api/agent-sessions/stop', { sessionId: session.sessionId }); await loadStatus(); };
-        box.append(stop);
-      }
-    }
-    function renderReports(reports) {
-      const box = document.getElementById('reports-list'); box.replaceChildren();
-      for (const report of reports) box.append(reportLink(report.name));
-    }
-    async function refreshBridge() {
-      const sequence = ++bridgeRequest;
-      const params = new URLSearchParams({ host: state.host, mission: document.getElementById('mission-select').value, target: document.getElementById('target-input').value, lang: state.lang });
-      const data = await request('/api/bridge?' + params);
-      if (!data || sequence !== bridgeRequest) return;
-      state.bridge = data;
-      document.getElementById('bridge-command').textContent = data.cliCommand + '\\n\\n' + data.prompt;
-    }
-    async function copyCommand(kind) {
-      try {
-        const text = kind === 'cli' ? state.bridge.cliCommand : state.bridge.prompt;
-        if (!text) return;
-        await navigator.clipboard.writeText(text);
-        message(t('Skopiowano do schowka.\\n', 'Copied to clipboard.\\n') + text);
-      } catch (error) { message(t('Błąd schowka. ', 'Clipboard error. ') + error.message); }
-    }
-    async function launchAgentTerminal() {
-      const button = document.getElementById('launch-agent-btn'); button.disabled = true;
-      message(t('Uruchamianie sesji agenta…', 'Starting agent session…'));
-      const data = await request('/api/launch-agent', { host: state.host, mission: document.getElementById('mission-select').value, target: document.getElementById('target-input').value, lang: state.lang });
-      button.disabled = false;
-      if (data) message(data.message);
-      await loadStatus();
-    }
-    async function startWorkflow() {
-      const button = document.getElementById('start-workflow-btn'); button.disabled = true;
-      const files = document.getElementById('wf-files').value.split('\\n').map(file => file.trim()).filter(Boolean);
-      const data = await request('/api/workflows/start', { workflow: state.workflow, consent: document.getElementById('consent-check').checked, target: document.getElementById('wf-target').value, files, lang: state.lang });
-      button.disabled = false;
-      if (data) { state.activeRunId = data.run.runId; message(t('Uruchomiono audyt ', 'Started audit ') + data.run.runId); }
-      await loadStatus();
-    }
-    async function cancelCurrentWorkflow() {
-      if (!state.activeRunId) return;
-      await request('/api/workflows/cancel', { runId: state.activeRunId }); await loadStatus();
-    }
-    async function resumeCurrentWorkflow() { if (state.activeRunId) await resumeRunById(state.activeRunId); }
-    async function resumeRunById(runId) {
-      const data = await request('/api/workflows/resume', { runId });
-      if (data) state.activeRunId = runId;
-      await loadStatus();
-    }
-    selectWorkflow('pc'); loadStatus();
-    setInterval(() => {
-      if (!document.hidden && (state.runs.some(run => run.status === 'running') || state.sessions.some(session => !session.endedAt))) loadStatus();
-    }, 1500);
-  </script>
-</body>
-</html>`;
-  const translations = {
-  "01 / PROWADZONY AUDYT KROK PO KROKU": "GUIDED AUDIT",
-  "Wybierz cel: Komputer, Projekt, Strona lub Demo": "Choose a computer, project, website or demo",
-  "Każde uruchomienie ma własny identyfikator, historię kroków, możliwość anulowania i wznowienia po błędzie.": "Track each run, review its steps, cancel it or resume after an error.",
-  "💻 Komputer": "💻 Computer",
-  "📁 Projekt": "📁 Project",
-  "🌐 Strona WWW": "🌐 Website",
-  "Inwentarz + CVE + Windows": "Inventory and vulnerability evidence",
-  "Scope + Kod v0.2 + Deps": "Scope, code and dependencies",
-  "Wykrycie → Fix → Retest": "Finding → Fix → Retest",
-  "Ścieżka projektu lub adres URL (dla Projekt / Strona WWW):": "Project directory or website URL",
-  "Pliki względne do katalogu projektu, po jednym w wierszu": "Files relative to the project directory, one per line",
-  "np. ./ lub https://twoja-strona.pl": "e.g. ./ or https://your-site.example",
-  "▶ Uruchom prowadzony audyt": "▶ Start guided audit",
-  "⏹ Anuluj bieżący audyt": "⏹ Cancel current audit",
-  "↻ Wznów od błędu / przerwania": "↻ Resume audit",
-  "📊 Otwórz Dashboard ↗": "📊 Open dashboard ↗",
-  "02 / MOSTEK CLAUDE CODE CLI & CODEX CLI": "CLAUDE CODE AND CODEX",
-  "Uruchomienie agenta ze stanem sesji": "Agent sessions",
-  "Przekazuje wybrane zadanie bezpośrednio do ujednoliconego pliku wykonywalnego CLI i monitoruje stan logowania.": "Send the selected task to your installed CLI and follow its output and session status.",
-  "Zadanie dla agenta": "Agent task",
-  "Szybkie Demo End-to-End": "Synthetic demo",
-  "Audyt kodu i zależności projektu": "Project code and dependencies",
-  "Audyt komputera (OSV + KEV + Windows)": "Computer vulnerability review",
-  "Pasywny audyt strony WWW": "Passive website check",
-  "Wygeneruj raport HTML/PDF + Dashboard": "Generate report and dashboard",
-  "Cel zadania (ścieżka / URL)": "Task target (directory or URL)",
-  "Ujednolicona komenda CLI i przekazywany prompt:": "CLI command and mission prompt",
-  "⚡ Uruchom agenta z tym zadaniem": "⚡ Start agent session",
-  "📋 Kopiuj komendę CLI": "📋 Copy CLI command",
-  "💬 Kopiuj sam prompt": "💬 Copy prompt",
-  "03 / HISTORIA URUCHOMIEŃ, KONSOLA I RAPORTY (.CDA/REPORTS)": "RUN HISTORY AND REPORTS",
-  "Gotowy. Wybierz prowadzony audyt lub uruchom sesję Claude Code / Codex CLI.": "Ready. Choose an audit or start an agent session.",
-  "Stworzone przez": "Created by",
-  "TYLKO ODCZYT": "READ ONLY"
-};
-  return initialLang === "en" ? Object.entries(translations).reduce((html, [polish, english]) => html.replaceAll(polish, english), markup) : markup;
+  const html = fs.readFileSync(path.join(PANEL_DIR, "index.html"), "utf8");
+  return html
+    .replace("__CDA_TOKEN__", String(token).replace(/[^a-f0-9]/gi, ""))
+    .replaceAll("__CDA_LANG__", initialLang === "en" ? "en" : "pl");
 }
 
 /** Start the local Mini Interface server on 127.0.0.1. */
@@ -1878,7 +1213,7 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       res.setHeader("X-Content-Type-Options", "nosniff");
       res.setHeader("X-Frame-Options", "DENY");
       res.setHeader("Referrer-Policy", "no-referrer");
-      res.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'");
+      res.setHeader("Content-Security-Policy", PANEL_CSP);
       const actualPort = server.address()?.port || port;
       verifyLocalRequest(req, actualPort, {
         token,
@@ -1886,9 +1221,26 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       });
 
       const url = new URL(req.url || "/", `http://127.0.0.1:${actualPort}`);
+      const secure = { "Cache-Control": "no-store", "Content-Security-Policy": PANEL_CSP, "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
       if (req.method === "GET" && url.pathname === "/") {
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-        res.end(renderMiniUiHtml(token, url.searchParams.get("lang") === "en" ? "en" : url.searchParams.get("lang") === "pl" ? "pl" : lang));
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", ...secure });
+        res.end(renderMiniUiHtml(token, url.searchParams.get("lang") ?? lang));
+        return;
+      }
+      if (req.method === "GET" && Object.hasOwn(PANEL_FILES, url.pathname)) {
+        const [file, type] = PANEL_FILES[url.pathname];
+        res.writeHead(200, { "Content-Type": type, ...secure });
+        res.end(file ? fs.readFileSync(path.join(PANEL_DIR, file)) : PANEL_ICON);
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/overview") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(buildOverview(rootDir)));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/doctor") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(runDoctor({ rootDir })));
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/status") {
@@ -1919,6 +1271,11 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         res.end(JSON.stringify(bridge));
         return;
       }
+      if (req.method === "GET" && url.pathname === "/api/providers") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(detectProviders({ rootDir })));
+        return;
+      }
       if (req.method === "GET" && url.pathname === "/api/workflows") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({ ok: true, runs: listGuidedAudits(rootDir) }));
@@ -1931,9 +1288,17 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       }
       if (req.method === "GET" && url.pathname.startsWith("/report/")) {
         const rawSegment = decodeURIComponent(url.pathname.slice("/report/".length));
-        const reportsDir = resolveContainedPath(rootDir, ".cda", "reports");
-        const filePath = resolveContainedPath(reportsDir, rawSegment);
-        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        let filePath;
+        try {
+          filePath = resolveContainedPath(rootDir, ".cda", "reports", rawSegment);
+        } catch (error) {
+          if (error.code !== "STATE_LINK_BLOCKED") throw error;
+          res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+          res.end("Report not found. Run Demo or Guided Audit first.");
+          return;
+        }
+        const stat = fs.existsSync(filePath) ? fs.lstatSync(filePath) : null;
+        if (!stat || !stat.isFile() || stat.nlink > 1) {
           res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
           res.end("Report not found. Run Demo or Guided Audit first.");
           return;
@@ -1953,7 +1318,10 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           const checkedPath = resolveContainedPath(resolveContainedPath(rootDir, ".cda", "reports"), rawSegment);
           const current = fs.lstatSync(checkedPath);
           if (current.dev !== before.dev || current.ino !== before.ino || current.mtimeMs !== before.mtimeMs || current.size !== before.size) throw new Error("REPORT_CHANGED_DURING_READ");
-          res.writeHead(200, { "Content-Type": types[ext] || "text/plain; charset=utf-8" });
+          res.writeHead(200, {
+            "Content-Type": types[ext] || "text/plain; charset=utf-8",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; frame-ancestors 'none'",
+          });
           res.end(content);
         } finally {
           fs.closeSync(descriptor);
@@ -1964,7 +1332,7 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         let body = "";
         for await (const chunk of req) {
           body += chunk;
-          if (body.length > 16384) throw new Error("PAYLOAD_TOO_LARGE");
+          if (body.length > (url.pathname === "/api/model/chat" ? 131072 : 16384)) throw new Error("PAYLOAD_TOO_LARGE");
         }
         const payload = JSON.parse(body || "{}");
         if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("INVALID_PAYLOAD");
@@ -2011,6 +1379,24 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           res.end(JSON.stringify({ ok: true, run }));
           return;
         }
+        if (url.pathname === "/api/model/config") {
+          const config = saveModelConfig({ provider: payload.provider, model: payload.model || null, lang: payload.lang }, rootDir);
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true, config }));
+          return;
+        }
+        if (url.pathname === "/api/model/chat") {
+          const result = await chatWithModel(payload, { rootDir });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify(result));
+          return;
+        }
+        if (url.pathname === "/api/model/explain") {
+          const result = await explainReportsWithModel(payload, { rootDir });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify(result));
+          return;
+        }
         if (url.pathname === "/api/run") {
           const result = runBoundedAction(payload.action, payload);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -2027,12 +1413,13 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         code === "INVALID_ORIGIN" ||
         code === "INVALID_SESSION_TOKEN" ||
         code === "PATH_OUTSIDE_BOUNDARY" ||
-        code === "INVALID_AGENT_HOST"
-        || code === "STATE_LINK_BLOCKED"
+        code === "INVALID_AGENT_HOST" ||
+        code === "CONSENT_REQUIRED" ||
+        code === "STATE_LINK_BLOCKED"
           ? 403
           : 400;
       res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: false, error: code }));
+      res.end(JSON.stringify({ ok: false, error: code, ...(error.detail ? { detail: String(error.detail).slice(0, 200) } : {}) }));
     }
   });
 

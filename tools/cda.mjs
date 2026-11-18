@@ -26,6 +26,24 @@ import { checkWebsite, renderWeb } from "./web.mjs";
 import { collect, renderVisual, expertFinding, printPdf } from "./visual.mjs";
 import { runDetectionBenchmark, renderBenchmarkMarkdown } from "./benchmark.mjs";
 import { markdown } from "./redact.mjs";
+import {
+  PROVIDERS,
+  ProviderError,
+  detectProviders,
+  resolveProvider,
+  saveModelConfig,
+  loadModelConfig,
+  storeApiKey,
+  forgetApiKey,
+  callModel,
+  systemPrompt,
+  buildBrief,
+  briefPrompt,
+  renderExplanation,
+  sanitizeModelMarkdown,
+} from "./providers.mjs";
+import { chatTerminal } from "./chat.mjs";
+import { runDoctor, renderDoctor } from "./doctor.mjs";
 
 function gitStagedFiles(rootDir) {
   if (typeof rootDir !== "string" || !rootDir) deny("INVALID_ROOT");
@@ -63,12 +81,23 @@ export function renderPrComment(scope, retestReport) {
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(ROOT);
 let dashboardScope;
-const help = `Cyber Defense Agent v0.2 — evidence tools for a defensive agent (AI Evolution Polska)
+const help = `Cyber Defense Agent v0.3 — evidence tools for a defensive agent (AI Evolution Polska)
 
 Interactive Command Center & Agent Bridge
   node tools/cda.mjs start [--lang pl|en]
   node tools/cda.mjs ui [--lang pl|en] [--port 3109]
   node tools/cda.mjs agent [--host claude|codex] [--mission demo|code|pc|web|report] [--target <path|url>] [--lang pl|en]
+
+Connect a model (optional; the model gets no tools, files or shell)
+  node tools/cda.mjs doctor [--lang pl|en]
+  node tools/cda.mjs providers
+  node tools/cda.mjs connect --provider claude-code|codex|openrouter|anthropic|openai|ollama [--model <id>] [--key-stdin|--forget-key]
+  node tools/cda.mjs explain --from <report> [--from <report>] [--scope <scope>] [--question <text>] [--provider <id>] [--model <id>] [--name <out>] [--lang pl|en] (--dry-run | --send-summary)
+  node tools/cda.mjs ask --question <text> [--provider <id>] [--model <id>] [--lang pl|en] --send-question
+  node tools/cda.mjs chat [--provider <id>] [--model <id>] [--lang pl|en]
+  explain sends only a bounded, redacted brief (priority, area, title, fix hint) after --send-summary;
+  --dry-run prints exactly what would be sent and sends nothing. API keys come from the environment
+  (OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY) or a user-level file outside the repository.
 
 Files you approve (read-only, exact allowlist, 24 h)
   node tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>
@@ -118,6 +147,75 @@ function refreshDashboard(lang = "en", rootKey) {
   return store.write("reports", name, renderVisual(collect(named, { rootKey }), { lang, mode: "dashboard" }), "html");
 }
 
+async function readStdin(limit = 4096) {
+  let data = "";
+  for await (const chunk of process.stdin) {
+    data += chunk;
+    if (data.length > limit) deny("INVALID_INPUT");
+  }
+  return data.trim();
+}
+
+/** Model connection commands. Every transmission needs its own explicit flag. */
+async function modelCommand(command, v) {
+  const lang = v.lang || loadModelConfig(ROOT).lang || "pl";
+  if (command === "doctor") {
+    const result = runDoctor({ rootDir: ROOT });
+    process.stdout.write(v.json ? `${JSON.stringify(result, null, 2)}\n` : renderDoctor(result, lang));
+    return;
+  }
+  if (command === "providers") {
+    const status = detectProviders({ rootDir: ROOT });
+    if (v.json) { process.stdout.write(`${JSON.stringify(status, null, 2)}\n`); return; }
+    const rows = status.providers.map((p) => `${p.selected ? "▶" : " "} ${p.ready ? "\x1b[32m✓\x1b[0m" : "\x1b[33m○\x1b[0m"} ${p.id.padEnd(12)} ${p.kind.padEnd(5)} ${(p.version || p.keyHint || p.defaultModel || "").toString().padEnd(26)} ${p.ready ? "" : p.setup}`);
+    process.stdout.write(`Model providers (local check only, nothing sent)\n${rows.join("\n")}\nSelected: ${status.config.provider ?? "none"}${status.config.model ? ` · ${status.config.model}` : ""}\n`);
+    return;
+  }
+  if (command === "connect") {
+    if (!v.provider) deny("INVALID_ARGUMENTS");
+    if (v["forget-key"]) {
+      process.stdout.write(`${JSON.stringify({ provider: v.provider, keyRemoved: forgetApiKey(v.provider) })}\n`);
+      return;
+    }
+    let stored = null;
+    if (v["key-stdin"]) stored = storeApiKey(v.provider, await readStdin());
+    const config = saveModelConfig({ provider: v.provider, model: v.model, lang }, ROOT);
+    const spec = PROVIDERS[config.provider];
+    process.stdout.write(`${JSON.stringify({ provider: config.provider, model: config.model ?? spec.defaultModel, keyStored: stored ? stored.file : null, next: spec.kind === "cli" ? `Make sure you are logged in: ${spec.login}` : spec.env ? `Key from ${spec.env} or the credentials file. Test: node tools/cda.mjs ask --question "ping" --send-question` : "Start: ollama serve", network: false })}\n`);
+    return;
+  }
+  if (command === "chat") {
+    const provider = resolveProvider(v.provider, { rootDir: ROOT });
+    await chatTerminal({ provider, model: v.model ?? (loadModelConfig(ROOT).provider === provider ? loadModelConfig(ROOT).model : null), lang, store });
+    return;
+  }
+  const provider = command === "explain" && v["dry-run"] ? v.provider ?? loadModelConfig(ROOT).provider ?? "none" : resolveProvider(v.provider, { rootDir: ROOT });
+  const model = v.model ?? (loadModelConfig(ROOT).provider === provider ? loadModelConfig(ROOT).model : null);
+  if (command === "ask") {
+    if (!v.question || v.question.length > 4000) deny("INVALID_ARGUMENTS");
+    if (v["send-question"] !== true) deny("CONSENT_REQUIRED");
+    const res = await callModel({ provider, model, system: systemPrompt(lang), messages: [{ role: "user", content: v.question }], consent: true });
+    process.stdout.write(`${sanitizeModelMarkdown(res.text)}\n\n— ${res.provider} · ${res.model} · model judgment\n`);
+    return;
+  }
+  // explain
+  if (!v.from?.length || v.from.length > 20) deny("INVALID_ARGUMENTS");
+  const selected = v.scope ? store.read("scopes", v.scope) : null;
+  if (selected) authorized(selected);
+  const brief = buildBrief(v.from.map((n) => [n, store.read("reports", n)]), { rootKey: selected ? sha(selected.root) : undefined });
+  if (!brief.coverage.sources) deny("NO_SUPPORTED_REPORTS");
+  const prompt = briefPrompt(brief, lang, v.question);
+  if (v["dry-run"]) {
+    process.stdout.write(`${JSON.stringify({ wouldSendTo: provider, model: model ?? PROVIDERS[provider]?.defaultModel ?? null, systemPrompt: systemPrompt(lang), userMessage: prompt, sent: false }, null, 2)}\n`);
+    return;
+  }
+  if (v["send-summary"] !== true) deny("CONSENT_REQUIRED");
+  const res = await callModel({ provider, model, system: systemPrompt(lang), messages: [{ role: "user", content: prompt }], consent: true });
+  const name = v.name || `explain-${new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14)}`;
+  const output = store.write("reports", name, renderExplanation({ provider: res.provider, model: res.model, text: res.text, brief, sources: v.from, lang, question: v.question }), "md");
+  process.stdout.write(`${JSON.stringify({ output, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, rawEvidenceSent: false, seconds: Math.round(res.ms / 100) / 10, basis: "model judgment" })}\n`);
+}
+
 async function main() {
   const { positionals, values: v } = parseArgs({
     allowPositionals: true,
@@ -153,6 +251,15 @@ async function main() {
       mission: { type: "string" },
       target: { type: "string" },
       port: { type: "string" },
+      provider: { type: "string" },
+      model: { type: "string" },
+      question: { type: "string" },
+      "key-stdin": { type: "boolean" },
+      "forget-key": { type: "boolean" },
+      "send-summary": { type: "boolean" },
+      "send-question": { type: "boolean" },
+      "dry-run": { type: "boolean" },
+      json: { type: "boolean" },
       help: { type: "boolean" },
     },
   });
@@ -167,6 +274,12 @@ async function main() {
     ui: ["lang", "port"],
     agent: ["host", "mission", "target", "lang"],
     benchmark: ["name", "lang"],
+    doctor: ["lang", "json"],
+    providers: ["json"],
+    connect: ["provider", "model", "key-stdin", "forget-key", "lang"],
+    explain: ["from", "scope", "question", "provider", "model", "name", "lang", "send-summary", "dry-run"],
+    ask: ["question", "provider", "model", "lang", "send-question"],
+    chat: ["provider", "model", "lang"],
     scope: ["root", "allow", "git-staged", "name"],
     approve: ["scope", "root", "yes", "proposal"],
     show: ["scope"],
@@ -213,6 +326,11 @@ async function main() {
     );
     await new Promise((resolve) => process.once("SIGINT", resolve));
     ui.server.close();
+    return;
+  }
+  if (["doctor", "providers", "connect", "explain", "ask", "chat"].includes(command)) {
+    if (v.lang && !["en", "pl"].includes(v.lang)) deny("INVALID_ARGUMENTS");
+    await modelCommand(command, v);
     return;
   }
   if (command === "agent") {
@@ -468,6 +586,12 @@ if (
           "revoke",
           "onboarding",
           "pr-comment",
+          "doctor",
+          "providers",
+          "connect",
+          "explain",
+          "ask",
+          "chat",
         ].includes(process.argv[2]) &&
         !process.exitCode
       ) {
@@ -481,15 +605,16 @@ if (
     }
   } catch (error) {
     const code =
-      error instanceof PolicyError
+      error instanceof PolicyError || error instanceof ProviderError
         ? error.code
         : error.message === "INTERACTIVE_TERMINAL_REQUIRED"
           ? "INTERACTIVE_TERMINAL_REQUIRED"
           : error.code === "ENOENT"
             ? "FILE_NOT_FOUND"
             : "INVALID_INPUT_OR_IO";
+    const hint = error instanceof ProviderError && error.detail ? ` (${error.detail})` : "";
     process.stderr.write(
-      `CDA: ${code}. Operation stopped; do not expand scope automatically.\n`,
+      `CDA: ${code}${hint}. Operation stopped; do not expand scope automatically.\n`,
     );
     process.exitCode = 1;
   }

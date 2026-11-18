@@ -201,3 +201,17 @@ Local lint, TypeScript and static export passed before final section tagging. Lo
 Source `d1e5f28faa9a355fa94f91477dd5b163b240b6f5` passed [Website motion acceptance 42887300281](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300281). Both languages passed 320/390/768/1440 Chromium viewport checks, anchor integrity, automatic stage changes, local pause with readable evidence, left-to-right host motion outside hover, keyboard stage selection, reduced-motion cleanup, cursor movement during construction and completed content restoration. Nine screenshots are attached to that run. Desktop and phone screenshots were visually reviewed; these are Chromium viewport checks, not physical iPhone/Safari tests.
 
 [Cross-platform CI 42887300297](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300297) passed Windows, macOS and Ubuntu. [Defensive PR review 42887300671](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300671) passed. Final refinements keep individual grid cards on the cursor timeline and reveal all text when playback stops. Both downloadable GIFs decode and have a six-second loop. The PR has not deployed a Pages artifact.
+
+## v0.3 model connection and restored motion (18 November 2026)
+
+Observed in a Linux container (Node 22.23.5):
+
+- `npm run check`: 118 unit tests pass, ESLint, TypeScript and the static Next.js export succeed.
+- `node tools/demo.mjs` → `explain --from demo-before --dry-run` printed the brief without sending. `explain --send-summary --provider claude-code` through a logged-in Claude Code CLI wrote a Polish plan labelled model judgment (≈28 s). `ask --send-question` returned the expected echo. OpenRouter, Anthropic, OpenAI, Codex and Ollama paths were exercised with network/process doubles only; they were not called live.
+- Mini UI (Playwright, 1440 px): provider card renders six providers, no console errors.
+- Static site (Playwright): at 1440 px the overlay becomes active on load with three cursors on distinct paths and the construction frame tracking the section; the header button sets `data-motion=paused`. At 390 px touch, one cursor, no horizontal overflow. Not verified: Windows/macOS browsers, physical devices, frame rate.
+
+## v0.3 Command Center panel (18 November 2026)
+
+- New panel (`tools/panel/`) served by `ui.mjs` under `default-src 'none'; script-src 'self'; style-src 'self'` with no inline scripts or handlers. Playwright at 1440 px and 390 px (touch): all seven views render, no console errors or CSP violations, no horizontal overflow, bottom tab bar on mobile, PL/EN switch.
+- Live: "Ask the expert" on a demo finding through the logged-in Claude Code CLI returned a formatted Polish answer in about 27 s; without consent the panel refused and showed a notice.

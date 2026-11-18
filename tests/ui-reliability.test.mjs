@@ -218,8 +218,12 @@ test("local panel serves both languages with valid scripts and blocks linked rep
     assert.equal(response.headers.get("cache-control"), "no-store");
     const html = await response.text();
     assert.match(html, new RegExp(`<html lang="${lang}">`));
-    assert.doesNotThrow(() => new Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]));
-    assert.ok(html.includes(lang === "pl" ? "Uruchom prowadzony audyt" : "Start guided audit"));
+    assert.match(html, /<script[^>]+src="\/panel\.js"/);
+    const script = await fetch(`${ui.url}panel.js`);
+    assert.equal(script.status, 200);
+    const source = await script.text();
+    assert.doesNotThrow(() => new Script(source));
+    assert.ok(source.includes(lang === "pl" ? "Rozpocznij audyt" : "Start audit"));
   }
   const store = new StateStore(rootDir);
   store.write("reports", "test-report", "<p>synthetic</p>", "html");
@@ -227,8 +231,8 @@ test("local panel serves both languages with valid scripts and blocks linked rep
   fs.writeFileSync(outside, "private fixture");
   fs.linkSync(outside, path.join(rootDir, ".cda", "reports", "linked.html"));
   const linked = await fetch(`${ui.url}report/linked.html`);
-  assert.equal(linked.status, 403);
-  assert.equal((await linked.json()).error, "STATE_LINK_BLOCKED");
+  assert.equal(linked.status, 404);
+  assert.doesNotMatch(await linked.text(), /private fixture/);
   const valid = await fetch(`${ui.url}report/test-report.html`);
   assert.equal(valid.status, 200);
   assert.equal(await valid.text(), "<p>synthetic</p>");

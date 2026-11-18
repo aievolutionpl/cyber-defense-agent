@@ -2,7 +2,7 @@
   <img src="docs/assets/product-preview.png" alt="Cyber Defense Agent — polski skill bezpieczeństwa dla agentów AI od AI Evolution Polska" width="100%" />
 </p>
 
-<h1 align="center">🛡️ Cyber Defense Agent (v0.2)</h1>
+<h1 align="center">🛡️ Cyber Defense Agent (v0.3)</h1>
 <p align="center">
   <strong>Wiesz, co poprawić. Masz na to dowód.</strong><br/>
   Przegląd kodu, agentów AI i konfiguracji. Zatwierdzony zakres, konkretne dowody, plan naprawy i retest.<br/>
@@ -11,6 +11,14 @@
 
 <p align="center">
   <a href="https://aievolutionpl.github.io/cyber-defense-agent/"><img src="docs/assets/explore.svg" alt="Otwórz interaktywną prezentację online" width="640" /></a>
+</p>
+
+<p align="center">
+  <img alt="Node 22+" src="https://img.shields.io/badge/node-22%2B-34d399?style=flat-square" />
+  <img alt="zero npm deps in CLI" src="https://img.shields.io/badge/CLI-zero%20npm%20deps-34d399?style=flat-square" />
+  <img alt="tests" src="https://img.shields.io/badge/tests-118%20passing-34d399?style=flat-square" />
+  <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-38bdf8?style=flat-square" />
+  <img alt="models" src="https://img.shields.io/badge/models-Claude%20%C2%B7%20Codex%20%C2%B7%20OpenRouter%20%C2%B7%20Ollama-a78bfa?style=flat-square" />
 </p>
 
 <p align="center">
@@ -39,6 +47,38 @@ Po przeglądzie otrzymujesz raport HTML z priorytetami, dowodami, ograniczeniami
 **Nowa ścieżka: agenci AI, skille i MCP.** [Playbook](skills/cyber-defense/references/knowledge/agent-security.md) pomaga ocenić uprawnienia narzędzi, granice zaufania, pamięć i przepływ danych. Korzysta ze źródeł OWASP Agentic 2026, ASVS 5.0.0 i MCP sprawdzonych 13 listopada 2026. To metoda przeglądu, nie automatyczny skaner MCP.
 
 Lokalny CLI nie wywołuje modelu. Wybrany host AI może przekazywać treść rozmowy swojemu dostawcy i mieć własne opłaty. Zapytania do OSV i kontrola strony wymagają osobnych zgód.
+
+---
+
+## 🧠 Nowość w v0.3: skill **albo** samodzielny program
+
+| Tryb | Kto myśli | Jak zacząć |
+|---|---|---|
+| **Skill w agencie** | Model Twojego agenta (Claude Code, Codex, Cursor, Antigravity, Hermes) czyta `SKILL.md` i steruje CLI | `/cyber-defense demo` lub `$cyber-defense demo` |
+| **Samodzielny program** | CLI samo zbiera dowody, a podłączony model **tłumaczy wyniki, odpowiada na pytania i układa plan naprawy** | `node tools/cda.mjs connect` → `explain` / `chat` / `ui` |
+
+### Podłącz swój model — subskrypcję, klucz API albo model lokalny
+
+| Dostawca (`--provider`) | Rodzaj | Logowanie / klucz | Domyślny model |
+|---|---|---|---|
+| `claude-code` | 💳 subskrypcja Claude Pro/Max | `claude` → `/login` | domyślny CLI |
+| `codex` | 💳 subskrypcja ChatGPT Plus/Pro | `codex login` | domyślny CLI |
+| `openrouter` | 🔑 API — setki modeli, jeden klucz | `OPENROUTER_API_KEY` | `openrouter/auto` |
+| `anthropic` | 🔑 Claude API | `ANTHROPIC_API_KEY` | `claude-opus-5-5` |
+| `openai` | 🔑 OpenAI API | `OPENAI_API_KEY` | `gpt-5` |
+| `ollama` | 🏠 lokalnie, nic nie wychodzi z komputera | — | `llama3.2` |
+
+```sh
+node tools/cda.mjs doctor                                      # co działa na tym komputerze (bez sieci)
+node tools/cda.mjs connect --provider claude-code              # albo codex / openrouter / anthropic / openai / ollama
+node tools/cda.mjs connect --provider openrouter --key-stdin < klucz.txt   # klucz poza repo, plik 0600
+node tools/cda.mjs explain --from demo-before --dry-run        # pokaż DOKŁADNIE, co zostałoby wysłane
+node tools/cda.mjs explain --from demo-before --send-summary   # plan naprawy po polsku → .cda/reports/explain-*.md
+node tools/cda.mjs chat                                        # rozmowa z ekspertem w terminalu (/explain, /provider, /model)
+node tools/cda.mjs ui                                          # Command Center w przeglądarce: widok „Ekspert AI” (klawisz 4)
+```
+
+**Granice są w kodzie, nie w obietnicach:** model nie ma narzędzi, plików ani powłoki; dostaje tylko zredagowany skrót ustaleń (priorytet, obszar, tytuł, wskazówka naprawy) — bez treści plików, ścieżek, cookies i sekretów. Każde wysłanie wymaga flagi zgody (`--send-summary`, `--send-question`), stała lista adresów, bez przekierowań, limity rozmiaru i czasu. Odpowiedź jest oczyszczana i zawsze oznaczona jako **ocena modelu** — nie zamyka żadnego ustalenia bez retestu. Szczegóły: [docs/MODEL_PROVIDERS.md](docs/MODEL_PROVIDERS.md).
 
 ---
 
@@ -113,21 +153,38 @@ node tools/cda.mjs start
 # 2. Lokalny Mini Interfejs Graficzny w przeglądarce (127.0.0.1:3109) + Mostek Agentów:
 node tools/cda.mjs ui
 
-# 3. Bezpośredni generator komend i promptów dla Claude Code CLI / Codex CLI:
+# 3. Diagnostyka i połączenie z modelem (subskrypcja Claude/ChatGPT, OpenRouter, Ollama):
+node tools/cda.mjs doctor
+node tools/cda.mjs chat
+
+# 4. Bezpośredni generator komend i promptów dla Claude Code CLI / Codex CLI:
 node tools/cda.mjs agent --host claude --mission code --lang pl
 node tools/cda.mjs agent --host codex --mission pc --lang pl
 ```
 
 <p align="center">
-  <img src="docs/assets/mini-interface-preview.png" alt="Cyber Defense Agent — Lokalny Mini Interfejs Graficzny i Mostek Claude Code CLI & Codex CLI" width="100%" />
+  <img src="docs/assets/mini-interface-preview.png" alt="Cyber Defense Agent — Command Center: wskaźnik ochrony, priorytety P0–P3, obszary i pokrycie" width="100%" />
 </p>
 
-W panelu wybierz cel audytu. Dla projektu wpisz katalog oraz dokładne ścieżki plików, po jednej w wierszu. Panel pokaże pełny zakres do zatwierdzenia przed odczytem. Audyt komputera ma osobną zgodę na przekazanie nazw i wersji pakietów do OSV.dev. Wynik i historia kroków pojawiają się w panelu, a raport HTML otworzysz z listy plików.
+### 🖥️ Command Center (`node tools/cda.mjs ui`) — nowość v0.3
 
-Przycisk uruchomienia agenta przekazuje jedno zadanie do zainstalowanego Claude Code lub Codexa i pokazuje wyjście sesji. Dalszą rozmowę prowadzisz w swoim czacie lub terminalu agenta.
+Lokalny panel w przeglądarce (tylko `127.0.0.1`, token sesji, ścisłe CSP bez skryptów inline), w pełni po polsku i angielsku:
 
+| Widok (klawisz) | Co daje |
+|---|---|
+| **Przegląd** (`1`) | Wskaźnik ochrony 0–100, werdykt, liczniki P0–P3, potwierdzone poprawki, obszary i pokrycie dowodów |
+| **Audyt** (`2`) | Prowadzony audyt komputera, projektu, strony lub demo z osobną zgodą na każdy krok i osią czasu kroków |
+| **Ustalenia** (`3`) | Wyszukiwarka i filtry (priorytet, obszar), szczegóły z poprawką i retestem, eksport do Markdown |
+| **Ekspert AI** (`4`) | Czat z Twoim modelem (Claude Code, Codex, OpenRouter, Anthropic, OpenAI, Ollama); „Zapytaj eksperta” przy każdym ustaleniu |
+| **Agenci CLI** (`5`) | Przekazanie zadania Claude Code / Codex / Hermes w tle lub skopiowanie komendy |
+| **Raporty** (`6`) | Wszystkie pliki HTML/MD/JSON/PDF/SARIF z `.cda/reports` |
+| **System** (`7`) | Diagnostyka środowiska bez sieci i granice bezpieczeństwa |
 
-### Najważniejsze polecenia CLI (v0.2)
+Skróty: `/` szuka w ustaleniach, `R` odświeża, `L` zmienia język.
+
+Dla projektu podaj dokładne ścieżki plików, po jednej w wierszu. Zatwierdź wyświetlony zakres przed odczytem. Inwentaryzacja komputera działa lokalnie, a wyszukiwanie podatności wymaga osobnej zgody na udostępnienie nazw i wersji pakietów.
+
+### Najważniejsze polecenia CLI (v0.3)
 
 ```sh
 # 1. Wyznacz zakres (np. tylko pliki zmienione w Git przed commitem) i zatwierdź:
@@ -146,8 +203,12 @@ node tools/cda.mjs web --url https://twoja-strona.pl --name site --authorized
 node tools/cda.mjs report --name raport-audytu --from before --from site --lang pl --pdf
 node tools/cda.mjs dashboard --scope audit --lang pl
 
-# 5. Wygeneruj podsumowanie Markdown gotowe do komentarza w GitHub Pull Request:
-node tools/cda.mjs pr-comment --scope audit --report before --name pr-summary
+# 5. Wyjaśnij wyniki prostym językiem z podłączonym modelem (najpierw podgląd, potem zgoda):
+node tools/cda.mjs explain --from before --from site --dry-run
+node tools/cda.mjs explain --from before --from site --send-summary --question "Co naprawić przed publikacją?"
+
+# 6. Wygeneruj podsumowanie Markdown gotowe do komentarza w GitHub Pull Request:
+node tools/cda.mjs pr-comment --scope audit --retest after-check
 ```
 
 ---
@@ -175,12 +236,25 @@ Otwórz repozytorium w środowisku Hermes i poproś agenta o wczytanie [`skills/
 <a id="english-documentation"></a>
 ## 🇬🇧 English Documentation
 
-**Cyber Defense Agent (v0.2)** is a Polish-born, open-source defensive security skill and zero-dependency Node.js CLI created by **[AI Evolution Polska](https://github.com/aievolutionpl)**. It turns your AI coding agent (**Codex**, **Claude Code**, **Cursor**, **Google Antigravity**, **Lovable**, **Hermes**) into a structured security reviewer.
+**Cyber Defense Agent (v0.3)** is a Polish-born, open-source defensive security skill and zero-dependency Node.js CLI created by **[AI Evolution Polska](https://github.com/aievolutionpl)**. It turns your AI coding agent (**Codex**, **Claude Code**, **Cursor**, **Google Antigravity**, **Lovable**, **Hermes**) into a structured security reviewer.
 
 - 🌐 **Live Interactive Presentation**: [Polish (Default)](https://aievolutionpl.github.io/cyber-defense-agent/) · [English Version](https://aievolutionpl.github.io/cyber-defense-agent/en/)
 - 📄 **Sample Visual PDF Report**: [English PDF](examples/sample-audit-report.pdf) · [Polish PDF](examples/sample-audit-report-pl.pdf)
 
-The website includes a seven-scenario brief planner for Codex and Claude Code. The new [agent-security playbook](skills/cyber-defense/references/knowledge/agent-security.md) covers skills, MCP permissions, memory and trust boundaries. It is a read-only review method, not an automatic MCP scanner. Local CLI commands do not call a model; your AI host has its own data-handling settings and costs.
+The website includes a seven-scenario brief planner for Codex and Claude Code. The new [agent-security playbook](skills/cyber-defense/references/knowledge/agent-security.md) covers skills, MCP permissions, memory and trust boundaries. It is a read-only review method, not an automatic MCP scanner. When the skill runs inside your AI host, the host has its own data-handling settings and costs.
+
+### New in v0.3 — skill *or* standalone program
+Use it as a skill inside your agent, or as a program that connects to **your own model**: the logged-in **Claude Code** or **Codex** CLI (your Claude Pro/Max or ChatGPT Plus/Pro subscription), an **OpenRouter**, **Anthropic** or **OpenAI** API key, or a local **Ollama** model.
+
+```sh
+node tools/cda.mjs doctor                                   # local readiness check, no network
+node tools/cda.mjs connect --provider openrouter --key-stdin < key.txt
+node tools/cda.mjs explain --from demo-before --dry-run     # exactly what would be sent
+node tools/cda.mjs explain --from demo-before --send-summary --lang en
+node tools/cda.mjs chat --lang en                           # interactive security expert
+```
+
+The model gets **no tools, files or shell** — only a bounded, redacted brief (priority, area, title, fix hint). Every transmission needs an explicit flag; output is sanitized and labelled model judgment. See [docs/MODEL_PROVIDERS.md](docs/MODEL_PROVIDERS.md).
 
 ### Key Capabilities
 1. **One Skill, Every Agent**: Drop-in `.agents/skills`, `.claude/skills`, and `.hermes/skills` entry points backed by ten knowledge documents (`skills/cyber-defense/references/knowledge/`).
@@ -212,6 +286,8 @@ npm run demo    # lokalne demo na danych syntetycznych
 ```
 
 Więcej dokumentacji technicznej:
+- [Połączenie z modelem: subskrypcje, API, Ollama](docs/MODEL_PROVIDERS.md)
+- [Audyt produktu v0.3 i dalsze kroki](docs/AUDIT.md)
 - [Architektura i granice zaufania](docs/ARCHITECTURE.md)
 - [Model zagrożeń (Threat Model)](docs/THREAT_MODEL.md)
 - [Integracja skanerów (Gitleaks, Trivy, OSV, SARIF)](docs/SCANNER_INTEGRATIONS.md)
