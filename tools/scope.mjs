@@ -106,7 +106,7 @@ export class StateStore {
     this.root = path.join(this.repoRoot, '.cda');
   }
   file(kind, name, ext = 'json', create = false) {
-    if (!['scopes', 'reports'].includes(kind) || typeof name !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(name) || !['json', 'md', 'html', 'pdf', 'sarif'].includes(ext)) deny('INVALID_STATE_NAME');
+    if (!['scopes', 'reports', 'sessions', 'runs'].includes(kind) || typeof name !== 'string' || !/^[a-zA-Z0-9_-]{1,64}$/.test(name) || !['json', 'md', 'html', 'pdf', 'sarif', 'txt'].includes(ext)) deny('INVALID_STATE_NAME');
     let cursor = this.repoRoot;
     for (const part of ['.cda', kind]) {
       cursor = path.join(cursor, part);
@@ -124,7 +124,7 @@ export class StateStore {
   /** Names of stored JSON documents of one kind. Never follows links. */
   list(kind) {
     const dir = path.join(this.root, kind);
-    if (!['scopes', 'reports'].includes(kind) || !fs.existsSync(dir) || fs.lstatSync(dir).isSymbolicLink()) return [];
+    if (!['scopes', 'reports', 'sessions', 'runs'].includes(kind) || !fs.existsSync(dir) || fs.lstatSync(dir).isSymbolicLink()) return [];
     return fs.readdirSync(dir).filter(f => /^[a-zA-Z0-9_-]{1,64}\.json$/.test(f)).map(f => f.slice(0, -5)).sort();
   }
   read(kind, name) {

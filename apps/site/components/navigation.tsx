@@ -19,6 +19,7 @@ export function Navigation({ locale }: { locale: Locale }) {
     ['#scan', pl ? 'Jak działa' : 'How it works'],
     ['#report', pl ? 'Raport PDF' : 'PDF report'],
     ['#control', pl ? 'Bezpieczeństwo' : 'Control'],
+    ['#model', pl ? 'Twój model' : 'Your model'],
     ['#install', pl ? 'Start' : 'Quick start'],
   ];
   return (

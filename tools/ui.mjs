@@ -1,10 +1,24 @@
-import { renderControlCenter } from "./control-center.mjs";
 import http from "node:http";
 import crypto from "node:crypto";
 import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  detectProviders,
+  saveModelConfig,
+  loadModelConfig,
+  callModel,
+  systemPrompt,
+  buildBrief,
+  briefPrompt,
+  renderExplanation,
+  validateProvider,
+} from "./providers.mjs";
+import { buildOverview, chatWithModel, readStoredReports } from "./panel-api.mjs";
+import { StateStore, scopeDigest } from "./scope.mjs";
+import { redact } from "./redact.mjs";
+import { runDoctor } from "./doctor.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -54,6 +68,22 @@ export function resolveContainedPath(baseDir, ...segments) {
     err.code = "PATH_OUTSIDE_BOUNDARY";
     throw err;
   }
+  let cursor = baseResolved;
+  for (const part of ["", ...rel.split(path.sep)]) {
+    if (part) cursor = path.join(cursor, part);
+    let stat;
+    try {
+      stat = fs.lstatSync(cursor);
+    } catch (error) {
+      if (error.code === "ENOENT") break;
+      throw error;
+    }
+    if (stat.isSymbolicLink() || (stat.isFile() && stat.nlink > 1)) {
+      const error = new Error("STATE_LINK_BLOCKED");
+      error.code = "STATE_LINK_BLOCKED";
+      throw error;
+    }
+  }
   return targetResolved;
 }
 
@@ -66,8 +96,6 @@ export function verifyLocalRequest(req, port, { token = null, requireToken = fal
   const allowedHosts = new Set([
     `127.0.0.1:${port}`,
     `localhost:${port}`,
-    "127.0.0.1",
-    "localhost",
   ]);
   if (!hostHeader || !allowedHosts.has(hostHeader)) {
     const err = new Error("INVALID_HOST_HEADER");
@@ -79,8 +107,6 @@ export function verifyLocalRequest(req, port, { token = null, requireToken = fal
   const allowedOrigins = new Set([
     `http://127.0.0.1:${port}`,
     `http://localhost:${port}`,
-    "http://127.0.0.1",
-    "http://localhost",
   ]);
   if (origin && !allowedOrigins.has(origin)) {
     const err = new Error("INVALID_ORIGIN");
@@ -116,6 +142,26 @@ export function verifyLocalRequest(req, port, { token = null, requireToken = fal
     }
   }
   return true;
+}
+
+/** Launch npm's Windows shims through Node so prompts remain literal arguments. */
+function agentInvocation(executable) {
+  if (process.platform !== "win32" || !/\.(cmd|bat)$/i.test(executable)) {
+    return { command: executable, args: [] };
+  }
+  const shim = fs.readFileSync(executable, "utf8");
+  const match = /"%dp0%[\\/]([^"\r\n]+\.m?js)"/i.exec(shim);
+  if (!match) throw new Error("UNSUPPORTED_AGENT_SHIM");
+  const script = resolveContainedPath(path.dirname(executable), match[1]);
+  if (!fs.statSync(script).isFile()) throw new Error("UNSUPPORTED_AGENT_SHIM");
+  return { command: process.execPath, args: [script] };
+}
+
+function shellArgument(value) {
+  const text = String(value);
+  return process.platform === "win32"
+    ? `'${text.replace(/(\\*)"/g, '$1$1\\"').replace(/'/g, "''")}'`
+    : `'${text.replace(/'/g, "'\\''")}'`;
 }
 
 /**
@@ -174,15 +220,24 @@ export function resolveAgentBinary(host, { execSyncImpl = execFileSync, platform
 
   for (const bin of probeList) {
     try {
-      const out = execSyncImpl(bin, ["--version"], {
+      let invocation = { command: bin, args: [] };
+      const options = {
         encoding: "utf8",
         timeout: 2500,
         stdio: ["ignore", "pipe", "ignore"],
         windowsHide: true,
-      }).trim();
+      };
+      let out;
+      try {
+        out = execSyncImpl(bin, ["--version"], options).trim();
+      } catch (error) {
+        if (platform !== "win32" || !/\.(cmd|bat)$/i.test(bin)) throw error;
+        invocation = agentInvocation(bin);
+        out = execSyncImpl(invocation.command, [...invocation.args, "--version"], options).trim();
+      }
       const ver = out.split(/\r?\n/)[0]?.slice(0, 80) || "detected";
       versionByPath.push({ path: bin, version: ver });
-      if (!chosen) chosen = { executablePath: bin, version: ver };
+      if (!chosen) chosen = { executablePath: bin, commandPath: invocation.command, commandArgs: invocation.args, version: ver };
     } catch {
       /* candidate failed */
     }
@@ -192,6 +247,8 @@ export function resolveAgentBinary(host, { execSyncImpl = execFileSync, platform
   return {
     installed: Boolean(chosen),
     executablePath: chosen ? chosen.executablePath : host,
+    commandPath: chosen?.commandPath || host,
+    commandArgs: chosen?.commandArgs || [],
     version: chosen ? chosen.version : null,
     candidates: versionByPath,
     multipleVersions: distinctVersions.length > 1,
@@ -234,10 +291,10 @@ export function detectAgents(options = {}) {
 }
 
 /** Build structured prompts and CLI invocations for Claude Code, Codex and Hermes. */
-export function buildAgentBridge({ host = "claude", mission = "demo", target = "", lang = "pl", executablePath = null } = {}) {
+export function buildAgentBridge({ host = "claude", mission = "demo", target = "", lang = "pl", executablePath = null, executableArgs = [] } = {}) {
   const safeHost = validateAgentHost(typeof host === "string" ? host.toLowerCase() : "");
   const pl = lang === "pl";
-  const cleanTarget = String(target || "").replace(/[\r\n"`$]/g, "").trim().slice(0, 200);
+  const cleanTarget = String(target || "").replace(/[\r\n\0]/g, " ").trim().slice(0, 200);
   const prefix = safeHost === "codex" ? "$cyber-defense" : "/cyber-defense";
 
   const missions = {
@@ -295,8 +352,11 @@ export function buildAgentBridge({ host = "claude", mission = "demo", target = "
   const selected = missions[selectedKey];
   const bin = safeHost === "codex" ? "codex" : safeHost === "hermes" ? "hermes" : "claude";
   const resolvedBin = executablePath || bin;
-  const quotedBin = resolvedBin.includes(" ") ? `"${resolvedBin}"` : resolvedBin;
-  const cliCommand = `${quotedBin} "${selected.prompt.replace(/"/g, '\\"')}"`;
+  const invocation = [resolvedBin, ...executableArgs, selected.prompt].map(shellArgument).join(" ");
+  const cliCommand = process.platform === "win32"
+    ? `& { $PSNativeCommandArgumentPassing = 'Legacy'; & ${invocation} }`
+    : invocation;
+  const quotedBin = shellArgument(resolvedBin);
 
   return {
     host: safeHost,
@@ -314,7 +374,7 @@ export function buildAgentBridge({ host = "claude", mission = "demo", target = "
 export function detectAgentAuthError(text, host = "claude", lang = "pl") {
   const raw = String(text || "");
   if (
-    /not logged in|please run .*login|authentication failed|unauthorized|invalid api key|missing api key|401|anthropic_api_key|openai_api_key|login required|token expired/i.test(
+    /not logged in|please run .*login|authentication failed|unauthorized|invalid api key|missing api key|HTTP\s*401|anthropic_api_key|openai_api_key|login required|token expired/i.test(
       raw,
     )
   ) {
@@ -332,62 +392,44 @@ export function detectAgentAuthError(text, host = "claude", lang = "pl") {
 
 const activeAgentProcesses = new Map();
 
-function sessionsDir(rootDir = ROOT) {
-  const dir = resolveContainedPath(rootDir, ".cda", "sessions");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
 function saveSessionState(session, rootDir = ROOT) {
-  const dir = sessionsDir(rootDir);
-  const file = resolveContainedPath(dir, `${session.sessionId}.json`);
-  fs.writeFileSync(file, JSON.stringify(session, null, 2), "utf8");
+  new StateStore(rootDir).write("sessions", session.sessionId, session);
   return session;
 }
 
 /** List tracked agent CLI sessions (newest first). */
 export function getAgentSessions(rootDir = ROOT) {
-  const dir = path.join(rootDir, ".cda", "sessions");
+  const dir = resolveContainedPath(rootDir, ".cda", "sessions");
   if (!fs.existsSync(dir)) return [];
-  try {
-    return fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => {
-        try {
-          return JSON.parse(fs.readFileSync(resolveContainedPath(dir, f), "utf8"));
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(b.startedAt || "").localeCompare(String(a.startedAt || "")))
-      .slice(0, 20);
-  } catch {
-    return [];
-  }
+  const store = new StateStore(rootDir);
+  return fs.readdirSync(dir)
+    .filter((name) => /^[a-zA-Z0-9_-]{1,64}\.json$/.test(name))
+    .flatMap((name) => {
+      try { return [store.read("sessions", name.slice(0, -5))]; }
+      catch { return []; }
+    })
+    .sort((a, b) => String(b.startedAt || "").localeCompare(String(a.startedAt || "")))
+    .slice(0, 20);
 }
 
-/** Stop an active agent session by sessionId. */
+/** Cancellation is final even when a child subsequently emits output or closes. */
 export function stopAgentSession(sessionId, rootDir = ROOT) {
-  const cleanId = String(sessionId || "").replace(/[^a-zA-Z0-9_-]/g, "");
-  if (!cleanId) throw new Error("INVALID_SESSION_ID");
-  const dir = sessionsDir(rootDir);
-  const file = resolveContainedPath(dir, `${cleanId}.json`);
-  if (!fs.existsSync(file)) throw new Error("SESSION_NOT_FOUND");
-  const session = JSON.parse(fs.readFileSync(file, "utf8"));
-  const proc = activeAgentProcesses.get(cleanId);
-  if (proc) {
-    try {
-      proc.kill("SIGTERM");
-    } catch {
-      /* process already exited */
-    }
-    activeAgentProcesses.delete(cleanId);
-  }
+  const store = new StateStore(rootDir);
+  const file = store.file("sessions", sessionId);
+  const active = activeAgentProcesses.get(file);
+  const session = active?.session || store.read("sessions", sessionId);
+  if (!["running", "auth_error"].includes(session.status) || session.endedAt) return session;
   session.status = "cancelled";
   session.endedAt = new Date().toISOString();
-  return saveSessionState(session, rootDir);
+  saveSessionState(session, rootDir);
+  try { active?.process.kill("SIGTERM"); }
+  catch (error) {
+    if (error.code !== "ESRCH") {
+      session.error = error.message;
+      saveSessionState(session, rootDir);
+    }
+  }
+  return session;
 }
 
 /**
@@ -400,7 +442,6 @@ export function launchAgentSession(
     rootDir = ROOT,
     agentsMap = null,
     spawnImpl = spawn,
-    openTerminalWindow = process.platform === "win32",
   } = {},
 ) {
   const rawHost = payload.host === undefined ? "claude" : payload.host;
@@ -418,20 +459,15 @@ export function launchAgentSession(
     mission: payload.mission || "demo",
     target: payload.target || "",
     lang,
-    executablePath: hostInfo.executablePath || safeHost,
+    executablePath: hostInfo.commandPath || hostInfo.executablePath || safeHost,
+    executableArgs: hostInfo.commandArgs || [],
   });
 
-  const cdaDir = resolveContainedPath(rootDir, ".cda");
-  fs.mkdirSync(cdaDir, { recursive: true });
-  const promptFile = resolveContainedPath(cdaDir, `last-agent-prompt-${safeHost}.txt`);
-  fs.writeFileSync(promptFile, bridge.prompt, "utf8");
-
   const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
-  const sessionId = `agent-${safeHost}-${stamp}-${crypto.randomBytes(3).toString("hex")}`;
-  const sDir = sessionsDir(rootDir);
-  const sessionPromptFile = resolveContainedPath(sDir, `${sessionId}-prompt.txt`);
-  fs.writeFileSync(sessionPromptFile, bridge.prompt, "utf8");
-
+  const sessionId = `agent-${safeHost}-${stamp}-${crypto.randomBytes(6).toString("hex")}`;
+  const store = new StateStore(rootDir);
+  const promptFile = store.write("sessions", sessionId, bridge.prompt, "txt");
+  const sessionFile = store.file("sessions", sessionId);
   const session = {
     sessionId,
     host: safeHost,
@@ -444,7 +480,7 @@ export function launchAgentSession(
     version: hostInfo.version || null,
     versionWarning: hostInfo.versionWarning || null,
     prompt: bridge.prompt,
-    promptFile: `.cda/last-agent-prompt-${safeHost}.txt`,
+    promptFile,
     cliCommand: bridge.cliCommand,
     status: hostInfo.installed ? "running" : "not_installed",
     startedAt: new Date().toISOString(),
@@ -473,29 +509,25 @@ export function launchAgentSession(
   }
 
   try {
-    const args = safeHost === "claude" ? ["-p", bridge.prompt] : [bridge.prompt];
-    const useCmdShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(session.executablePath);
-    const proc = useCmdShim
-      ? spawnImpl("cmd.exe", ["/d", "/s", "/c", session.executablePath, ...args], {
-          cwd: rootDir,
-          stdio: ["ignore", "pipe", "pipe"],
-          windowsHide: true,
-        })
-      : spawnImpl(session.executablePath, args, {
-          cwd: rootDir,
-          stdio: ["ignore", "pipe", "pipe"],
-          windowsHide: true,
-        });
-
-    activeAgentProcesses.set(sessionId, proc);
-
+    const args = safeHost === "claude" ? ["-p", "--", bridge.prompt]
+      : safeHost === "codex" ? ["exec", "--", bridge.prompt] : [bridge.prompt];
+    const invocation = hostInfo.commandPath
+      ? { command: hostInfo.commandPath, args: hostInfo.commandArgs || [] }
+      : agentInvocation(session.executablePath);
+    const proc = spawnImpl(invocation.command, [...invocation.args, ...args], {
+      cwd: rootDir,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
+    });
+    activeAgentProcesses.set(sessionFile, { process: proc, session });
+    let rawOutput = "";
     const appendOutput = (chunk) => {
-      session.output = (session.output + String(chunk ?? "")).slice(-12000);
-      const auth = detectAgentAuthError(session.output, safeHost, lang);
-      if (auth.isAuthError) {
-        session.authError = true;
-        session.authHint = auth.hint;
-        session.status = "auth_error";
+      if (session.status === "cancelled" || session.error === "SESSION_OUTPUT_LIMIT") return;
+      rawOutput += String(chunk ?? "");
+      session.output = redact(rawOutput, Infinity).slice(-12000);
+      if (Buffer.byteLength(rawOutput) > 2 * 1024 * 1024) {
+        session.error = "SESSION_OUTPUT_LIMIT";
+        proc.kill("SIGTERM");
       }
       saveSessionState(session, rootDir);
     };
@@ -504,25 +536,25 @@ export function launchAgentSession(
     proc.stderr?.on("data", appendOutput);
 
     proc.on("error", (err) => {
-      activeAgentProcesses.delete(sessionId);
-      session.status = "failed";
+      activeAgentProcesses.delete(sessionFile);
+      if (session.status !== "cancelled") session.status = "failed";
       session.error = err.message || "SPAWN_ERROR";
       session.endedAt = new Date().toISOString();
       saveSessionState(session, rootDir);
     });
 
     proc.on("close", (code) => {
-      activeAgentProcesses.delete(sessionId);
+      activeAgentProcesses.delete(sessionFile);
       session.exitCode = code;
       session.endedAt = new Date().toISOString();
       const auth = detectAgentAuthError(session.output, safeHost, lang);
-      if (auth.isAuthError) {
+      if (code !== 0 && auth.isAuthError && session.status !== "cancelled") {
         session.authError = true;
         session.authHint = auth.hint;
         session.status = "auth_error";
         session.error = auth.hint;
       } else if (session.status !== "cancelled") {
-        session.status = code === 0 ? "completed" : "failed";
+        session.status = code === 0 && !session.error ? "completed" : "failed";
         if (code !== 0 && !session.error) {
           session.error =
             lang === "en"
@@ -533,18 +565,7 @@ export function launchAgentSession(
       saveSessionState(session, rootDir);
     });
 
-    if (openTerminalWindow && spawnImpl === spawn && process.platform === "win32") {
-      try {
-        const winChild = spawn(
-          "cmd.exe",
-          ["/c", "start", "cmd.exe", "/k", session.executablePath, bridge.prompt],
-          { cwd: rootDir, detached: true, stdio: "ignore", windowsHide: true },
-        );
-        winChild.unref();
-      } catch {
-        /* ignore window spawn error */
-      }
-    }
+
   } catch (err) {
     session.status = "failed";
     session.error = err.message || "LAUNCH_FAILED";
@@ -565,7 +586,7 @@ export function launchAgentSession(
 
 /** List existing reports in .cda/reports/ safely. */
 export function listReportsSummary(rootDir = ROOT) {
-  const dir = path.join(rootDir, ".cda", "reports");
+  const dir = resolveContainedPath(rootDir, ".cda", "reports");
   if (!fs.existsSync(dir)) return [];
   try {
     return fs
@@ -593,85 +614,28 @@ export function listReportsSummary(rootDir = ROOT) {
 
 const activeWorkflowChildren = new Map();
 
-function runsDir(rootDir = ROOT) {
-  const dir = resolveContainedPath(rootDir, ".cda", "runs");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
-}
-
 function saveRunState(run, rootDir = ROOT) {
   run.updatedAt = new Date().toISOString();
-  const dir = runsDir(rootDir);
-  const file = resolveContainedPath(dir, `${run.runId}.json`);
-  fs.writeFileSync(file, JSON.stringify(run, null, 2), "utf8");
+  new StateStore(rootDir).write("runs", run.runId, run);
   return run;
 }
 
 export function getGuidedAudit(runId, rootDir = ROOT) {
-  const cleanId = String(runId || "").replace(/[^a-zA-Z0-9_-]/g, "");
-  if (!cleanId) throw new Error("INVALID_RUN_ID");
-  const file = resolveContainedPath(runsDir(rootDir), `${cleanId}.json`);
-  if (!fs.existsSync(file)) throw new Error("RUN_NOT_FOUND");
-  return JSON.parse(fs.readFileSync(file, "utf8"));
+  return new StateStore(rootDir).read("runs", runId);
 }
 
 export function listGuidedAudits(rootDir = ROOT) {
-  const dir = path.join(rootDir, ".cda", "runs");
+  const dir = resolveContainedPath(rootDir, ".cda", "runs");
   if (!fs.existsSync(dir)) return [];
-  try {
-    return fs
-      .readdirSync(dir)
-      .filter((f) => f.endsWith(".json"))
-      .map((f) => {
-        try {
-          return JSON.parse(fs.readFileSync(resolveContainedPath(dir, f), "utf8"));
-        } catch {
-          return null;
-        }
-      })
-      .filter(Boolean)
-      .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
-      .slice(0, 25);
-  } catch {
-    return [];
-  }
-}
-
-function discoverProjectFiles(targetRoot) {
-  const candidates = [
-    "package.json",
-    "package-lock.json",
-    ".env",
-    "AGENTS.md",
-    "CLAUDE.md",
-    "SKILL.md",
-    ".mcp.json",
-  ];
-  const found = [];
-  for (const rel of candidates) {
-    const full = path.join(targetRoot, rel);
-    if (fs.existsSync(full) && fs.statSync(full).isFile()) {
-      found.push(rel);
-    }
-  }
-  const scanSubdir = (sub) => {
-    const dir = path.join(targetRoot, sub);
-    if (!fs.existsSync(dir) || !fs.statSync(dir).isDirectory()) return;
-    for (const entry of fs.readdirSync(dir).slice(0, 25)) {
-      const rel = path.posix.join(sub, entry);
-      const full = path.join(targetRoot, sub, entry);
-      if (
-        fs.existsSync(full) &&
-        fs.statSync(full).isFile() &&
-        /\.(?:[cm]?[jt]sx?|py|json|ya?ml|md)$/i.test(entry)
-      ) {
-        found.push(rel);
-      }
-    }
-  };
-  scanSubdir("src");
-  scanSubdir("tools");
-  return [...new Set(found)].slice(0, 30);
+  const store = new StateStore(rootDir);
+  return fs.readdirSync(dir)
+    .filter((name) => /^[a-zA-Z0-9_-]{1,64}\.json$/.test(name))
+    .flatMap((name) => {
+      try { return [store.read("runs", name.slice(0, -5))]; }
+      catch { return []; }
+    })
+    .sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")))
+    .slice(0, 25);
 }
 
 function buildWorkflowDefinition(workflow, runId, params = {}) {
@@ -699,6 +663,7 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
         },
         ...(params.sharePackageNames === true ? [{
           id: "advisories",
+          requiresApproval: "package_names",
           label: pl ? "2. Weryfikacja luk (OSV.dev, CISA KEV i Katalog Windows)" : "2. Vulnerability check (OSV.dev, CISA KEV & Windows Catalog)",
           script: cda,
           args: ["advisories", "--inventory", invName, "--name", advName, "--share-package-names"],
@@ -719,8 +684,10 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
     if (params.consent !== true) throw new Error("CONSENT_REQUIRED");
     const targetRoot = params.target ? path.resolve(String(params.target)) : ROOT;
     if (!fs.existsSync(targetRoot)) throw new Error("INVALID_TARGET_PATH");
-    const files = Array.isArray(params.files) && params.files.length ? params.files : discoverProjectFiles(targetRoot);
-    if (!files.length) throw new Error("NO_REVIEWABLE_FILES_FOUND");
+    if (!Array.isArray(params.files) || !params.files.length || params.files.length > 100 || params.files.some((file) => typeof file !== "string")) {
+      throw new Error("EXPLICIT_FILES_REQUIRED");
+    }
+    const files = [...new Set(params.files)];
     const scopeName = `${runId}-scope`;
     const revName = `${runId}-review`;
     const depsName = `${runId}-deps`;
@@ -738,6 +705,7 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
       },
       {
         id: "approve",
+        requiresApproval: "scope",
         label: pl ? "2. Zatwierdzenie zakresu tylko do odczytu (24h)" : "2. Approve read-only scope (24h)",
         script: cda,
         args: ["approve", "--scope", scopeName, "--root", targetRoot, "--yes"],
@@ -846,6 +814,9 @@ function computeNextStepRecommendation(run) {
       ? `Krok zakończył się błędem (${run.error || "sprawdź logi"}). Po rozwiązaniu przyczyny kliknij „Wznów audyt”.`
       : `A step failed (${run.error || "check logs"}). Fix the cause and click 'Resume audit'.`;
   }
+  if (run.status === "awaiting_approval") {
+    return pl ? "Sprawdź szczegóły kolejnego kroku i zatwierdź jego wykonanie." : "Review the next step and approve it to continue.";
+  }
   if (run.status === "running") {
     return pl ? "Trwa wykonywanie kroków audytu..." : "Executing guided audit steps...";
   }
@@ -861,44 +832,45 @@ function computeNextStepRecommendation(run) {
 }
 
 async function executeWorkflowSteps(run, { rootDir = ROOT, stepRunner = null } = {}) {
-  const defaultRunner = (step, runId) =>
-    new Promise((resolve, reject) => {
-      const child = spawn(process.execPath, [step.script, ...step.args], {
-        cwd: rootDir,
-        stdio: ["ignore", "pipe", "pipe"],
-        windowsHide: true,
-      });
-      activeWorkflowChildren.set(runId, child);
-      let stdout = "";
-      let stderr = "";
-      child.stdout?.on("data", (d) => {
-        stdout += String(d);
-      });
-      child.stderr?.on("data", (d) => {
-        stderr += String(d);
-      });
-      child.on("error", (err) => {
-        activeWorkflowChildren.delete(runId);
-        reject(err);
-      });
-      child.on("close", (code, signal) => {
-        activeWorkflowChildren.delete(runId);
-        if (signal === "SIGTERM" || signal === "SIGKILL") {
-          const cancelErr = new Error("WORKFLOW_CANCELLED");
-          cancelErr.code = "WORKFLOW_CANCELLED";
-          reject(cancelErr);
-          return;
-        }
-        if (code !== 0) {
-          const err = new Error((stderr || stdout || `Step ${step.id} exited with code ${code}`).trim());
-          err.code = "STEP_FAILED";
-          reject(err);
-          return;
-        }
-        resolve(stdout.trim());
-      });
+  const defaultRunner = (step, runId) => new Promise((resolve, reject) => {
+    const child = spawn(process.execPath, [step.script, ...step.args], {
+      cwd: rootDir,
+      stdio: ["ignore", "pipe", "pipe"],
+      windowsHide: true,
     });
-
+    const key = new StateStore(rootDir).file("runs", runId);
+    activeWorkflowChildren.set(key, child);
+    let stdout = "";
+    let stderr = "";
+    let failure = null;
+    const timer = setTimeout(() => {
+      failure = new Error("STEP_TIMEOUT");
+      child.kill("SIGTERM");
+    }, 300_000);
+    const collect = (chunk, isError) => {
+      if (failure) return;
+      if (isError) stderr += String(chunk); else stdout += String(chunk);
+      if (Buffer.byteLength(stdout) + Buffer.byteLength(stderr) > 2 * 1024 * 1024) {
+        failure = new Error("STEP_OUTPUT_TOO_LARGE");
+        child.kill("SIGTERM");
+      }
+    };
+    child.stdout?.on("data", (chunk) => collect(chunk, false));
+    child.stderr?.on("data", (chunk) => collect(chunk, true));
+    child.on("error", (error) => {
+      clearTimeout(timer);
+      activeWorkflowChildren.delete(key);
+      reject(error);
+    });
+    child.on("close", (code, signal) => {
+      clearTimeout(timer);
+      activeWorkflowChildren.delete(key);
+      if (failure) return reject(failure);
+      if (signal) return reject(new Error("WORKFLOW_CANCELLED"));
+      if (code !== 0) return reject(new Error((stderr || stdout || `Step ${step.id} exited with code ${code}`).trim()));
+      resolve(stdout.trim());
+    });
+  });
   const runner = stepRunner || defaultRunner;
 
   for (const step of run.steps) {
@@ -910,6 +882,17 @@ async function executeWorkflowSteps(run, { rootDir = ROOT, stepRunner = null } =
       return run;
     }
     if (step.status === "completed") continue;
+    if (step.requiresApproval && !run.approvals?.[step.requiresApproval]) {
+      run.status = "awaiting_approval";
+      run.pendingApproval = {
+        kind: step.requiresApproval,
+        token: crypto.randomBytes(16).toString("hex"),
+        ...(step.requiresApproval === "scope" ? { root: run.scopeProposal.root, files: run.scopeProposal.files } : {}),
+      };
+      run.nextStep = computeNextStepRecommendation(run);
+      saveRunState(run, rootDir);
+      return run;
+    }
 
     step.status = "running";
     step.startedAt = new Date().toISOString();
@@ -927,9 +910,18 @@ async function executeWorkflowSteps(run, { rootDir = ROOT, stepRunner = null } =
         saveRunState(run, rootDir);
         return run;
       }
+      step.output = String(output || "").slice(0, 4000);
+      if (step.id === "scope") {
+        const scope = JSON.parse(String(output).split("\nAwaiting explicit approval.")[0]);
+        if (scope.approved !== false || !Array.isArray(scope.files) || typeof scope.root !== "string") {
+          throw new Error("INVALID_SCOPE_PROPOSAL");
+        }
+        run.scopeProposal = scope;
+        const approvalStep = run.steps.find((item) => item.id === "approve");
+        approvalStep.args.push("--proposal", scopeDigest(scope));
+      }
       step.status = "completed";
       step.finishedAt = new Date().toISOString();
-      step.output = String(output || "").slice(0, 4000);
       if (step.reportName && !run.reports.includes(step.reportName)) {
         run.reports.push(step.reportName);
       }
@@ -987,7 +979,7 @@ export function startGuidedAudit(
   const workflow = String(params.workflow || "demo").toLowerCase();
   const lang = params.lang === "en" ? "en" : "pl";
   const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
-  const runId = `run-${workflow}-${stamp}-${crypto.randomBytes(2).toString("hex")}`;
+  const runId = `run-${workflow}-${stamp}-${crypto.randomBytes(6).toString("hex")}`;
   const def = buildWorkflowDefinition(workflow, runId, { ...params, lang });
 
   const run = {
@@ -1001,7 +993,10 @@ export function startGuidedAudit(
     updatedAt: new Date().toISOString(),
     finishedAt: null,
     error: null,
+    approvals: { package_names: params.sharePackageNames === true },
+    pendingApproval: null,
     steps: def.steps.map((s) => ({
+      ...s,
       id: s.id,
       label: s.label,
       script: s.script,
@@ -1019,14 +1014,30 @@ export function startGuidedAudit(
   };
 
   saveRunState(run, rootDir);
-  const promise = executeWorkflowSteps(run, { rootDir, stepRunner });
-  if (awaitCompletion) return promise;
-  return Promise.resolve(run);
+  return runGuidedExecution(run, { rootDir, stepRunner, awaitCompletion });
 }
 
-/** Cancel a running guided audit workflow and record cancellation state. */
+const activeWorkflowRuns = new Map();
+
+function runGuidedExecution(run, { rootDir, stepRunner, awaitCompletion }) {
+  const key = new StateStore(rootDir).file("runs", run.runId);
+  const completion = Promise.resolve()
+    .then(() => executeWorkflowSteps(run, { rootDir, stepRunner }))
+    .catch((error) => {
+      run.status = "failed";
+      run.error = error.message;
+      run.nextStep = computeNextStepRecommendation(run);
+      return saveRunState(run, rootDir);
+    })
+    .finally(() => activeWorkflowRuns.delete(key));
+  activeWorkflowRuns.set(key, completion);
+  return awaitCompletion ? completion : Promise.resolve(run);
+}
+
+/** Cancel is idempotent and retains the active child until its close event. */
 export function cancelGuidedAudit(runId, { rootDir = ROOT } = {}) {
   const run = getGuidedAudit(runId, rootDir);
+  if (["completed", "cancelled"].includes(run.status)) return run;
   run.status = "cancelled";
   run.cancelledAt = new Date().toISOString();
   for (const step of run.steps) {
@@ -1037,39 +1048,63 @@ export function cancelGuidedAudit(runId, { rootDir = ROOT } = {}) {
   }
   run.nextStep = computeNextStepRecommendation(run);
   saveRunState(run, rootDir);
-
-  const child = activeWorkflowChildren.get(run.runId);
-  if (child) {
-    try {
-      child.kill("SIGTERM");
-    } catch {
-      /* already exited */
-    }
-    activeWorkflowChildren.delete(run.runId);
-  }
+  const key = new StateStore(rootDir).file("runs", run.runId);
+  activeWorkflowChildren.get(key)?.kill("SIGTERM");
   return run;
 }
 
-/** Resume a failed or cancelled guided audit from the first unfinished step. */
-export function resumeGuidedAudit(
-  runId,
-  { rootDir = ROOT, stepRunner = null, awaitCompletion = false } = {},
-) {
+/** Resume waits for a cancelled child to close, so two attempts cannot overlap. */
+export async function resumeGuidedAudit(runId, { rootDir = ROOT, stepRunner = null, awaitCompletion = false } = {}) {
+  const key = new StateStore(rootDir).file("runs", runId);
+  const active = activeWorkflowRuns.get(key);
+  if (active) {
+    const current = getGuidedAudit(runId, rootDir);
+    if (current.status === "running") return awaitCompletion ? active : current;
+    await active;
+    const resumed = activeWorkflowRuns.get(key);
+    if (resumed) return awaitCompletion ? resumed : getGuidedAudit(runId, rootDir);
+  }
   const run = getGuidedAudit(runId, rootDir);
-  if (run.status === "running") return Promise.resolve(run);
+  if (run.status === "completed") return run;
+  if (run.status === "awaiting_approval" && run.pendingApproval) return run;
+  if (!run.approvals) {
+    run.approvals = {};
+    for (const step of run.steps) {
+      if (run.workflow === "pc" && step.id === "advisories") step.requiresApproval = "package_names";
+      if (run.workflow === "project" && ["scope", "approve"].includes(step.id)) {
+        step.status = "pending";
+        if (step.id === "approve") step.requiresApproval = "scope";
+      }
+    }
+  }
   run.status = "running";
   run.error = null;
+  run.finishedAt = null;
   for (const step of run.steps) {
-    if (step.status === "failed" || step.status === "cancelled") {
+    if (["failed", "cancelled", "running"].includes(step.status)) {
       step.status = "pending";
       step.error = null;
+      step.startedAt = null;
+      step.finishedAt = null;
+      step.output = "";
     }
   }
   run.nextStep = computeNextStepRecommendation(run);
   saveRunState(run, rootDir);
-  const promise = executeWorkflowSteps(run, { rootDir, stepRunner });
-  if (awaitCompletion) return promise;
-  return Promise.resolve(run);
+  return runGuidedExecution(run, { rootDir, stepRunner, awaitCompletion });
+}
+
+/** Approve only the displayed step and its current proposal token. */
+export async function approveGuidedAudit(runId, { approvalToken, rootDir = ROOT, stepRunner = null, awaitCompletion = false } = {}) {
+  const run = getGuidedAudit(runId, rootDir);
+  if (run.status !== "awaiting_approval" || !run.pendingApproval || run.pendingApproval.token !== approvalToken) {
+    throw new Error("APPROVAL_REQUIRED");
+  }
+  run.approvals ||= {};
+  run.approvals[run.pendingApproval.kind] = true;
+  run.pendingApproval = null;
+  saveRunState(run, rootDir);
+  return resumeGuidedAudit(runId, { rootDir, stepRunner, awaitCompletion });
 }
 
 /** Execute a bounded, allowlisted local tool action from the Mini UI or TUI. */
@@ -1120,11 +1155,18 @@ export function runBoundedAction(action, params = {}) {
     const targetRoot = params.root ? path.resolve(String(params.root)) : ROOT;
     const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
     const scopeName = `staged-${stamp}`;
-    const revName = `staged-review-${stamp}`;
     const scopeOut = runNode(cda, ["scope", "--root", targetRoot, "--git-staged", "--name", scopeName]);
-    const approveOut = runNode(cda, ["approve", "--scope", scopeName, "--root", targetRoot, "--yes"]);
-    const reviewOut = runNode(cda, ["review", "--scope", scopeName, "--name", revName]);
-    return { ok: true, action, reportName: revName, output: `${scopeOut}${approveOut}${reviewOut}` };
+    const proposal = new StateStore(ROOT).read("scopes", scopeName);
+    return { ok: true, action, scopeName, proposalDigest: scopeDigest(proposal), output: scopeOut };
+  }
+  if (action === "review-staged") {
+    if (params.consent !== true) throw new Error("CONSENT_REQUIRED");
+    const proposal = new StateStore(ROOT).read("scopes", params.scopeName);
+    if (params.proposalDigest !== scopeDigest(proposal)) throw new Error("SCOPE_PROPOSAL_CHANGED");
+    const reportName = `staged-review-${crypto.randomBytes(6).toString("hex")}`;
+    runNode(cda, ["approve", "--scope", params.scopeName, "--root", proposal.root, "--yes", "--proposal", params.proposalDigest]);
+    const output = runNode(cda, ["review", "--scope", params.scopeName, "--name", reportName]);
+    return { ok: true, action, reportName, output };
   }
   if (action === "dashboard") {
     const lang = params.lang === "en" ? "en" : "pl";
@@ -1134,11 +1176,64 @@ export function runBoundedAction(action, params = {}) {
   throw new Error("UNSUPPORTED_ACTION");
 }
 
+/**
+ * Explain stored reports with the connected model from the Mini UI.
+ * Requires payload.consent === true (the operator ticked the send-summary box) and the session token.
+ */
+export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, call = callModel } = {}) {
+  if (payload.consent !== true) throw Object.assign(new Error("CONSENT_REQUIRED"), { code: "CONSENT_REQUIRED" });
+  const lang = payload.lang === "en" ? "en" : "pl";
+  const config = loadModelConfig(rootDir);
+  const provider = validateProvider(payload.provider || config.provider || "");
+  // A string (even empty) is the operator's explicit choice; only an omitted field falls back to the saved model.
+  const model = typeof payload.model === "string" ? payload.model.trim() || null : config.provider === provider ? config.model : null;
+  const requested = Array.isArray(payload.reports) ? payload.reports.filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n)) : [];
+  // Reads go through StateStore (no symlinked or hard-linked state). Without an explicit selection,
+  // explain the 20 most recently written reports and say how many were left out.
+  const available = readStoredReports(rootDir, 500, requested.length ? requested : null);
+  const named = available.slice(0, 20).map(([n, r]) => [n, r]);
+  const names = named.map(([n]) => n);
+  const excludedReports = available.length - named.length;
+  const brief = buildBrief(named);
+  if (!brief.coverage.sources) throw Object.assign(new Error("NO_SUPPORTED_REPORTS"), { code: "NO_SUPPORTED_REPORTS" });
+  const question = String(payload.question || "").slice(0, 800);
+  const res = await call({ provider, model, system: systemPrompt(lang), messages: [{ role: "user", content: briefPrompt(brief, lang, question) }], consent: true, rootDir });
+  const md = renderExplanation({ provider: res.provider, model: res.model, text: res.text, brief, sources: names, lang, question });
+  const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+  // StateStore.write refuses linked targets and ancestors and replaces the file atomically.
+  const file = new StateStore(rootDir).write("reports", `explain-${stamp}`, md, "md");
+  return { ok: true, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, reportsUsed: names, excludedReports, rawEvidenceSent: false, report: path.basename(file), text: md };
+}
+
+const PANEL_DIR = path.join(ROOT, "tools", "panel");
+const PANEL_FILES = Object.freeze({
+  "/panel.css": ["panel.css", "text/css; charset=utf-8"],
+  "/panel.js": ["panel.js", "text/javascript; charset=utf-8"],
+  "/panel-icon.svg": [null, "image/svg+xml"],
+});
+const PANEL_ICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><rect width="24" height="24" rx="6" fill="#0b1310"/><path d="M12 3.5 5.5 6v5c0 4.2 2.8 7.8 6.5 9 3.7-1.2 6.5-4.8 6.5-9V6L12 3.5Z" fill="none" stroke="#5eead4" stroke-width="1.6"/><path d="m9 12 2 2 4-4" fill="none" stroke="#5eead4" stroke-width="1.6" stroke-linecap="round"/></svg>`;
+/** Strict policy: only this origin's own script and style files, no inline code, no framing. */
+const PANEL_CSP = "default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+function renderMiniUiHtml(token, initialLang = "pl") {
+  const html = fs.readFileSync(path.join(PANEL_DIR, "index.html"), "utf8");
+  return html
+    .replace("__CDA_TOKEN__", String(token).replace(/[^a-f0-9]/gi, ""))
+    .replaceAll("__CDA_LANG__", initialLang === "en" ? "en" : "pl");
+}
+
 /** Start the local Mini Interface server on 127.0.0.1. */
-export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true, rootDir = ROOT } = {}) {
+export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true, rootDir = ROOT, agentsMap = null } = {}) {
   const token = crypto.randomBytes(24).toString("hex");
+  let agents = agentsMap;
+  const getAgents = () => agents ||= detectAgents();
   const server = http.createServer(async (req, res) => {
     try {
+      res.setHeader("Cache-Control", "no-store");
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Frame-Options", "DENY");
+      res.setHeader("Referrer-Policy", "no-referrer");
+      res.setHeader("Content-Security-Policy", PANEL_CSP);
       const actualPort = server.address()?.port || port;
       verifyLocalRequest(req, actualPort, {
         token,
@@ -1146,16 +1241,33 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       });
 
       const url = new URL(req.url || "/", `http://127.0.0.1:${actualPort}`);
+      const secure = { "Cache-Control": "no-store", "Content-Security-Policy": PANEL_CSP, "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
       if (req.method === "GET" && url.pathname === "/") {
-        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
-        res.end(renderControlCenter(token, lang));
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8", ...secure });
+        res.end(renderMiniUiHtml(token, url.searchParams.get("lang") ?? lang));
+        return;
+      }
+      if (req.method === "GET" && Object.hasOwn(PANEL_FILES, url.pathname)) {
+        const [file, type] = PANEL_FILES[url.pathname];
+        res.writeHead(200, { "Content-Type": type, ...secure });
+        res.end(file ? fs.readFileSync(path.join(PANEL_DIR, file)) : PANEL_ICON);
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/overview") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(buildOverview(rootDir)));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/doctor") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
+        res.end(JSON.stringify(runDoctor({ rootDir })));
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/status") {
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(
           JSON.stringify({
-            agents: detectAgents(),
+            agents: getAgents(),
             reports: listReportsSummary(rootDir),
             runs: listGuidedAudits(rootDir),
             sessions: getAgentSessions(rootDir),
@@ -1166,16 +1278,22 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       if (req.method === "GET" && url.pathname === "/api/bridge") {
         const reqHost = url.searchParams.get("host") || "claude";
         validateAgentHost(reqHost);
-        const agents = detectAgents();
+        const agents = getAgents();
         const bridge = buildAgentBridge({
           host: reqHost,
           mission: url.searchParams.get("mission") || "demo",
           target: url.searchParams.get("target") || "",
           lang: url.searchParams.get("lang") || lang,
-          executablePath: agents[reqHost]?.executablePath || reqHost,
+          executablePath: agents[reqHost]?.commandPath || reqHost,
+          executableArgs: agents[reqHost]?.commandArgs || [],
         });
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify(bridge));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/providers") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(detectProviders({ rootDir })));
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/workflows") {
@@ -1190,9 +1308,17 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
       }
       if (req.method === "GET" && url.pathname.startsWith("/report/")) {
         const rawSegment = decodeURIComponent(url.pathname.slice("/report/".length));
-        const reportsDir = resolveContainedPath(rootDir, ".cda", "reports");
-        const filePath = resolveContainedPath(reportsDir, rawSegment);
-        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        let filePath;
+        try {
+          filePath = resolveContainedPath(rootDir, ".cda", "reports", rawSegment);
+        } catch (error) {
+          if (error.code !== "STATE_LINK_BLOCKED") throw error;
+          res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+          res.end("Report not found. Run Demo or Guided Audit first.");
+          return;
+        }
+        const stat = fs.existsSync(filePath) ? fs.lstatSync(filePath) : null;
+        if (!stat || !stat.isFile() || stat.nlink > 1) {
           res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
           res.end("Report not found. Run Demo or Guided Audit first.");
           return;
@@ -1204,20 +1330,35 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           ".json": "application/json; charset=utf-8",
           ".pdf": "application/pdf",
         };
-        res.writeHead(200, { "Content-Type": types[ext] || "text/plain; charset=utf-8" });
-        res.end(fs.readFileSync(filePath));
+        const descriptor = fs.openSync(filePath, fs.constants.O_RDONLY | (fs.constants.O_NOFOLLOW || 0));
+        try {
+          const before = fs.fstatSync(descriptor);
+          if (before.nlink > 1 || before.size > 8 * 1024 * 1024) throw new Error("INVALID_REPORT_FILE");
+          const content = fs.readFileSync(descriptor);
+          const checkedPath = resolveContainedPath(resolveContainedPath(rootDir, ".cda", "reports"), rawSegment);
+          const current = fs.lstatSync(checkedPath);
+          if (current.dev !== before.dev || current.ino !== before.ino || current.mtimeMs !== before.mtimeMs || current.size !== before.size) throw new Error("REPORT_CHANGED_DURING_READ");
+          res.writeHead(200, {
+            "Content-Type": types[ext] || "text/plain; charset=utf-8",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; frame-ancestors 'none'",
+          });
+          res.end(content);
+        } finally {
+          fs.closeSync(descriptor);
+        }
         return;
       }
       if (req.method === "POST") {
         let body = "";
         for await (const chunk of req) {
           body += chunk;
-          if (body.length > 16384) throw new Error("PAYLOAD_TOO_LARGE");
+          if (body.length > (url.pathname === "/api/model/chat" ? 131072 : 16384)) throw new Error("PAYLOAD_TOO_LARGE");
         }
         const payload = JSON.parse(body || "{}");
+        if (!payload || typeof payload !== "object" || Array.isArray(payload)) throw new Error("INVALID_PAYLOAD");
 
         if (url.pathname === "/api/launch-agent") {
-          const result = launchAgentSession(payload, { rootDir });
+          const result = launchAgentSession(payload, { rootDir, agentsMap: getAgents() });
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
           res.end(JSON.stringify(result));
           return;
@@ -1255,6 +1396,30 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           res.end(JSON.stringify({ ok: true, run }));
           return;
         }
+        if (url.pathname === "/api/workflows/approve") {
+          const run = await approveGuidedAudit(payload.runId, { rootDir, approvalToken: payload.approvalToken });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true, run }));
+          return;
+        }
+        if (url.pathname === "/api/model/config") {
+          const config = saveModelConfig({ provider: payload.provider, model: payload.model || null, lang: payload.lang }, rootDir);
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true, config }));
+          return;
+        }
+        if (url.pathname === "/api/model/chat") {
+          const result = await chatWithModel(payload, { rootDir });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify(result));
+          return;
+        }
+        if (url.pathname === "/api/model/explain") {
+          const result = await explainReportsWithModel(payload, { rootDir });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify(result));
+          return;
+        }
         if (url.pathname === "/api/run") {
           const result = runBoundedAction(payload.action, payload);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -1271,11 +1436,13 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         code === "INVALID_ORIGIN" ||
         code === "INVALID_SESSION_TOKEN" ||
         code === "PATH_OUTSIDE_BOUNDARY" ||
-        code === "INVALID_AGENT_HOST"
+        code === "INVALID_AGENT_HOST" ||
+        code === "CONSENT_REQUIRED" ||
+        code === "STATE_LINK_BLOCKED"
           ? 403
           : 400;
       res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
-      res.end(JSON.stringify({ ok: false, error: code }));
+      res.end(JSON.stringify({ ok: false, error: code, ...(error.detail ? { detail: String(error.detail).slice(0, 200) } : {}) }));
     }
   });
 

@@ -28,11 +28,12 @@ export function TabBar({ prefix, tabs, value, onChange, label }: { prefix: strin
 }
 
 export function CopyButton({ text, label, locale = 'en' }: { text: string; label: string; locale?: Locale }) {
-  const [message, setMessage] = useState('');
+  const [feedback, setFeedback] = useState({ text: '', message: '' });
+  const message = feedback.text === text ? feedback.message : '';
   const copied = locale === 'pl' ? 'Skopiowano' : 'Copied';
   const copy = async () => {
-    try { await navigator.clipboard.writeText(text); setMessage(copied); }
-    catch { setMessage(locale === 'pl' ? 'Zaznacz i skopiuj tekst ręcznie' : 'Select and copy the text manually'); }
+    try { await navigator.clipboard.writeText(text); setFeedback({ text, message: copied }); }
+    catch { setFeedback({ text, message: locale === 'pl' ? 'Zaznacz i skopiuj tekst ręcznie' : 'Select and copy the text manually' }); }
   };
-  return <div className="copy-control"><button type="button" onClick={copy} aria-label={label} className="copy-button">{message === copied ? <Check size={15} aria-hidden="true"/> : <Copy size={15} aria-hidden="true"/>}<span>{message === copied ? copied : locale === 'pl' ? 'Kopiuj' : 'Copy'}</span></button><span className="sr-only" role="status">{message}</span></div>;
+  return <div className="copy-control"><button type="button" onClick={copy} aria-label={label} className="copy-button">{message === copied ? <Check size={15} aria-hidden="true"/> : <Copy size={15} aria-hidden="true"/>}<span>{message === copied ? copied : locale === 'pl' ? 'Kopiuj' : 'Copy'}</span></button><span className={message && message !== copied ? 'copy-fallback' : 'sr-only'} role="status">{message}</span></div>;
 }

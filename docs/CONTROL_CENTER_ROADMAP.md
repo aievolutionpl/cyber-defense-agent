@@ -97,4 +97,4 @@ Porównanie: obecne reguły CDA, OCR, CDA + OCR. Mierzymy trafność, pominięte
 
 ## Granice obecnego wydania
 
-Nowy panel nie uruchamia OCR, nie skanuje ciągle w tle, nie zmienia kodu i nie instaluje aktualizacji. Nie dodaje modelowego czatu ani systemu wieloklientowego. Liczniki opisują faktyczne uruchomienia i pliki, a nie stan bezpieczeństwa infrastruktury. Autoryzacja hosta CLI i sesja z modelem wymagają osobnej weryfikacji w środowisku operatora.
+Nowy panel nie uruchamia OCR, nie skanuje ciągle w tle, nie zmienia kodu i nie instaluje aktualizacji. Czat z modelem jest już dostępny w wersji 0.3 i korzysta z własnej zgody na wysłanie danych. Liczniki opisują faktyczne uruchomienia i pliki, a nie stan bezpieczeństwa infrastruktury. Autoryzacja hosta CLI i sesja z modelem wymagają osobnej weryfikacji w środowisku operatora.

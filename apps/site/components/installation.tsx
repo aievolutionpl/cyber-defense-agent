@@ -24,7 +24,7 @@ export function Installation({ locale }: { locale: Locale }) {
     {
       id: 'code',
       label: ['Code Audit', 'Audyt kodu'],
-      cmd: 'node tools/cda.mjs scope --root . --git-staged --name audit',
+      cmd: 'node tools/cda.mjs start',
       promptSuffix: [
         'Review my project before release. Propose an exact file scope first and wait for my approval.',
         'Przejrzyj mój projekt przed publikacją. Najpierw zaproponuj dokładny zakres plików i poczekaj na moją zgodę.',
@@ -33,19 +33,19 @@ export function Installation({ locale }: { locale: Locale }) {
     {
       id: 'pc',
       label: ['Computer & CVEs', 'Komputer i CVE'],
-      cmd: 'node tools/cda.mjs inventory --name pc --yes',
+      cmd: 'node tools/cda.mjs start',
       promptSuffix: [
-        'Check my computer for installed software, open ports and known vulnerabilities (OSV.dev + CISA KEV).',
-        'Sprawdź mój komputer: zainstalowane programy, otwarte porty oraz znane luki w OSV.dev i CISA KEV.',
+        'Plan a computer review. Ask before local inventory, then ask separately before sharing package names, versions and ecosystems with OSV.dev and downloading CISA KEV.',
+        'Zaplanuj przegląd komputera. Zapytaj o zgodę na lokalną inwentaryzację, a osobno o wysłanie nazw, wersji i ekosystemów pakietów do OSV.dev oraz pobranie CISA KEV.',
       ],
     },
     {
       id: 'web',
       label: ['Website Check', 'Strona WWW'],
-      cmd: 'node tools/cda.mjs web --url https://your-site.pl --name site --authorized',
+      cmd: 'node tools/cda.mjs start',
       promptSuffix: [
-        'Passively check my website security headers (HTTPS, HSTS, CSP, cookies, CORS, TLS).',
-        'Sprawdź pasywnie zabezpieczenia mojej strony WWW (HTTPS, HSTS, CSP, cookies, CORS, certyfikat TLS).',
+        'Plan a passive website check. Confirm the exact URL and my authorization before sending requests. Explain the scope and limits.',
+        'Zaplanuj pasywną kontrolę strony. Potwierdź dokładny adres i moje uprawnienia przed wysłaniem zapytań. Wyjaśnij zakres i ograniczenia.',
       ],
     },
   ];
@@ -59,14 +59,14 @@ export function Installation({ locale }: { locale: Locale }) {
       label: 'Claude Code CLI',
       command: `node tools/cda.mjs agent --host claude --mission ${mission} --lang ${locale}\nclaude`,
       prompt: `/cyber-defense ${currentMission.promptSuffix[i]}`,
-      anchor: '#claude-code',
+      anchor: '#uruchomienie-w-claude-code',
     },
     {
       id: 'codex',
       label: 'Codex CLI',
       command: `node tools/cda.mjs agent --host codex --mission ${mission} --lang ${locale}\ncodex`,
       prompt: `$cyber-defense ${currentMission.promptSuffix[i]}`,
-      anchor: '#codex',
+      anchor: '#uruchomienie-w-openai-codex',
     },
     {
       id: 'ui',
@@ -162,8 +162,8 @@ export function Installation({ locale }: { locale: Locale }) {
                 02 /{' '}
                 {host.id === 'ui' || host.id === 'tui'
                   ? pl
-                    ? 'LUB WYWOŁAJ BEZPOŚREDNIO KOMENDĘ'
-                    : 'OR RUN DIRECT CLI COMMAND'
+                    ? 'BEZPIECZNY PUNKT STARTU'
+                    : 'A SAFE STARTING POINT'
                   : pl
                     ? 'GOTOWY PROMPT DO CZATU AGENTA'
                     : 'READY PROMPT FOR AGENT CHAT'}
@@ -180,8 +180,8 @@ export function Installation({ locale }: { locale: Locale }) {
 
             <p className="install-status">
               {pl
-                ? 'Kolorowy terminal (PL/EN) oraz lokalny Mini Interfejs (127.0.0.1:3109) łączą się z Claude Code CLI i Codex CLI. Zero zewnętrznych zależności npm.'
-                : 'The bilingual color TUI (PL/EN) and local Mini Web Interface (127.0.0.1:3109) bridge directly with Claude Code CLI and Codex CLI. Zero external npm dependencies.'}
+                ? 'CLI i panel lokalny działają bez instalacji pakietów npm. Sesja AI wymaga zainstalowanego i zalogowanego Codexa lub Claude Code; obowiązują zasady i limity jego dostawcy.'
+                : 'The local CLI and panel need no npm package installation. An AI session requires an installed, authenticated Codex or Claude Code host, with its provider’s terms and limits.'}
             </p>
             <div className="install-footer">
               <span>Node.js 22+ · Git · MIT · AI Evolution Polska</span>

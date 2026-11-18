@@ -1,6 +1,6 @@
 # Development path
 
-Updated 10 November 2026. The first product milestone is a reproducible repository review that explains what changed, why it matters and what evidence confirms a fix. Existing computer, website, database and incident-response playbooks remain available.
+Updated 13 November 2026. The first product milestone is a reproducible repository review that explains what changed, why it matters and what evidence confirms a fix. Existing computer, website, database and incident-response playbooks remain available.
 
 ## Implemented in the evidence and CI update
 
@@ -16,10 +16,14 @@ Updated 10 November 2026. The first product milestone is a reproducible reposito
 | Panel security & Host/Origin guard | Strict agent host allowlist (`claude`, `codex`, `hermes`), `.cda` path containment (`resolveContainedPath`) and `Host`/`Origin`/CSRF verification on `127.0.0.1`. | Path traversal, DNS-rebinding Host and cross-origin rejection tests. |
 | Unified Agent CLI launcher & session state | Unified binary discovery across Node/PowerShell (`where.exe`), prompt passing, live session status and login/auth error diagnostics (`claude login` / `codex login`). | Multi-version PATH detection, prompt delivery and auth-failure simulation tests. |
 | Guided multi-step audit workflow | Asynchronous guided audits (`pc`, `project`, `web`, `demo`) with per-run report namespaces, cancellation (`cancel`), resumption (`resume`) and run history. | Interruption, error recovery, resume and per-run history tests. |
-| Windows vendor security catalog | Curated Windows software baseline (7-Zip, WinRAR, Git, Chrome, Edge, Firefox, VLC, PuTTY, Node.js, VS Code, Python, Docker, Wireshark, FileZilla, KeePassXC, Notepad++) with fixed versions, official download URLs and `winget` IDs. | Verified vs manual-lookup counts, fixed-version and update-source tests. |
-| Held-out detection benchmark | Separate 16-sample clean/vulnerable corpus across all 8 rules (`CDA-DEP-001` .. `CDA-XSS-001`) via `node tools/cda.mjs benchmark`. | Measured 100% precision, 100% recall, 0 false positives, 0 missed findings and 100% evidence completeness. |
+| Windows update sources | Official vendor URLs and winget identifiers for 16 application families. Vulnerability status comes from advisory evidence. | Manual-lookup counts, official source links and regression coverage for legacy fixed-threshold reports. |
+| Held-out detection benchmark | Separate 16-sample clean/vulnerable corpus across all 8 rules (`CDA-DEP-001` .. `CDA-XSS-001`) via `node tools/cda.mjs benchmark`. | All 16 synthetic samples matched their labels. Broader detection measurements require the independent cases in the next milestone. |
 
 Usage and current adapter limits are in [scanner integrations](SCANNER_INTEGRATIONS.md).
+
+## Website and skill refinement
+
+The site now builds a local review brief for seven scenarios, including AI agents, skills and MCP. The canonical skill has a dedicated agent-security playbook and an evidence-review method that separates tool signals, expert judgment and missing coverage. Current source references are recorded in the knowledge source list. This ships as review guidance; automatic MCP scanning, new connectors and live host acceptance remain separate work.
 
 ## Next milestones
 
@@ -27,12 +31,12 @@ Usage and current adapter limits are in [scanner integrations](SCANNER_INTEGRATI
 | --- | --- | --- | --- |
 | 1 | Exporter compatibility matrix | Capture clean, vulnerable, malformed and incomplete output from pinned Gitleaks, OSV-Scanner and Trivy releases on Linux. Record versions and digests. Repeat supported cases on Windows/macOS. | Current adapters and fixture suite. |
 | 2 | Host acceptance | Complete one clean-install Codex session and one Claude Code session, from scope approval to report and retest. Record where each host sends data and whether every boundary held. | Installed/authenticated hosts and a synthetic project. |
-| 3 | Detection benchmark | Separate held-out clean/vulnerable fixtures from regression fixtures. Publish false positives, missed findings and evidence completeness per scanner/rule. | Ground-truth labels and exporter matrix. |
+| 3 | Extend the detection benchmark | Separate held-out clean/vulnerable fixtures from regression fixtures. Publish false positives, missed findings and evidence completeness per scanner/rule. | Ground-truth labels and exporter matrix. |
 | 4 | Full PR scanner jobs | Run pinned external scanners in isolated jobs with bounded runtime and report sizes. Preserve source/commit identity, expose coverage failures and use opt-in SARIF upload. | Exporter matrix and isolation tests. |
 | 5 | Finding history across versions | Persist validated events per asset, scanner and rule version. Retain source digests, first/last seen and fixed/reopened transitions. Add alias-aware vulnerability grouping without losing package locations. | Stable scanner identities and migration tests for existing reports. |
 | 6 | Desktop coverage | Add consented vendor-catalogue adapters and firewall/encryption/update-setting collectors. Every unsupported app is counted. | Real-device tests and declared outbound data. |
 | 7 | Prioritization | Add EPSS with observation time, exposure context and inventory-to-inventory retest. Show the reason for each priority. | Recorded feed fixtures and existing OSV/KEV coverage. |
-| 8 | AI skill review | Evaluate importing SkillSpector evidence for agent skills and MCP configuration. Show concrete source locations and permissions requiring review. | A supported exporter schema and held-out fixtures. |
+| 8 | AI skill review | A source-backed manual playbook is available. Next evaluate importing SkillSpector evidence for agent skills and MCP configuration. Show concrete source locations and permissions requiring review. | A supported exporter schema and held-out fixtures. |
 
 These are acceptance-driven milestones. Dates follow measured integration work. Full host sessions and real exporter runs are tracked separately from local tests.
 

@@ -1,5 +1,40 @@
 # Verification record
 
+## Merge of the audit planner and Command Center updates — 18 November 2026
+
+- On Linux with Node 24, `npm run check` passed with 135 passing tests and one Windows-only test skipped. Skill checks, ESLint, TypeScript and the static export passed. The synthetic demo passed without network calls.
+- The static site passed the Chromium motion acceptance suite in both languages at 320, 390, 768 and 1440 px. The local Command Center passed 35 Chromium checks, including history and report filters, prompt preview, exact-file approval, the separate advisory opt-in and the bundled demo.
+- The browser tests used synthetic data and intercepted the computer-inventory request. They exercised no live provider session or advisory request.
+
+## Website planner and agent-security skill — 13 November 2026
+
+Branch `codex/fix-panel-workflows`, Windows, Node.js 26.12.1. This extends the panel repair below; it does not add a scanner, network integration or OS collector.
+
+- `npm run check`: **97/97 tests**, skill contracts, ESLint, TypeScript and static export passed. After the final copy changes, ESLint and production build/type checking passed again. The skill validator accepts the canonical skill; all 15 skill documents have resolving relative links, including the new agent-security and evidence-review references. Host entry points remain thin and retain their explicit invocation settings.
+- Synthetic demo passed: the local fix is `confirmed_fixed`, imported and incomplete evidence remains `insufficient_data`, and the out-of-scope read is rejected with `INVALID_PATH`. No target or fixture code was executed and no evidence network request was made.
+- Static-export Chromium acceptance: **164/164 checks**, zero uncaught browser errors and zero failed local responses. This covers seven scenarios, both host prefixes, complete clipboard content, keyboard selection, changing-copy feedback, visible clipboard-denied fallback, separate consent in setup prompts, PL/EN, policy links, reduced motion and 320/390/768/1440 layouts. Selecting scenarios generated no fetch/XHR audit requests.
+- The existing CI browser runner passed locally against the static export. It now verifies the correct PL/EN routes and includes keyboard/clipboard checks for agent and computer review briefs, plus autoplay, pause and reduced motion. `CDA_SITE_URL` allows the same runner to target the static preview. Clipboard assertions wait for the asynchronous copy confirmation. Run clipboard suites sequentially: different browser processes share the OS clipboard.
+- Desktop and 390 px planner screenshots were visually inspected. The emerald visual language is preserved; the planner uses a readable list/detail layout, real local output and explicit scope limits. Screenshots remain under ignored `output/playwright/`.
+- Public OWASP Agentic 2026, ASVS 5.0.0 and MCP revision 2026-07-28 documentation was retrieved on 13 November. Source URLs and the purpose of each reference are recorded in the knowledge source list. This is research for the playbook, not a live audit of an asset.
+- Skill behavioral cases were reviewed against the instructions: exact scope, changed proposals, offline requests, untrusted candidate instructions, empty scanner imports, reuse of valid consent and urgent incident routing. This is document review, not independent model-session acceptance. Live authenticated Codex/Claude sessions, live MCP servers, real machine inventory, OSV/CISA queries, Firefox/Safari and physical-device testing were not performed in this iteration.
+
+Reproduce the full website suite with `scripts/ui-acceptance.js` through Playwright CLI against the built static export. Run `scripts/site-motion-check.mjs` separately with the installed Playwright module and the same preview URL. GitHub CI status is tracked on PR #17; local results do not establish macOS CI success.
+
+## Local panel and workflow repairs — 12 November 2026
+
+Includes upstream scanner-provenance repair `7b4769b`, on branch `codex/fix-panel-workflows`. Windows, Node.js 26.12.1.
+
+- `npm run check` passes with **97/97 tests**, skill contracts, ESLint, TypeScript and static export. A separate production TypeScript configuration validates freshly generated route types while excluding stale development-cache types. Source checking remains strict.
+- Sixteen focused regression tests cover linked paths and reports, exact listener origins, final cancellation state, streamed-secret redaction, successful configuration advice, Codex print execution, real Windows npm shim resolution, shell metacharacters, approval tokens, serialized resume, explicit project files, legacy coverage and interrupted-run compatibility.
+- The project workflow was exercised through a copied trusted CLI against a separate synthetic project. It paused before approval, displayed the exact scope and generated the expected lodash finding and HTML report after approval. Replacing the saved proposal before approval produced `SCOPE_PROPOSAL_CHANGED` and prevented the review step.
+- The synthetic demo passes with the bounded local fix, separate imported-finding uncertainty, incomplete-data result and out-of-scope rejection. The 16-sample benchmark reports eight true positives, zero false positives and zero missed labelled findings for this corpus.
+- Chromium static-export acceptance passes **58/58** checks across PL and EN, command and prompt clipboard operations, keyboard tabs and menu, policy links, reduced motion and 320/390/768/1440 px layouts. Mini UI acceptance passes **29/29**, including exact-scope approval, a real completed synthetic workflow, keyboard controls, clipboard, both languages, all four widths and inert rendering of injected HTML. Both suites recorded zero uncaught browser errors. Static-export requests recorded zero failing local responses.
+- Desktop and mobile screenshots were visually inspected. The panel now wraps installed CLI paths, keeps diagnostic detail from stretching the agent cards and displays process output as text.
+- Agent lifecycle and authentication tests use simulated child processes. Version discovery, installed CLI help and a synthetic Windows npm shim were exercised locally. Live authenticated provider sessions, live OSV/CISA requests and a real machine inventory remain separate acceptance work. Physical devices, Safari and Firefox require their own verification.
+
+Reproduce browser acceptance with the existing Playwright CLI after `npm run build`. Serve the export using `node scripts/preview.mjs --port 3112`, open that URL and run `scripts/ui-acceptance.js` with `run-code --filename`. For the operator panel, open `http://127.0.0.1:3109/` and run `scripts/mini-ui-acceptance.js`. Screenshots are saved under the ignored `output/playwright/` directory.
+
+
 ## Evidence adapters, comparison and PR review — 10 November 2026
 
 - Based on `e4bc7a4`, including the preceding report-correctness fixes from PR #11.
@@ -172,6 +207,20 @@ Local lint, TypeScript and static export passed before final section tagging. Lo
 Source `d1e5f28faa9a355fa94f91477dd5b163b240b6f5` passed [Website motion acceptance 42887300281](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300281). Both languages passed 320/390/768/1440 Chromium viewport checks, anchor integrity, automatic stage changes, local pause with readable evidence, left-to-right host motion outside hover, keyboard stage selection, reduced-motion cleanup, cursor movement during construction and completed content restoration. Nine screenshots are attached to that run. Desktop and phone screenshots were visually reviewed; these are Chromium viewport checks, not physical iPhone/Safari tests.
 
 [Cross-platform CI 42887300297](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300297) passed Windows, macOS and Ubuntu. [Defensive PR review 42887300671](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300671) passed. Final refinements keep individual grid cards on the cursor timeline and reveal all text when playback stops. Both downloadable GIFs decode and have a six-second loop. The PR has not deployed a Pages artifact.
+
+## v0.3 model connection and restored motion (18 November 2026)
+
+Observed in a Linux container (Node 22.23.5):
+
+- `npm run check`: 118 unit tests pass, ESLint, TypeScript and the static Next.js export succeed.
+- `node tools/demo.mjs` → `explain --from demo-before --dry-run` printed the brief without sending. `explain --send-summary --provider claude-code` through a logged-in Claude Code CLI wrote a Polish plan labelled model judgment (≈28 s). `ask --send-question` returned the expected echo. OpenRouter, Anthropic, OpenAI, Codex and Ollama paths were exercised with network/process doubles only; they were not called live.
+- Mini UI (Playwright, 1440 px): provider card renders six providers, no console errors.
+- Static site (Playwright): at 1440 px the overlay becomes active on load with three cursors on distinct paths and the construction frame tracking the section; the header button sets `data-motion=paused`. At 390 px touch, one cursor, no horizontal overflow. Not verified: Windows/macOS browsers, physical devices, frame rate.
+
+## v0.3 Command Center panel (18 November 2026)
+
+- New panel (`tools/panel/`) served by `ui.mjs` under `default-src 'none'; script-src 'self'; style-src 'self'` with no inline scripts or handlers. Playwright at 1440 px and 390 px (touch): all seven views render, no console errors or CSP violations, no horizontal overflow, bottom tab bar on mobile, PL/EN switch.
+- Live: "Ask the expert" on a demo finding through the logged-in Claude Code CLI returned a formatted Polish answer in about 27 s; without consent the panel refused and showed a notice.
 
 ## Control center refresh (2026-11-16)
 
