@@ -15,7 +15,7 @@ import {
   renderExplanation,
   validateProvider,
 } from "./providers.mjs";
-import { buildOverview, chatWithModel } from "./panel-api.mjs";
+import { buildOverview, chatWithModel, readStoredReports } from "./panel-api.mjs";
 import { runDoctor } from "./doctor.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -1139,22 +1139,13 @@ export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, ca
   // A string (even empty) is the operator's explicit choice; only an omitted field falls back to the saved model.
   const model = typeof payload.model === "string" ? payload.model.trim() || null : config.provider === provider ? config.model : null;
   const reportsDir = path.join(rootDir, ".cda", "reports");
-  const requested = Array.isArray(payload.reports) ? payload.reports : [];
-  // Without an explicit selection, explain the 20 most recently written reports and say how many were left out.
-  const stored = fs.existsSync(reportsDir)
-    ? fs.readdirSync(reportsDir)
-        .filter((f) => /^[a-zA-Z0-9_-]{1,64}\.json$/.test(f))
-        .map((f) => ({ name: f.slice(0, -5), at: fs.statSync(resolveContainedPath(reportsDir, f)).mtimeMs }))
-        .sort((a, b) => b.at - a.at)
-        .map((r) => r.name)
-    : [];
-  const candidates = (requested.length ? requested : stored).filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n));
-  const names = candidates.slice(0, 20);
-  const excludedReports = candidates.length - names.length;
-  const named = [];
-  for (const n of names) {
-    try { named.push([n, JSON.parse(fs.readFileSync(resolveContainedPath(reportsDir, `${n}.json`), "utf8"))]); } catch { /* skip */ }
-  }
+  const requested = Array.isArray(payload.reports) ? payload.reports.filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n)) : [];
+  // Reads go through StateStore (no symlinked or hard-linked state). Without an explicit selection,
+  // explain the 20 most recently written reports and say how many were left out.
+  const available = readStoredReports(rootDir, 500, requested.length ? requested : null);
+  const named = available.slice(0, 20).map(([n, r]) => [n, r]);
+  const names = named.map(([n]) => n);
+  const excludedReports = available.length - named.length;
   const brief = buildBrief(named);
   if (!brief.coverage.sources) throw Object.assign(new Error("NO_SUPPORTED_REPORTS"), { code: "NO_SUPPORTED_REPORTS" });
   const question = String(payload.question || "").slice(0, 800);

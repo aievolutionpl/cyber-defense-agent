@@ -17,27 +17,33 @@ import {
 } from "./providers.mjs";
 import { fitHistory } from "./chat.mjs";
 import { redact } from "./redact.mjs";
+import { StateStore } from "./scope.mjs";
 
 const NAME = /^[a-zA-Z0-9_-]{1,64}$/;
 
-/** Stored JSON reports, newest first: [name, report] pairs. Unreadable files are skipped. */
-export function readStoredReports(rootDir, limit = 200) {
-  const dir = path.join(rootDir, ".cda", "reports");
-  if (!fs.existsSync(dir) || fs.lstatSync(dir).isSymbolicLink()) return [];
+/**
+ * Stored JSON reports, newest first: [name, report, mtime] triples. Every read goes through
+ * StateStore, which refuses symlinked or hard-linked state files and linked ancestors, exactly
+ * like the CLI. `names` restricts and orders the selection; unreadable or refused files are skipped.
+ */
+export function readStoredReports(rootDir, limit = 200, names = null) {
+  let store;
+  try { store = new StateStore(rootDir); } catch { return []; }
+  const listed = store.list("reports");
+  const wanted = Array.isArray(names) ? names.filter((n) => typeof n === "string" && NAME.test(n) && listed.includes(n)) : listed;
   const entries = [];
-  for (const file of fs.readdirSync(dir)) {
-    if (!file.endsWith(".json") || !NAME.test(file.slice(0, -5))) continue;
-    const full = path.join(dir, file);
+  for (const name of wanted) {
     try {
-      const stat = fs.lstatSync(full);
+      const file = store.file("reports", name);
+      const stat = fs.lstatSync(file);
       if (!stat.isFile()) continue;
-      entries.push({ name: file.slice(0, -5), full, at: stat.mtimeMs });
-    } catch { /* vanished */ }
+      entries.push({ name, at: stat.mtimeMs });
+    } catch { /* refused or vanished */ }
   }
-  entries.sort((a, b) => b.at - a.at);
+  if (!names) entries.sort((a, b) => b.at - a.at);
   const named = [];
   for (const e of entries.slice(0, limit)) {
-    try { named.push([e.name, JSON.parse(fs.readFileSync(e.full, "utf8")), e.at]); } catch { /* skip */ }
+    try { named.push([e.name, store.read("reports", e.name), e.at]); } catch { /* refused or unreadable */ }
   }
   return named;
 }

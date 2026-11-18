@@ -349,15 +349,25 @@ function boundedHistory(messages, budget = 45000) {
   while (kept.length > 1 && kept[0].role !== "user") kept.shift();
   return kept;
 }
+/** Returns true only when the message was accepted for sending, so callers keep the draft otherwise. */
 async function send(text, { focus = null, attach = false } = {}) {
-  if (state.busy || !text.trim()) return;
-  if (!$("#ex-consent").checked) { setView("expert"); toast(t("ex.needConsent"), "err"); $("#ex-consent").focus(); return; }
+  if (state.busy || !text.trim()) return false;
+  if (!$("#ex-consent").checked) { setView("expert"); toast(t("ex.needConsent"), "err"); $("#ex-consent").focus(); return false; }
+  void deliver(text, { focus, attach });
+  return true;
+}
+async function deliver(text, { focus, attach }) {
   const attachReports = attach || $("#ex-attach").checked;
   state.chat.push({ role: "user", content: text, display: focus ? `${text}\n\n▸ [${focus.priority}] ${focus.title}` : attachReports ? `${text}\n\n▸ +reports` : text });
   state.busy = true; renderChat(); $("#chat-send").disabled = true;
   const epoch = state.chatEpoch;
   const history = boundedHistory(state.chat.filter((m) => !m.error).map(({ role, content }) => ({ role, content })));
-  const data = await api("/api/model/chat", { provider: state.provider, model: $("#ex-model").value.trim(), messages: history, consent: true, lang: state.lang, focus, attachReports });
+  let data;
+  try {
+    data = await api("/api/model/chat", { provider: state.provider, model: $("#ex-model").value.trim(), messages: history, consent: true, lang: state.lang, focus, attachReports });
+  } catch (error) {
+    data = { ok: false, error: "NETWORK_ERROR", detail: String(error?.message ?? "").slice(0, 120) };
+  }
   // The conversation was cleared or the provider changed while this request was pending: drop the reply.
   if (epoch !== state.chatEpoch) return;
   state.busy = false; $("#chat-send").disabled = false; $("#ex-attach").checked = false;
@@ -454,7 +464,10 @@ function resetChat() {
   renderChat();
 }
 $("#ex-clear").addEventListener("click", resetChat);
-$("#chat-form").addEventListener("submit", (e) => { e.preventDefault(); const v = $("#chat-text").value; $("#chat-text").value = ""; send(v); });
+$("#chat-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (await send($("#chat-text").value)) $("#chat-text").value = "";
+});
 $("#chat-text").addEventListener("keydown", (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); $("#chat-form").requestSubmit(); } });
 $("#ag-mission").addEventListener("change", refreshBridge);
 $("#ag-target").addEventListener("input", refreshBridge);

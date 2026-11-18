@@ -112,3 +112,17 @@ test("an explicitly empty model selects the provider default instead of the save
   await chatWithModel({ ...base, model: "new-model" }, { rootDir: root, call });
   assert.deepEqual(seen, [null, "old-model", "new-model"]);
 });
+
+test("reports reached through symlinks never enter the overview or a model brief", { skip: process.platform === "win32" && "symlinks need extra privileges on Windows" }, async (t) => {
+  const root = tmp(t);
+  const dir = seed(root);
+  const outside = tmp(t);
+  fs.writeFileSync(path.join(outside, "secret.json"), JSON.stringify(web([{ id: "X", priority: "P0", title: "CONFIDENTIAL external finding", evidence: "e", fix: "f" }])));
+  fs.symlinkSync(path.join(outside, "secret.json"), path.join(dir, "linked.json"));
+  assert.ok(!JSON.stringify(buildOverview(root)).includes("CONFIDENTIAL"));
+  assert.deepEqual(readStoredReports(root).map(([n]) => n), ["site"]);
+  let sent = "";
+  const { explainReportsWithModel } = await import("../tools/ui.mjs");
+  await explainReportsWithModel({ provider: "openrouter", consent: true, reports: ["linked", "site"] }, { rootDir: root, call: async (req) => { sent = req.messages[0].content; return { provider: "openrouter", model: "m", text: "ok", ms: 1 }; } });
+  assert.ok(sent && !sent.includes("CONFIDENTIAL"));
+});
