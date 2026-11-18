@@ -25,6 +25,8 @@ import {
 import { runDoctor } from "../tools/doctor.mjs";
 import { explainReportsWithModel } from "../tools/ui.mjs";
 
+// On Windows a `.cmd` shim is run as `cmd.exe /d /s /c <shim> ...args`; compare the CLI's own arguments.
+const withoutShim = (args) => (args[0] === "/d" && args[2] === "/c" ? args.slice(4) : args);
 const noCli = () => { throw new Error("not installed"); };
 const tmp = (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "cda-providers-"));
@@ -113,7 +115,7 @@ test("CLI provider runs in an empty sandbox with fixed arguments and prompt on s
     child.stderr = new EventEmitter();
     child.kill = () => {};
     child.stdin = { end: (data) => {
-      seen = { bin, args, cwd: opts.cwd, stdin: data, files: fs.readdirSync(opts.cwd) };
+      seen = { bin, args: withoutShim(args), cwd: opts.cwd, stdin: data, files: fs.readdirSync(opts.cwd) };
       setImmediate(() => { child.stdout.emit("data", "Model says hi"); child.emit("close", 0); });
     } };
     return child;
@@ -132,7 +134,7 @@ test("Codex provider uses non-interactive read-only exec", async (t) => {
   const root = tmp(t);
   let args;
   const spawnImpl = (bin, a) => {
-    args = a;
+    args = withoutShim(a);
     const child = new EventEmitter();
     child.stdout = new EventEmitter();
     child.stderr = new EventEmitter();
