@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import vm from "node:vm";
 import { buildOverview, chatWithModel, postureScore, readStoredReports } from "../tools/panel-api.mjs";
 import { startMiniUi } from "../tools/ui.mjs";
 
@@ -79,6 +80,9 @@ test("panel serves its own files under a strict CSP and new APIs stay token-gate
   assert.ok(html.includes(`content="${ui.token}"`));
   assert.ok(!/<script>(?!<\/script>)/.test(html) && !html.includes("onclick="), "no inline script or handlers");
   for (const file of ["panel.js", "panel.css", "panel-icon.svg"]) assert.equal((await fetch(`${ui.url}${file}`)).status, 200, file);
+  // The served script must compile: a syntax error would disable every panel control.
+  const script = await (await fetch(`${ui.url}panel.js`)).text();
+  assert.doesNotThrow(() => new vm.Script(script));
   assert.equal((await fetch(`${ui.url}panel.mjs`)).status, 404);
   const overview = await (await fetch(`${ui.url}api/overview`)).json();
   assert.equal(overview.counts.P0, 1);
