@@ -16,7 +16,7 @@
 <p align="center">
   <img alt="Node 22+" src="https://img.shields.io/badge/node-22%2B-34d399?style=flat-square" />
   <img alt="zero npm deps in CLI" src="https://img.shields.io/badge/CLI-zero%20npm%20deps-34d399?style=flat-square" />
-  <img alt="tests" src="https://img.shields.io/badge/tests-101%20passing-34d399?style=flat-square" />
+  <img alt="tests" src="https://img.shields.io/badge/tests-103%20passing-34d399?style=flat-square" />
   <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-38bdf8?style=flat-square" />
   <img alt="models" src="https://img.shields.io/badge/models-Claude%20%C2%B7%20Codex%20%C2%B7%20OpenRouter%20%C2%B7%20Ollama-a78bfa?style=flat-square" />
 </p>
@@ -255,7 +255,7 @@ node tools/demo.mjs
 ```sh
 npm ci
 npm run dev     # serwer deweloperski: http://localhost:3107
-npm run check   # check:skills + 101 testów jednostkowych + ESLint + TypeScript + Next.js static build
+npm run check   # check:skills + 103 testów jednostkowych + ESLint + TypeScript + Next.js static build
 npm run demo    # lokalne demo na danych syntetycznych
 ```
 

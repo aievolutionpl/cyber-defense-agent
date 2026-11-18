@@ -1137,11 +1137,17 @@ export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, ca
   const model = payload.model || (config.provider === provider ? config.model : null);
   const reportsDir = path.join(rootDir, ".cda", "reports");
   const requested = Array.isArray(payload.reports) ? payload.reports : [];
-  const names = (requested.length
-    ? requested
-    : fs.existsSync(reportsDir) ? fs.readdirSync(reportsDir).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)) : [])
-    .filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n))
-    .slice(0, 20);
+  // Without an explicit selection, explain the 20 most recently written reports and say how many were left out.
+  const stored = fs.existsSync(reportsDir)
+    ? fs.readdirSync(reportsDir)
+        .filter((f) => /^[a-zA-Z0-9_-]{1,64}\.json$/.test(f))
+        .map((f) => ({ name: f.slice(0, -5), at: fs.statSync(resolveContainedPath(reportsDir, f)).mtimeMs }))
+        .sort((a, b) => b.at - a.at)
+        .map((r) => r.name)
+    : [];
+  const candidates = (requested.length ? requested : stored).filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n));
+  const names = candidates.slice(0, 20);
+  const excludedReports = candidates.length - names.length;
   const named = [];
   for (const n of names) {
     try { named.push([n, JSON.parse(fs.readFileSync(resolveContainedPath(reportsDir, `${n}.json`), "utf8"))]); } catch { /* skip */ }
@@ -1155,7 +1161,7 @@ export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, ca
   const file = resolveContainedPath(reportsDir, `explain-${stamp}.md`);
   fs.mkdirSync(reportsDir, { recursive: true });
   fs.writeFileSync(file, md, { encoding: "utf8", mode: 0o600 });
-  return { ok: true, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, rawEvidenceSent: false, report: path.basename(file), text: md };
+  return { ok: true, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, reportsUsed: names, excludedReports, rawEvidenceSent: false, report: path.basename(file), text: md };
 }
 
 function renderMiniUiHtml(token, initialLang = "pl") {
@@ -1740,7 +1746,7 @@ function renderMiniUiHtml(token, initialLang = "pl") {
           body: JSON.stringify({ provider: state.provider, model: document.getElementById('model-input').value.trim(), question: document.getElementById('question-input').value, consent: true, lang: state.lang })
         });
         const data = await res.json();
-        box.textContent = data.ok ? data.text : ('❌ ' + data.error + ' — sprawdź logowanie CLI lub klucz API (node tools/cda.mjs doctor).');
+        box.textContent = data.ok ? ((data.excludedReports ? '⚠️ Użyto ' + data.reportsUsed.length + ' najnowszych raportów; pominięto ' + data.excludedReports + ' starszych.\n\n' : '') + data.text) : ('❌ ' + data.error + ' — sprawdź logowanie CLI lub klucz API (node tools/cda.mjs doctor).');
         loadStatus();
       } catch (e) {
         box.textContent = '❌ ' + e.message;

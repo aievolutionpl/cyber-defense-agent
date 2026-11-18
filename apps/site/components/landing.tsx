@@ -63,8 +63,8 @@ export function Landing({ locale }: { locale: Locale }) {
       ];
 
   const stats: [number, string][] = pl
-    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [101, "testy bezpieczeństwa CLI"], [0, "zmian bez Twojej zgody"]]
-    : [[9, "expert playbooks"], [6, "protection areas"], [101, "CLI security tests"], [0, "changes without consent"]];
+    ? [[9, "playbooków eksperckich"], [6, "obszarów ochrony"], [103, "testy bezpieczeństwa CLI"], [0, "zmian bez Twojej zgody"]]
+    : [[9, "expert playbooks"], [6, "protection areas"], [103, "CLI security tests"], [0, "changes without consent"]];
 
   return (
     <>

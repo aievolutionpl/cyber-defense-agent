@@ -271,7 +271,7 @@ export function scrubIdentifiers(text) {
     .replace(/\b(?:\d{1,3}\.){3}\d{1,3}(?::\d+)?\b/g, "[ip]")
     .replace(/\b[a-z]:[\\/][^\s"'<>|]*/gi, "[path]")
     .replace(/(^|[\s("'=])(?:~|\.{1,2})?\/[^\s"'<>|)]+/g, "$1[path]")
-    .replace(/\b[\w.-]+(?:[\\/][\w.-]+)+/g, "[path]")
+    .replace(/(?<![@\w.-])[\w.-]+(?:[\\/][\w.-]+)+/g, "[path]")
     .replace(/\b(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.){2,}[a-z]{2,24}\b/gi, "[host]")
     .replace(/\b[a-z0-9-]+\.(?:local|lan|internal|corp|home|intranet|localdomain)\b/gi, "[host]");
 }
@@ -505,7 +505,7 @@ export function sanitizeModelMarkdown(text) {
     .replace(/[\u0000-\u0008\u000b-\u001f\u007f‪-‮⁦-⁩]/g, "")
     .replace(/<\/?(script|iframe|object|embed|style|link|meta|img|svg)[^>]*>/gi, "")
     .split(/\n/)
-    .map((line) => redact(line))
+    .map((line) => redact(line, MAX_OUTPUT_CHARS))
     .join("\n")
     .slice(0, MAX_OUTPUT_CHARS);
 }

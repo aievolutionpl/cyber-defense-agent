@@ -310,3 +310,28 @@ test("Windows .cmd shims are probed through cmd.exe", () => {
     Object.defineProperty(process, "platform", original);
   }
 });
+
+test("scrubbing keeps scoped package names and model lines are not truncated at 1600 chars", () => {
+  const brief = buildBrief([["adv", { format: "cda.advisories.v1", checked: 1, findings: [{ package: "@babel/traverse", installed: "7.20.0", id: "CVE-2023-45133", priority: "P1", severity: "critical", fixedIn: ["7.23.2"] }] }]]);
+  assert.match(brief.findings[0].title, /@babel\/traverse 7\.20\.0/);
+  const long = `${"x".repeat(3000)} END`;
+  assert.ok(sanitizeModelMarkdown(long).endsWith("END"));
+});
+
+test("Mini UI explains the newest reports first and discloses excluded ones", async (t) => {
+  const root = tmp(t);
+  const dir = path.join(root, ".cda", "reports");
+  fs.mkdirSync(dir, { recursive: true });
+  for (let i = 0; i < 21; i += 1) {
+    const file = path.join(dir, `r${String(i).padStart(2, "0")}.json`);
+    fs.writeFileSync(file, JSON.stringify({ ...webReport, findings: [{ id: `W${i}`, priority: i === 20 ? "P0" : "P3", title: `t${i}`, evidence: "e", fix: "f" }] }));
+    const when = new Date(Date.now() - (21 - i) * 60000);
+    fs.utimesSync(file, when, when);
+  }
+  let sent;
+  const result = await explainReportsWithModel({ provider: "openrouter", consent: true, lang: "en" }, { rootDir: root, call: async (req) => { sent = req; return { provider: "openrouter", model: "m", text: "ok", ms: 1 }; } });
+  assert.equal(result.excludedReports, 1);
+  assert.equal(result.reportsUsed[0], "r20");
+  assert.ok(!result.reportsUsed.includes("r00"));
+  assert.match(sent.messages[0].content, /"P0": 1/);
+});
