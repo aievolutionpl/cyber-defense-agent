@@ -4,6 +4,17 @@ import { execFileSync, spawn } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  detectProviders,
+  saveModelConfig,
+  loadModelConfig,
+  callModel,
+  systemPrompt,
+  buildBrief,
+  briefPrompt,
+  renderExplanation,
+  validateProvider,
+} from "./providers.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -454,7 +465,8 @@ export function launchAgentSession(
   }
 
   try {
-    const args = safeHost === "claude" ? ["-p", bridge.prompt] : [bridge.prompt];
+    // Non-interactive forms: `claude -p` and `codex exec` (plain `codex <prompt>` opens a TUI that needs a terminal).
+    const args = safeHost === "claude" ? ["-p", bridge.prompt] : safeHost === "codex" ? ["exec", "--skip-git-repo-check", bridge.prompt] : [bridge.prompt];
     const useCmdShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(session.executablePath);
     const proc = useCmdShim
       ? spawnImpl("cmd.exe", ["/d", "/s", "/c", session.executablePath, ...args], {
@@ -1113,6 +1125,39 @@ export function runBoundedAction(action, params = {}) {
   throw new Error("UNSUPPORTED_ACTION");
 }
 
+/**
+ * Explain stored reports with the connected model from the Mini UI.
+ * Requires payload.consent === true (the operator ticked the send-summary box) and the session token.
+ */
+export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, call = callModel } = {}) {
+  if (payload.consent !== true) throw Object.assign(new Error("CONSENT_REQUIRED"), { code: "CONSENT_REQUIRED" });
+  const lang = payload.lang === "en" ? "en" : "pl";
+  const config = loadModelConfig(rootDir);
+  const provider = validateProvider(payload.provider || config.provider || "");
+  const model = payload.model || (config.provider === provider ? config.model : null);
+  const reportsDir = path.join(rootDir, ".cda", "reports");
+  const requested = Array.isArray(payload.reports) ? payload.reports : [];
+  const names = (requested.length
+    ? requested
+    : fs.existsSync(reportsDir) ? fs.readdirSync(reportsDir).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)) : [])
+    .filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n))
+    .slice(0, 20);
+  const named = [];
+  for (const n of names) {
+    try { named.push([n, JSON.parse(fs.readFileSync(resolveContainedPath(reportsDir, `${n}.json`), "utf8"))]); } catch { /* skip */ }
+  }
+  const brief = buildBrief(named);
+  if (!brief.coverage.sources) throw Object.assign(new Error("NO_SUPPORTED_REPORTS"), { code: "NO_SUPPORTED_REPORTS" });
+  const question = String(payload.question || "").slice(0, 800);
+  const res = await call({ provider, model, system: systemPrompt(lang), messages: [{ role: "user", content: briefPrompt(brief, lang, question) }], consent: true, rootDir });
+  const md = renderExplanation({ provider: res.provider, model: res.model, text: res.text, brief, sources: names, lang, question });
+  const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+  const file = resolveContainedPath(reportsDir, `explain-${stamp}.md`);
+  fs.mkdirSync(reportsDir, { recursive: true });
+  fs.writeFileSync(file, md, { encoding: "utf8", mode: 0o600 });
+  return { ok: true, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, rawEvidenceSent: false, report: path.basename(file), text: md };
+}
+
 function renderMiniUiHtml(token, initialLang = "pl") {
   return `<!doctype html>
 <html lang="${initialLang}">
@@ -1437,6 +1482,14 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       max-height: 220px;
       overflow: auto;
     }
+    .provider-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap:10px; margin: 14px 0; }
+    .provider-pill { border:1px solid var(--line); border-radius:10px; padding:10px 12px; background:var(--surface); cursor:pointer; text-align:left; color:var(--text); font:inherit; }
+    .provider-pill:hover { border-color: var(--line-emerald); }
+    .provider-pill.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; background: rgba(52,211,153,0.07); }
+    .provider-pill strong { display:block; font-size:13px; }
+    .provider-pill small { display:block; font: 11px var(--mono); color: var(--muted); overflow-wrap:anywhere; }
+    .provider-pill .kind { color: var(--cyan); }
+    .model-answer { margin-top:16px; border:1px solid var(--line-emerald); border-radius:10px; padding:16px; background:#06100c; white-space:pre-wrap; font-size:13.5px; line-height:1.65; max-height:520px; overflow:auto; }
     .footer-credit {
       text-align: center;
       margin-top: 28px;
@@ -1549,6 +1602,33 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       </section>
     </div>
 
+    <!-- MODEL CONNECTION: subscription CLI, API key or local model -->
+    <section class="card" id="model-card">
+      <span class="eyebrow">04 / POŁĄCZENIE Z MODELEM · SUBSKRYPCJA, API LUB LOKALNIE</span>
+      <h2>Podłącz model i wyjaśnij wyniki prostym językiem</h2>
+      <p class="sub">Claude Code i Codex korzystają z Twojej subskrypcji (zalogowane CLI). OpenRouter, Anthropic i OpenAI używają klucza ze zmiennej środowiskowej. Ollama działa w 100% lokalnie. Model nie dostaje narzędzi, plików ani powłoki — tylko skrócony, zredagowany opis ustaleń.</p>
+      <div class="provider-grid" id="provider-grid"></div>
+      <div class="form-row">
+        <div>
+          <label for="model-input">Model (opcjonalnie, np. claude-opus-5-5, anthropic/claude-sonnet-5.5, gpt-5)</label>
+          <input type="text" id="model-input" placeholder="domyślny dla dostawcy" />
+        </div>
+        <div>
+          <label for="question-input">Pytanie do eksperta (opcjonalnie)</label>
+          <input type="text" id="question-input" placeholder="np. Co naprawić najpierw przed publikacją?" />
+        </div>
+      </div>
+      <label class="consent-bar">
+        <input type="checkbox" id="model-consent" />
+        <span>Zgadzam się wysłać do wybranego modelu skrócony opis ustaleń (priorytet, obszar, tytuł, wskazówka naprawy). Bez treści plików, ścieżek i sekretów.</span>
+      </label>
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" onclick="saveModelChoice()">💾 Zapisz wybór modelu</button>
+        <button class="btn btn-primary" type="button" id="explain-btn" onclick="explainWithModel()">🧠 Wyjaśnij raporty z modelem</button>
+      </div>
+      <div class="model-answer" id="model-answer" hidden></div>
+    </section>
+
     <!-- CONSOLE, RUN HISTORY & REPORTS -->
     <section class="card">
       <span class="eyebrow">03 / HISTORIA URUCHOMIEŃ, KONSOLA I RAPORTY (.CDA/REPORTS)</span>
@@ -1572,7 +1652,9 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       agents: {},
       bridge: {},
       runs: [],
-      sessions: []
+      sessions: [],
+      providers: [],
+      provider: null
     };
 
     function syncTarget(val) {
@@ -1596,6 +1678,70 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       document.getElementById('lang-en').classList.toggle('active', lang === 'en');
       refreshBridge();
       loadStatus();
+    }
+
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    async function loadProviders() {
+      const res = await fetch('/api/providers');
+      const data = await res.json();
+      state.providers = data.providers || [];
+      if (!state.provider) state.provider = (data.config && data.config.provider) || ((state.providers.find(p => p.ready) || {}).id) || 'claude-code';
+      if (data.config && data.config.model && !document.getElementById('model-input').value) document.getElementById('model-input').value = data.config.model;
+      renderProviders();
+    }
+
+    function renderProviders() {
+      const grid = document.getElementById('provider-grid');
+      grid.innerHTML = state.providers.map(p => {
+        const status = p.ready ? '✓ ' + (p.version || p.keyHint || 'gotowe') : (p.local ? '○ lokalny · ' + p.defaultModel : p.kind === 'cli' ? '○ brak CLI w PATH' : '○ brak ' + p.variable);
+        return '<button type="button" class="provider-pill' + (state.provider === p.id ? ' active' : '') + '" data-provider="' + esc(p.id) + '">' +
+          '<strong>' + esc(p.id) + ' <span class="kind">' + esc(p.kind === 'cli' ? 'SUBSKRYPCJA' : p.local ? 'LOKALNIE' : 'API') + '</span></strong>' +
+          '<small class="' + (p.ready ? 'status-ok' : 'status-warn') + '">' + esc(status) + '</small>' +
+          '<small>' + esc(state.lang === 'en' ? p.label : p.labelPl) + '</small>' +
+          (p.ready ? '' : '<small>→ ' + esc(p.setup) + '</small>') +
+        '</button>';
+      }).join('');
+      grid.querySelectorAll('[data-provider]').forEach(btn => btn.onclick = () => { state.provider = btn.dataset.provider; renderProviders(); });
+    }
+
+    async function saveModelChoice() {
+      const res = await fetch('/api/model/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
+        body: JSON.stringify({ provider: state.provider, model: document.getElementById('model-input').value.trim(), lang: state.lang })
+      });
+      const data = await res.json();
+      document.getElementById('console-out').textContent = data.ok ? ('✓ Zapisano: ' + data.config.provider + (data.config.model ? ' · ' + data.config.model : '')) : ('❌ ' + data.error);
+      loadProviders();
+    }
+
+    async function explainWithModel() {
+      const box = document.getElementById('model-answer');
+      const btn = document.getElementById('explain-btn');
+      box.hidden = false;
+      if (!document.getElementById('model-consent').checked) {
+        box.textContent = '⚠️ Zaznacz zgodę na wysłanie skróconego opisu do modelu.';
+        return;
+      }
+      btn.disabled = true;
+      box.textContent = '⏳ ' + state.provider + ' analizuje raporty… (subskrypcyjne CLI mogą potrzebować ~30 s)';
+      try {
+        const res = await fetch('/api/model/explain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-cda-token': TOKEN },
+          body: JSON.stringify({ provider: state.provider, model: document.getElementById('model-input').value.trim(), question: document.getElementById('question-input').value, consent: true, lang: state.lang })
+        });
+        const data = await res.json();
+        box.textContent = data.ok ? data.text : ('❌ ' + data.error + ' — sprawdź logowanie CLI lub klucz API (node tools/cda.mjs doctor).');
+        loadStatus();
+      } catch (e) {
+        box.textContent = '❌ ' + e.message;
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     async function loadStatus() {
@@ -1625,9 +1771,9 @@ function renderMiniUiHtml(token, initialLang = "pl") {
           ? ('✓ ' + (info.version || 'CLI'))
           : (info.entryExists ? '○ Skill gotowy (brak CLI)' : '—');
         div.innerHTML =
-          '<strong>' + info.name + '</strong>' +
-          '<small class="' + (info.installed ? 'status-ok' : 'status-warn') + '">' + statusText + '</small>' +
-          (info.executablePath ? '<small>' + info.executablePath + '</small>' : '');
+          '<strong>' + esc(info.name) + '</strong>' +
+          '<small class="' + (info.installed ? 'status-ok' : 'status-warn') + '">' + esc(statusText) + '</small>' +
+          (info.executablePath ? '<small>' + esc(info.executablePath) + '</small>' : '');
         row.appendChild(div);
       }
     }
@@ -1649,15 +1795,15 @@ function renderMiniUiHtml(token, initialLang = "pl") {
 
       const stepsHtml = (run.steps || []).map(s => {
         const cls = s.status === 'completed' ? 'status-ok' : s.status === 'running' ? 'status-warn' : s.status === 'failed' || s.status === 'cancelled' ? 'status-err' : '';
-        return '<div class="step-item"><span>' + s.label + '</span><span class="step-status ' + cls + '">' + s.status.toUpperCase() + '</span></div>';
+        return '<div class="step-item"><span>' + esc(s.label) + '</span><span class="step-status ' + cls + '">' + esc(String(s.status).toUpperCase()) + '</span></div>';
       }).join('');
 
-      const reportsLinks = (run.reports || []).map(r => '<a class="report-chip" href="/report/' + encodeURIComponent(r) + '" target="_blank">📄 ' + r + '</a>').join(' ');
+      const reportsLinks = (run.reports || []).map(r => '<a class="report-chip" href="/report/' + encodeURIComponent(r) + '" target="_blank">📄 ' + esc(r) + '</a>').join(' ');
 
       box.innerHTML =
-        '<div style="font:600 12px var(--mono);color:#94a3b8;margin-bottom:6px;">AKTYWNE URUCHOMIENIE: ' + run.runId + ' [' + run.status.toUpperCase() + ']</div>' +
+        '<div style="font:600 12px var(--mono);color:#94a3b8;margin-bottom:6px;">AKTYWNE URUCHOMIENIE: ' + esc(run.runId) + ' [' + esc(String(run.status).toUpperCase()) + ']</div>' +
         '<div class="steps-list">' + stepsHtml + '</div>' +
-        (run.nextStep ? '<div class="next-step-box"><strong>Następny krok:</strong> ' + run.nextStep + '</div>' : '') +
+        (run.nextStep ? '<div class="next-step-box"><strong>Następny krok:</strong> ' + esc(run.nextStep) + '</div>' : '') +
         (reportsLinks ? '<div class="reports-grid">' + reportsLinks + '</div>' : '');
     }
 
@@ -1669,9 +1815,9 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       }
       box.innerHTML = state.runs.slice(0, 6).map(r => {
         const canResume = r.status === 'failed' || r.status === 'cancelled';
-        return '<div class="step-item" onclick="state.activeRunId=\\'' + r.runId + '\\';renderActiveRun();" style="cursor:pointer">' +
-          '<span><strong>' + r.title + '</strong> <small style="color:#94a3b8">(' + r.runId + ')</small></span>' +
-          '<span><span class="step-status">' + r.status.toUpperCase() + '</span>' +
+        return '<div class="step-item" onclick="state.activeRunId=\\'' + esc(r.runId) + '\\';renderActiveRun();" style="cursor:pointer">' +
+          '<span><strong>' + esc(r.title) + '</strong> <small style="color:#94a3b8">(' + esc(r.runId) + ')</small></span>' +
+          '<span><span class="step-status">' + esc(String(r.status).toUpperCase()) + '</span>' +
           (canResume ? ' <button class="btn btn-secondary" style="padding:3px 8px;font-size:11px" onclick="event.stopPropagation();resumeRunById(\\'' + r.runId + '\\')">↻ Wznów</button>' : '') +
           '</span></div>';
       }).join('');
@@ -1687,11 +1833,11 @@ function renderMiniUiHtml(token, initialLang = "pl") {
       const cls = s.status === 'completed' || s.status === 'running' ? 'status-ok' : 'status-err';
       box.innerHTML =
         '<div class="step-item">' +
-          '<div><strong>Sesja: ' + s.hostName + ' (' + s.mission + ')</strong><br/><small style="color:#94a3b8">Plik: ' + s.executablePath + '</small>' +
-          (s.authHint ? '<div style="color:#fb7185;font-size:11.5px;margin-top:4px;">⚠️ ' + s.authHint + '</div>' : '') +
-          (s.error && !s.authHint ? '<div style="color:#fbbf24;font-size:11.5px;margin-top:4px;">ℹ️ ' + s.error + '</div>' : '') +
+          '<div><strong>Sesja: ' + esc(s.hostName) + ' (' + esc(s.mission) + ')</strong><br/><small style="color:#94a3b8">Plik: ' + esc(s.executablePath) + '</small>' +
+          (s.authHint ? '<div style="color:#fb7185;font-size:11.5px;margin-top:4px;">⚠️ ' + esc(s.authHint) + '</div>' : '') +
+          (s.error && !s.authHint ? '<div style="color:#fbbf24;font-size:11.5px;margin-top:4px;">ℹ️ ' + esc(s.error) + '</div>' : '') +
           '</div>' +
-          '<span class="step-status ' + cls + '">' + s.status.toUpperCase() + '</span>' +
+          '<span class="step-status ' + cls + '">' + esc(String(s.status).toUpperCase()) + '</span>' +
         '</div>';
     }
 
@@ -1790,6 +1936,7 @@ function renderMiniUiHtml(token, initialLang = "pl") {
     }
 
     loadStatus();
+    loadProviders();
     refreshBridge();
     setInterval(() => {
       if (state.runs.some(r => r.status === 'running') || state.sessions.some(s => s.status === 'running')) {
@@ -1843,6 +1990,11 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         });
         res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify(bridge));
+        return;
+      }
+      if (req.method === "GET" && url.pathname === "/api/providers") {
+        res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(detectProviders({ rootDir })));
         return;
       }
       if (req.method === "GET" && url.pathname === "/api/workflows") {
@@ -1919,6 +2071,18 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
           res.end(JSON.stringify({ ok: true, run }));
           return;
         }
+        if (url.pathname === "/api/model/config") {
+          const config = saveModelConfig({ provider: payload.provider, model: payload.model || null, lang: payload.lang }, rootDir);
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify({ ok: true, config }));
+          return;
+        }
+        if (url.pathname === "/api/model/explain") {
+          const result = await explainReportsWithModel(payload, { rootDir });
+          res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+          res.end(JSON.stringify(result));
+          return;
+        }
         if (url.pathname === "/api/run") {
           const result = runBoundedAction(payload.action, payload);
           res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
@@ -1935,7 +2099,8 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         code === "INVALID_ORIGIN" ||
         code === "INVALID_SESSION_TOKEN" ||
         code === "PATH_OUTSIDE_BOUNDARY" ||
-        code === "INVALID_AGENT_HOST"
+        code === "INVALID_AGENT_HOST" ||
+        code === "CONSENT_REQUIRED"
           ? 403
           : 400;
       res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });

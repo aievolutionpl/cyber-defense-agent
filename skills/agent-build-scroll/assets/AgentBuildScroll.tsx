@@ -223,7 +223,10 @@ export function AgentBuildScroll({ locale = "en" }: { locale?: "en" | "pl" }) {
                 : pl
                   ? "kontrola"
                   : "checking";
-          const nextLabel = `${["Scout", "Builder", "Verifier"][i]} · ${action}`;
+          // The lead cursor takes the section's role (data-agent-target); the others keep distinct names.
+          const lead = target.dataset.agentTarget || "Scout";
+          const role = [lead, ...["Scout", "Builder", "Verifier"].filter((name) => name !== lead)][i];
+          const nextLabel = `${role} · ${action}`;
           if (label.textContent !== nextLabel) label.textContent = nextLabel;
         });
         layer.style.opacity = String(

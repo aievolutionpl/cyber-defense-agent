@@ -4,7 +4,7 @@
 
 This file guides contributors and coding agents working on this trusted repository. It does not grant permission to inspect another project. Product overview and first run: [README.md](README.md). Operator requirements: [docs/RESPONSIBLE_USE.md](docs/RESPONSIBLE_USE.md).
 
-Use Node.js >=22. The site is in apps/site. Local tools use only the Node standard library and never execute target code. Network access exists in exactly two consent-gated modules (`advisories.mjs`, `web.mjs`). Run npm run check and npm run demo before releasing.
+Use Node.js >=22. The site is in apps/site. Local tools use only the Node standard library and never execute target code. Network access exists in exactly three consent-gated modules (`advisories.mjs`, `web.mjs`, `providers.mjs`). Run npm run check and npm run demo before releasing.
 
 ## Ownership and architecture
 
@@ -21,6 +21,8 @@ Use Node.js >=22. The site is in apps/site. Local tools use only the Node standa
 - `tools/comparison.mjs`: validated snapshot comparison and redacted SARIF export. Absence is never a confirmed fix.
 - `tools/pr-review.mjs`: trusted base-policy review of separate repository snapshots. Never execute candidate code.
 - `tools/triage.mjs`: bounded model-input facts; no automatic transmission.
+- `tools/providers.mjs`: optional model connection (Claude Code / Codex CLI subscriptions, OpenRouter, Anthropic, OpenAI, local Ollama). Fixed URL allowlist, no redirects, consent flag per call, bounded redacted brief only, no tools for the model, keys from env or a user-level file outside the repository.
+- `tools/chat.mjs`, `tools/doctor.mjs`: interactive expert chat (per-brief confirmation) and a local, network-free readiness check.
 - `tools/welcome.mjs`: deterministic terminal intake; no target access, persistence or consent side effects.
 - `apps/site/`: static presentation, EN/PL and synthetic examples. No real scan or model API.
 - `tests/`: meaningful adversarial and workflow regression tests. CI runs on Windows, Linux and macOS.
