@@ -335,3 +335,14 @@ test("Mini UI explains the newest reports first and discloses excluded ones", as
   assert.ok(!result.reportsUsed.includes("r00"));
   assert.match(sent.messages[0].content, /"P0": 1/);
 });
+
+test("timeouts kill the whole provider process tree on Windows", async () => {
+  const { killTree } = await import("../tools/providers.mjs");
+  const calls = [];
+  let killed = false;
+  killTree({ pid: 4242, kill: () => { killed = true; } }, { platform: "win32", run: (bin, args) => calls.push([bin, args]) });
+  assert.deepEqual(calls, [["taskkill.exe", ["/pid", "4242", "/T", "/F"]]]);
+  assert.equal(killed, false);
+  killTree({ pid: 1, kill: () => { killed = true; } }, { platform: "linux", run: () => { throw new Error("unused"); } });
+  assert.equal(killed, true);
+});

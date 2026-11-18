@@ -425,7 +425,7 @@ function callCli(provider, model, system, messages, { spawnImpl, execImpl, timeo
       : spawnImpl(cli.executablePath, args, { cwd, stdio: ["pipe", "pipe", "pipe"], windowsHide: true });
     let stdout = "";
     let stderr = "";
-    const timer = setTimeout(() => { try { child.kill("SIGTERM"); } catch { /* gone */ } reject(new ProviderError("PROVIDER_TIMEOUT")); }, timeoutMs);
+    const timer = setTimeout(() => { killTree(child); reject(new ProviderError("PROVIDER_TIMEOUT")); }, timeoutMs);
     child.stdout?.on("data", (d) => { stdout = (stdout + d).slice(-MAX_RESPONSE_BYTES); });
     child.stderr?.on("data", (d) => { stderr = (stderr + d).slice(-8000); });
     child.on("error", () => { clearTimeout(timer); reject(new ProviderError("CLI_NOT_INSTALLED", spec.install)); });
@@ -447,6 +447,17 @@ function callCli(provider, model, system, messages, { spawnImpl, execImpl, timeo
     });
     child.stdin?.end(prompt);
   });
+}
+
+/**
+ * Stop a provider CLI and everything it started. On Windows the child is often the cmd.exe wrapper
+ * of an npm .cmd shim, and killing a parent there does not kill its children: use taskkill /T.
+ */
+export function killTree(child, { platform = process.platform, run = execFileSync } = {}) {
+  if (platform === "win32" && child?.pid) {
+    try { run("taskkill.exe", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore", timeout: 5000, windowsHide: true }); return; } catch { /* fall back */ }
+  }
+  try { child?.kill?.("SIGTERM"); } catch { /* already gone */ }
 }
 
 /**
