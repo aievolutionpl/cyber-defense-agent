@@ -148,6 +148,7 @@ test("Codex provider uses non-interactive read-only exec", async (t) => {
   assert.equal(args[0], "exec");
   assert.ok(args.includes("--sandbox") && args[args.indexOf("--sandbox") + 1] === "read-only");
   assert.equal(args.at(-1), "-");
+  for (const flag of ["features.shell_tool=false", "features.unified_exec=false", "features.apply_patch_freeform=false", "mcp_servers={}"]) assert.ok(args.includes(flag), flag);
 });
 
 test("brief never contains raw evidence, secrets or injected instructions verbatim as evidence", () => {
@@ -294,4 +295,18 @@ test("chat history is trimmed to the transport budget and starts on a user turn"
   assert.equal(kept[0].role, "user");
   assert.ok(kept.reduce((n, m) => n + m.content.length, 0) <= 45000);
   assert.equal(kept.at(-1).content, "q3");
+});
+
+test("Windows .cmd shims are probed through cmd.exe", () => {
+  const calls = [];
+  const execImpl = (bin, args) => { calls.push([bin, args]); if (bin === "cmd.exe" && args[3] === "claude.cmd") return "2.1.0 (Claude Code)"; throw new Error("no"); };
+  const original = Object.getOwnPropertyDescriptor(process, "platform");
+  Object.defineProperty(process, "platform", { value: "win32" });
+  try {
+    const row = detectProviders({ env: { CDA_CONFIG_HOME: os.tmpdir() }, execImpl, rootDir: os.tmpdir() }).providers.find((p) => p.id === "claude-code");
+    assert.equal(row.installed, true);
+    assert.deepEqual(calls.find(([bin]) => bin === "cmd.exe")[1], ["/d", "/s", "/c", "claude.cmd", "--version"]);
+  } finally {
+    Object.defineProperty(process, "platform", original);
+  }
 });

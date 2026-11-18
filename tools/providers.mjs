@@ -195,7 +195,11 @@ function probeCli(bin, execImpl = execFileSync) {
   const candidates = process.platform === "win32" ? [`${bin}.cmd`, `${bin}.exe`, bin] : [bin];
   for (const candidate of candidates) {
     try {
-      const out = execImpl(candidate, ["--version"], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
+      // npm installs Windows CLIs as .cmd shims, which are only runnable through cmd.exe.
+      const shim = /\.(cmd|bat)$/i.test(candidate);
+      const out = shim
+        ? execImpl("cmd.exe", ["/d", "/s", "/c", candidate, "--version"], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"], windowsHide: true })
+        : execImpl(candidate, ["--version"], { encoding: "utf8", timeout: 3000, stdio: ["ignore", "pipe", "ignore"], windowsHide: true });
       return { installed: true, executablePath: candidate, version: String(out).trim().split(/\r?\n/)[0].slice(0, 80) || "detected" };
     } catch { /* try next */ }
   }
@@ -408,7 +412,11 @@ function callCli(provider, model, system, messages, { spawnImpl, execImpl, timeo
   const args = provider === "claude-code"
     ? // --tools "" disables every built-in tool; --strict-mcp-config without --mcp-config loads no MCP servers.
       ["-p", "--output-format", "text", "--tools", "", "--strict-mcp-config", ...(model ? ["--model", model] : [])]
-    : ["exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never", "--output-last-message", lastMessage, ...(model ? ["-m", model] : []), "-"];
+    : // Read-only sandbox plus config overrides that turn off the shell, unified exec and patch
+      // tools and drop inherited MCP servers. Codex has no single "no tools" switch; see MODEL_PROVIDERS.md.
+      ["exec", "--skip-git-repo-check", "--sandbox", "read-only", "--color", "never",
+        "-c", "features.shell_tool=false", "-c", "features.unified_exec=false", "-c", "features.apply_patch_freeform=false", "-c", "mcp_servers={}",
+        "--output-last-message", lastMessage, ...(model ? ["-m", model] : []), "-"];
   const prompt = flatten(system, messages);
   const useShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(cli.executablePath);
   return new Promise((resolve, reject) => {
