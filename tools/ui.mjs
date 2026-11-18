@@ -1136,7 +1136,8 @@ export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, ca
   const lang = payload.lang === "en" ? "en" : "pl";
   const config = loadModelConfig(rootDir);
   const provider = validateProvider(payload.provider || config.provider || "");
-  const model = payload.model || (config.provider === provider ? config.model : null);
+  // A string (even empty) is the operator's explicit choice; only an omitted field falls back to the saved model.
+  const model = typeof payload.model === "string" ? payload.model.trim() || null : config.provider === provider ? config.model : null;
   const reportsDir = path.join(rootDir, ".cda", "reports");
   const requested = Array.isArray(payload.reports) ? payload.reports : [];
   // Without an explicit selection, explain the 20 most recently written reports and say how many were left out.

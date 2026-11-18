@@ -95,7 +95,8 @@ export async function chatWithModel(payload = {}, { rootDir, call = callModel } 
   const lang = payload.lang === "en" ? "en" : "pl";
   const config = loadModelConfig(rootDir);
   const provider = validateProvider(payload.provider || config.provider || "");
-  const model = payload.model || (config.provider === provider ? config.model : null);
+  // A string (even empty) is the operator's explicit choice; only an omitted field falls back to the saved model.
+  const model = typeof payload.model === "string" ? payload.model.trim() || null : config.provider === provider ? config.model : null;
   const raw = Array.isArray(payload.messages) ? payload.messages.slice(-30) : [];
   const messages = raw
     .filter((m) => m && typeof m.content === "string" && m.content.trim())

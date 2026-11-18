@@ -99,3 +99,16 @@ test("panel serves its own files under a strict CSP and new APIs stay token-gate
   const bigOther = await fetch(`${ui.url}api/model/config`, { method: "POST", headers: { "Content-Type": "application/json", "x-cda-token": ui.token }, body: JSON.stringify({ pad: "x".repeat(20000) }) });
   assert.equal((await bigOther.json()).error, "PAYLOAD_TOO_LARGE");
 });
+
+test("an explicitly empty model selects the provider default instead of the saved override", async (t) => {
+  const root = tmp(t);
+  fs.mkdirSync(path.join(root, ".cda"), { recursive: true });
+  fs.writeFileSync(path.join(root, ".cda", "config.json"), JSON.stringify({ provider: "openrouter", model: "old-model" }));
+  const seen = [];
+  const call = async (req) => { seen.push(req.model); return { provider: req.provider, model: "m", text: "ok", ms: 1 }; };
+  const base = { provider: "openrouter", consent: true, messages: [{ role: "user", content: "q" }] };
+  await chatWithModel({ ...base, model: "" }, { rootDir: root, call });
+  await chatWithModel(base, { rootDir: root, call });
+  await chatWithModel({ ...base, model: "new-model" }, { rootDir: root, call });
+  assert.deepEqual(seen, [null, "old-model", "new-model"]);
+});
