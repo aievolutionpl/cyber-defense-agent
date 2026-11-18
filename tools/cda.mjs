@@ -11,6 +11,7 @@ import {
   authorized,
   deny,
   sha,
+  scopeDigest,
 } from "./scope.mjs";
 import { review, importScan, retest, render, validateReport } from "./engine.mjs";
 import { compareReports, renderComparison, toSarif } from "./comparison.mjs";
@@ -223,6 +224,7 @@ async function main() {
       allow: { type: "string", multiple: true },
       name: { type: "string" },
       scope: { type: "string" },
+      proposal: { type: "string" },
       report: { type: "string" },
       input: { type: "string" },
       format: { type: "string" },
@@ -279,7 +281,7 @@ async function main() {
     ask: ["question", "provider", "model", "lang", "send-question"],
     chat: ["provider", "model", "lang"],
     scope: ["root", "allow", "git-staged", "name"],
-    approve: ["scope", "root", "yes"],
+    approve: ["scope", "root", "yes", "proposal"],
     show: ["scope"],
     onboarding: ["scope"],
     summary: ["scope", "report", "name"],
@@ -342,6 +344,8 @@ async function main() {
       mission: v.mission || "demo",
       target: v.target || "",
       lang,
+      executablePath: agents[v.host || "claude"].commandPath,
+      executableArgs: agents[v.host || "claude"].commandArgs,
     });
     process.stdout.write(
       `\n\x1b[38;2;52;211;153m╭────────────────────────────────────────────────────────────────────────────╮\x1b[0m\n` +
@@ -468,6 +472,7 @@ async function main() {
   }
   const scope = store.read("scopes", v.scope);
   if (command === "approve") {
+    if (v.proposal && v.proposal !== scopeDigest(scope)) deny("SCOPE_PROPOSAL_CHANGED");
     store.write("scopes", v.scope, approve(scope, v.root, v.yes));
     process.stdout.write(
       "Read scope approved. Target execution is unavailable; these files are never sent anywhere by the CLI.\n",

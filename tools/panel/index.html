@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pl">
+<html lang="__CDA_LANG__">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -111,6 +111,10 @@
             <label for="wf-target" id="wf-target-label" data-i18n="audit.target">Ścieżka projektu lub adres URL</label>
             <input id="wf-target" type="text" autocomplete="off" spellcheck="false" />
           </div>
+          <div class="field" id="wf-files-field" hidden>
+            <label for="wf-files" data-i18n="audit.files">Ścieżki względne, po jednej w wierszu</label>
+            <textarea id="wf-files" rows="4" spellcheck="false" placeholder="package.json&#10;package-lock.json"></textarea>
+          </div>
           <div class="consent-box" id="wf-consent-box">
             <label class="switch"><input type="checkbox" id="wf-consent" /><span></span></label>
             <div><strong data-i18n="audit.consent.t">Zgoda na ten krok</strong><p id="wf-consent-text" class="muted"></p></div>
@@ -126,6 +130,11 @@
             <div class="card-head"><h3 data-i18n="audit.active">Bieżące uruchomienie</h3><span class="chip" id="run-status">—</span></div>
             <ol class="timeline" id="run-steps"></ol>
             <div class="callout" id="run-next" hidden></div>
+            <div class="callout" id="run-approval" hidden>
+              <p id="run-approval-label"></p>
+              <pre id="run-scope" hidden></pre>
+              <button type="button" class="btn btn-primary" id="wf-approve" data-i18n="audit.approve">Zatwierdź krok</button>
+            </div>
             <div class="chips" id="run-reports"></div>
           </div>
           <div class="card">

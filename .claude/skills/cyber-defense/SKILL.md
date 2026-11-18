@@ -1,6 +1,6 @@
 ---
 name: cyber-defense
-description: Defensive security expert for your own assets - PC/server software and known vulnerabilities, websites, code, databases and network. Consent-gated and read-only. Invoke for a Cyber Defense Agent check or demo.
+description: Evidence-led security reviews of your own code, AI agents, skills, MCP configuration, computers and websites. Scoped consent, read-only tools and conservative retesting. Invoke for a Cyber Defense Agent review or synthetic demo.
 disable-model-invocation: true
 ---
 

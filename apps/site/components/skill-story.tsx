@@ -57,7 +57,7 @@ export function ConsentLadder({ locale }: { locale: Locale }) {
         ["L0", "Doradza", "Wyjaśnia i planuje. Niczego nie dotyka.", "domyślnie"],
         ["L1", "Czyta pliki", "Tylko dokładnie zatwierdzoną listę, przez 24 godziny.", "approve --yes"],
         ["L2", "Zagląda do komputera", "Programy i otwarte porty. Bez nazwy komputera i użytkownika.", "inventory --yes"],
-        ["L3", "Pyta internet", "Wysyła wyłącznie nazwy i wersje pakietów.", "--share-package-names"],
+        ["L3", "Pyta internet", "Nazwy, wersje i ekosystemy pakietów do OSV; pobranie CISA KEV.", "--share-package-names"],
         ["L4", "Sprawdza Twoją stronę", "Kilka zwykłych zapytań GET. Zero ruchu atakującego.", "--authorized"],
         ["L5", "Zmiany", "Nigdy sam. Przygotowuje poprawkę i sposób cofnięcia. Wdrażasz Ty.", "Twoja decyzja"],
       ]
@@ -65,7 +65,7 @@ export function ConsentLadder({ locale }: { locale: Locale }) {
         ["L0", "Advises", "Explains and plans. Touches nothing.", "default"],
         ["L1", "Reads files", "Only the exact list you approved, for 24 hours.", "approve --yes"],
         ["L2", "Looks at this machine", "Programs and open ports. No computer or user name.", "inventory --yes"],
-        ["L3", "Asks the internet", "Sends package names and versions only.", "--share-package-names"],
+        ["L3", "Asks the internet", "Package names, versions and ecosystems to OSV; a CISA KEV download.", "--share-package-names"],
         ["L4", "Checks your website", "A few ordinary GET requests. Zero attack traffic.", "--authorized"],
         ["L5", "Changes", "Never on its own. It prepares the fix and the rollback. You apply it.", "your decision"],
       ];
@@ -77,14 +77,14 @@ export function ConsentLadder({ locale }: { locale: Locale }) {
       <div className="ladder-intro" data-reveal>
         <span className="eyebrow">{pl ? "05 / TWOJA KONTROLA" : "05 / YOU STAY IN CONTROL"}</span>
         <h2 id="ladder-title">
-          {pl ? "Sześć poziomów." : "Six levels."}
+          {pl ? "Jasny zakres." : "A clear scope."}
           <br />
-          <span className="gradient-text">{pl ? "Każdy za Twoją zgodą." : "None without your yes."}</span>
+          <span className="gradient-text">{pl ? "Ty ustalasz granice." : "You set the boundaries."}</span>
         </h2>
         <p>
           {pl
-            ? "Agent wykonuje kolejny krok wyłącznie po Twojej jawnej zgodzie (fladze w CLI). Nigdy nie modyfikuje plików ani systemu na własną rękę."
-            : "The agent advances only when you pass an explicit consent flag in the CLI. It never modifies files or systems on its own."}
+            ? "Agent korzysta z udzielonej zgody w ustalonym zakresie. Nowe pliki, wysyłanie danych i zmiany wymagają osobnej decyzji. Raport pokazuje, co zostało sprawdzone."
+            : "The agent reuses consent within its approved scope. New files, data sharing and changes need a separate decision. The report shows what was checked."}
         </p>
         <ul className="never-list" aria-label={pl ? "Twarde granice" : "Hard lines"}>
           {never.map((text) => (
@@ -120,6 +120,7 @@ export function KnowledgeBase({ locale }: { locale: Locale }) {
         ["databases.md", "Bazy danych", "PostgreSQL, Supabase, MySQL, MongoDB, Redis. Tylko odczyt."],
         ["network.md", "Sieć", "Router, Wi-Fi, otwarte usługi, urządzenia IoT."],
         ["incident-first-response.md", "Pierwsza pomoc", "Phishing, przejęte konto, ransomware, wyciek klucza."],
+        ["agent-security.md", "Agenci AI i MCP", "Uprawnienia narzędzi, granice zaufania, pamięć i dane."],
         ["sources.md", "Źródła", "Standardy i otwarte repozytoria, z których powstała wiedza."],
       ]
     : [
@@ -131,13 +132,14 @@ export function KnowledgeBase({ locale }: { locale: Locale }) {
         ["databases.md", "Databases", "PostgreSQL, Supabase, MySQL, MongoDB, Redis. Read-only."],
         ["network.md", "Network", "Router, Wi-Fi, exposed services, IoT devices."],
         ["incident-first-response.md", "First response", "Phishing, account takeover, ransomware, leaked keys."],
+        ["agent-security.md", "AI agents & MCP", "Tool permissions, trust boundaries, memory and data."],
         ["sources.md", "Sources", "The standards and open repositories behind the knowledge."],
       ];
   return (
     <div className="knowledge-block" id="knowledge">
       <div className="knowledge-head" data-reveal>
         <span className="eyebrow"><BookOpen size={13} aria-hidden="true" />{pl ? "WIEDZA EKSPERTA W ŚRODKU" : "EXPERT KNOWLEDGE INSIDE"}</span>
-        <h3>{pl ? "Dziewięć playbooków. Zero zgadywania." : "Nine playbooks. Zero guesswork."}</h3>
+        <h3>{pl ? "Metoda, którą możesz sprawdzić." : "A method you can inspect."}</h3>
         <p>
           {pl
             ? "Opracowane na podstawie OWASP Top 10:2025, ASVS, CWE, CIS, NIST i CISA KEV oraz sprawdzonych otwartych repozytoriów. Każdy przeczytasz na GitHubie."

@@ -18,7 +18,9 @@ const I18N = {
     "verdictText.act": "Są ustalenia P0. Zacznij od nich — poniżej masz dokładne poprawki.", "verdictText.attention": "Brak P0, ale są pilne P1. Zaplanuj poprawki w tym tygodniu.", "verdictText.routine": "Tylko rutynowe ustalenia P2/P3. Dobry moment na porządki.", "verdictText.clear": "Narzędzia nic nie znalazły w sprawdzonym zakresie. To nie dowód pełnego bezpieczeństwa.", "verdictText.incomplete": "Część sprawdzeń się nie udała — uruchom je ponownie, zanim uznasz wynik.", "verdictText.none": "Zacznij od bezpiecznego demo na danych syntetycznych albo wybierz cel audytu.",
     "audit.eyebrow": "PROWADZONY AUDYT", "audit.title": "Co chcesz dziś sprawdzić?", "audit.target": "Ścieżka projektu lub adres URL", "audit.consent.t": "Zgoda na ten krok", "audit.start": "▶ Rozpocznij audyt", "audit.cancel": "⏹ Anuluj", "audit.resume": "↻ Wznów", "audit.active": "Bieżące uruchomienie", "audit.history": "Historia", "audit.noRun": "Brak uruchomień. Wybierz cel i zacznij.",
     "wf.pc": "Komputer", "wf.pc.d": "Programy, porty, znane luki CVE", "wf.project": "Projekt", "wf.project.d": "Kod, sekrety, zależności", "wf.web": "Strona WWW", "wf.web.d": "HTTPS, nagłówki, cookies, TLS", "wf.demo": "Demo", "wf.demo.d": "Dane syntetyczne, bez ryzyka",
-    "consent.pc": "Odczytam listę programów i otwarte porty (--yes), a nazwy i wersje pakietów wyślę do OSV.dev i CISA KEV (--share-package-names).", "consent.project": "Zatwierdzam zakres tylko do odczytu (do 30 plików, 24 h) wskazanego projektu (--yes).", "consent.web": "Potwierdzam, że to moja strona lub mam zgodę właściciela; wykonam kilka pasywnych zapytań GET (--authorized).", "consent.demo": "Demo działa na danych syntetycznych — zgoda nie jest potrzebna.",
+    "consent.pc": "Zgadzam się na lokalny odczyt listy programów i otwartych portów.", "consent.project": "Zgadzam się na przygotowanie zakresu dla podanych plików.", "consent.web": "Potwierdzam, że to moja strona lub mam zgodę właściciela; wykonam kilka pasywnych zapytań GET (--authorized).", "consent.demo": "Demo działa na danych syntetycznych — zgoda nie jest potrzebna.",
+    "audit.files": "Ścieżki względne, po jednej w wierszu", "audit.approve": "Zatwierdź krok", "audit.scope": "Zatwierdź odczyt poniższych plików.", "audit.share": "Wyślij nazwy i wersje pakietów do OSV.dev oraz pobierz listę CISA KEV.", "t.files": "Podaj dokładne ścieżki plików.",
+    "st.awaiting_approval": "czeka na zgodę",
     "target.project": "Ścieżka projektu (puste = to repozytorium)", "target.web": "Adres strony (https://…)",
     "f.search": "Szukaj w ustaleniach… ( / )", "f.all": "Wszystkie", "f.ideas": "Pomysły", "f.allAreas": "Wszystkie obszary", "f.export": "⇩ Eksport Markdown", "f.area": "Obszar",
     "f.summary": "Pokazano {n} z {t} ustaleń", "f.none": "Brak ustaleń dla tych filtrów.", "f.impact": "Wpływ", "f.evidence": "Dowód", "f.fix": "Poprawka", "f.verify": "Weryfikacja", "f.source": "Źródło", "f.ask": "🧠 Zapytaj eksperta", "f.copy": "Kopiuj poprawkę", "f.model": "ocena modelu", "f.reopened": "wróciło",
@@ -48,7 +50,9 @@ const I18N = {
     "verdictText.act": "There are P0 findings. Start there — exact fixes are below.", "verdictText.attention": "No P0, but urgent P1 items. Plan fixes this week.", "verdictText.routine": "Only routine P2/P3 items. A good moment to tidy up.", "verdictText.clear": "The tools found nothing in the checked scope. That is not proof of complete security.", "verdictText.incomplete": "Some checks did not complete — rerun them before trusting the result.", "verdictText.none": "Start with the safe synthetic demo or choose an audit target.",
     "audit.eyebrow": "GUIDED AUDIT", "audit.title": "What do you want to check today?", "audit.target": "Project path or URL", "audit.consent.t": "Consent for this step", "audit.start": "▶ Start audit", "audit.cancel": "⏹ Cancel", "audit.resume": "↻ Resume", "audit.active": "Current run", "audit.history": "History", "audit.noRun": "No runs yet. Pick a target and start.",
     "wf.pc": "Computer", "wf.pc.d": "Software, ports, known CVEs", "wf.project": "Project", "wf.project.d": "Code, secrets, dependencies", "wf.web": "Website", "wf.web.d": "HTTPS, headers, cookies, TLS", "wf.demo": "Demo", "wf.demo.d": "Synthetic data, no risk",
-    "consent.pc": "Read installed software and open ports (--yes), and send package names and versions to OSV.dev and CISA KEV (--share-package-names).", "consent.project": "Approve a read-only scope (up to 30 files, 24 h) of this project (--yes).", "consent.web": "I own this site or have the owner's permission; run a few passive GET requests (--authorized).", "consent.demo": "The demo uses synthetic data — no consent needed.",
+    "consent.pc": "I consent to reading the list of installed software and open ports locally.", "consent.project": "I consent to preparing a scope for the files listed.", "consent.web": "I own this site or have the owner's permission; run a few passive GET requests (--authorized).", "consent.demo": "The demo uses synthetic data — no consent needed.",
+    "audit.files": "Relative paths, one per line", "audit.approve": "Approve step", "audit.scope": "Approve reading the files listed below.", "audit.share": "Send package names and versions to OSV.dev and download the CISA KEV list.", "t.files": "Enter the exact file paths.",
+    "st.awaiting_approval": "awaiting approval",
     "target.project": "Project path (empty = this repository)", "target.web": "Website address (https://…)",
     "f.search": "Search findings… ( / )", "f.all": "All", "f.ideas": "Ideas", "f.allAreas": "All areas", "f.export": "⇩ Export Markdown", "f.area": "Area",
     "f.summary": "Showing {n} of {t} findings", "f.none": "No findings for these filters.", "f.impact": "Impact", "f.evidence": "Evidence", "f.fix": "Fix", "f.verify": "Verify", "f.source": "Source", "f.ask": "🧠 Ask the expert", "f.copy": "Copy fix", "f.model": "model judgment", "f.reopened": "reopened",
@@ -68,8 +72,16 @@ const I18N = {
 };
 
 const VIEWS = ["overview", "audit", "findings", "expert", "agents", "reports", "system"];
+const requestedLang = new URLSearchParams(location.search).get("lang");
 const state = {
-  lang: (() => { try { return localStorage.getItem("cda.lang"); } catch { return null; } })() || document.querySelector('meta[name="cda-lang"]').content || "pl",
+  lang: (() => {
+    if (requestedLang === "pl" || requestedLang === "en") return requestedLang;
+    try {
+      const saved = localStorage.getItem("cda.lang");
+      if (saved === "pl" || saved === "en") return saved;
+    } catch { /* private mode */ }
+    return document.querySelector('meta[name="cda-lang"]').content;
+  })(),
   view: "overview", overview: null, status: null, providers: null, config: null,
   provider: null, wf: "demo", runId: null, host: "claude", bridge: null,
   filter: { p: "all", area: "all", q: "" }, open: new Set(), chat: [], chatEpoch: 0, busy: false, lastRunStatus: {},
@@ -222,6 +234,7 @@ function renderAudit() {
   $$("[data-wf]").forEach((b) => b.setAttribute("aria-checked", String(b.dataset.wf === state.wf)));
   const needsTarget = state.wf === "project" || state.wf === "web";
   $("#wf-target-field").hidden = !needsTarget;
+  $("#wf-files-field").hidden = state.wf !== "project";
   if (needsTarget) $("#wf-target-label").textContent = t(`target.${state.wf}`);
   $("#wf-target").placeholder = state.wf === "web" ? "https://example.com" : "./";
   $("#wf-consent-box").hidden = state.wf === "demo";
@@ -229,7 +242,7 @@ function renderAudit() {
   const runs = state.status?.runs ?? [];
   const run = runs.find((r) => r.runId === state.runId) ?? runs[0];
   if (run) state.runId = run.runId;
-  $("#wf-cancel").hidden = run?.status !== "running";
+  $("#wf-cancel").hidden = !["running", "awaiting_approval"].includes(run?.status);
   $("#wf-resume").hidden = !(run && ["failed", "cancelled"].includes(run.status));
   const st = $("#run-status");
   st.textContent = run ? t(`st.${run.status}`) : "—";
@@ -239,6 +252,11 @@ function renderAudit() {
     : `<li class="empty">${esc(t("audit.noRun"))}</li>`;
   $("#run-next").hidden = !run?.nextStep;
   $("#run-next").textContent = run?.nextStep ?? "";
+  const approval = run?.status === "awaiting_approval" ? run.pendingApproval : null;
+  $("#run-approval").hidden = !approval;
+  $("#run-approval-label").textContent = approval ? t(approval.kind === "scope" ? "audit.scope" : "audit.share") : "";
+  $("#run-scope").hidden = approval?.kind !== "scope";
+  $("#run-scope").textContent = approval?.kind === "scope" ? [approval.root, ...approval.files].join("\n") : "";
   $("#run-reports").innerHTML = (run?.reports ?? []).map((r) => `<a class="chip run" href="/report/${encodeURIComponent(r)}" target="_blank" rel="noopener">📄 ${esc(r)}</a>`).join("");
   $("#run-history").innerHTML = runs.length
     ? runs.slice(0, 10).map((r) => `<li class="clickable" data-run="${esc(r.runId)}"><div><strong>${esc(r.title)}</strong><small>${esc(timeAgo(r.createdAt))} · ${esc(r.runId)}</small></div><span class="chip ${r.status === "completed" ? "ok" : r.status === "running" ? "run" : "err"}">${esc(t(`st.${r.status}`))}</span></li>`).join("")
@@ -250,7 +268,9 @@ async function startAudit(workflow = state.wf) {
   if (!consent) { toast(t("t.consent"), "err"); return; }
   const target = $("#wf-target").value.trim();
   if (workflow === "web" && !/^https?:\/\//i.test(target)) { toast(t("t.url"), "err"); return; }
-  const data = await api("/api/workflows/start", { workflow, consent, target: workflow === "project" ? target || undefined : target, lang: state.lang });
+  const files = workflow === "project" ? $("#wf-files").value.split(/\r?\n/).map((file) => file.trim()).filter(Boolean) : [];
+  if (workflow === "project" && !files.length) { toast(t("t.files"), "err"); return; }
+  const data = await api("/api/workflows/start", { workflow, consent, target: target || undefined, files, lang: state.lang });
   if (!data.ok) { toast(`❌ ${data.error}`, "err"); return; }
   state.runId = data.run.runId;
   state.lastRunStatus[data.run.runId] = "running";
@@ -446,6 +466,19 @@ document.addEventListener("click", async (e) => {
 });
 $("#wf-start").addEventListener("click", () => startAudit());
 $("#wf-cancel").addEventListener("click", async () => { await api("/api/workflows/cancel", { runId: state.runId }); refresh(); });
+$("#wf-approve").addEventListener("click", async () => {
+  const run = state.status?.runs?.find((item) => item.runId === state.runId);
+  if (run?.status !== "awaiting_approval" || !run.pendingApproval) return;
+  const button = $("#wf-approve");
+  button.disabled = true;
+  try {
+    const result = await api("/api/workflows/approve", { runId: run.runId, approvalToken: run.pendingApproval.token });
+    if (!result.ok) toast(result.error, "err");
+    await refresh();
+  } finally {
+    button.disabled = false;
+  }
+});
 $("#wf-resume").addEventListener("click", async () => { state.lastRunStatus[state.runId] = "running"; await api("/api/workflows/resume", { runId: state.runId }); refresh(); });
 $("#refresh-btn").addEventListener("click", () => refresh({ spin: true }));
 $("#f-search").addEventListener("input", (e) => { state.filter.q = e.target.value; renderFindings(); });

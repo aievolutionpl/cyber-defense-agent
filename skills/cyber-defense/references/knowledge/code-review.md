@@ -1,10 +1,12 @@
 # Code, dependencies and configuration
 
+For a release review, use the [evidence review method](../review-method.md) to track coverage and challenge candidate findings. If the approved code implements agents, skills, MCP tools or persistent model memory, also read [agent security](agent-security.md). A pattern match alone does not establish exploitability.
+
 For a project the user is building. Combine deterministic tools (repeatable evidence) with expert reading (context the tools lack).
 
 ## Order of work
 
-1. **Dependencies** - cheapest, highest hit rate. Scope the lockfile, then `deps` and `advisories`. Report direct dependencies first; for transitive ones name the direct parent to upgrade. No lockfile is itself a P2: builds are not reproducible.
+1. **Dependencies** - cheapest, highest hit rate. Scope the lockfile, then `deps` and `advisories`. Report direct dependencies first; for transitive ones name the direct parent to upgrade. For an application expected to use a lockfile, check whether its absence weakens reproducibility. A library or ecosystem may follow a different policy; absence alone is not an automatic P2 finding.
 2. **Secrets** - `review` flags obvious assignments. Also ask about: `.env` committed to Git, keys in CI logs, tokens in front-end bundles, credentials in container images and in shell history. A leaked secret is fixed by **rotating it**; deleting the line does not remove it from Git history.
 3. **Existing scanner output** - if the user runs Semgrep, CodeQL, Trivy, Gitleaks, Bandit, ESLint security rules or `npm audit`, `import` the SARIF or JSON and triage instead of re-inventing checks. Suggest those tools where they are missing; do not install or run them yourself.
 4. **Expert review** (opt-in lane) - read for the classes below. Start at the trust boundary: every place external input enters (HTTP handlers, webhooks, file uploads, queues, CLI args, environment, third-party API responses, LLM output) and follow it to a dangerous sink.
@@ -31,7 +33,7 @@ For each entry point ask: Who can call this? What do they control? Where does th
 | regular expressions on untrusted input with nested quantifiers | ReDoS (CWE-1333) | bounded input, linear-time patterns |
 | logs containing tokens, passwords, personal data | sensitive data exposure (CWE-532) | structured logging with redaction |
 
-Authorization deserves its own pass: list the roles, the resources and the actions, and check that each route enforces the matrix on the server. Most serious web flaws today are missing checks, not exotic injections.
+Authorization deserves its own pass: list the roles, the resources and the actions, and check that each route enforces the matrix on the server. Missing ownership and role checks deserve attention even when no dangerous API pattern is present.
 
 ## Language quick notes
 
