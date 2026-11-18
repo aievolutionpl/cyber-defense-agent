@@ -5,6 +5,7 @@
  */
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
+import { readStoredReports } from "./panel-api.mjs";
 import { PROVIDERS, callModel, systemPrompt, buildBrief, briefPrompt, sanitizeModelMarkdown, validateProvider, validateModelName } from "./providers.mjs";
 
 const c = {
@@ -26,6 +27,7 @@ const T = {
     noReports: "Brak raportów w .cda/reports. Uruchom najpierw: node tools/demo.mjs",
     you: "ty",
     kept: (p) => `Bez zmian: nadal ${p}.`,
+    excluded: (n, x) => `Użyję ${n} najnowszych raportów; pominięto ${x} starszych (podaj nazwy: /explain <raport>).`,
     cleared: "historia rozmowy wyczyszczona",
   },
   en: {
@@ -38,6 +40,7 @@ const T = {
     noReports: "No reports in .cda/reports. Run first: node tools/demo.mjs",
     you: "you",
     kept: (p) => `Unchanged: still ${p}.`,
+    excluded: (n, x) => `Using the ${n} newest reports; ${x} older ones left out (name them: /explain <report>).`,
     cleared: "conversation history cleared",
   },
 };
@@ -115,9 +118,17 @@ export async function chatTerminal({ provider, model, lang = "pl", store, rl: in
       }
       if (line.startsWith("/explain")) {
         const names = line.split(/\s+/).slice(1).filter(Boolean).slice(0, 20);
-        const pool = names.length ? names : store.list("reports").slice(0, 20);
         const named = [];
-        for (const n of pool) { try { named.push([n, store.read("reports", n)]); } catch { /* skip */ } }
+        let excluded = 0;
+        if (!names.length && store.repoRoot) {
+          // Newest first through the same link-safe reader as the panel; older reports are reported, not hidden.
+          const all = readStoredReports(store.repoRoot, 500);
+          for (const [n, r] of all.slice(0, 20)) named.push([n, r]);
+          excluded = Math.max(0, all.length - named.length);
+        } else {
+          for (const n of names.length ? names : store.list("reports").slice(0, 20)) { try { named.push([n, store.read("reports", n)]); } catch { /* skip */ } }
+        }
+        if (excluded) say(c.dim(t.excluded(named.length, excluded)));
         const brief = buildBrief(named);
         if (!brief.coverage.sources) { say(t.noReports); continue; }
         if (!yes(await rl.question(c.am(t.briefConsent(brief.included, brief.total))))) continue;

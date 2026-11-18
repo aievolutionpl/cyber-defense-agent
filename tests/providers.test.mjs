@@ -368,3 +368,29 @@ test("multi-line private keys in model output are redacted", () => {
   assert.match(out, /\[REDACTED KEY\]/);
   assert.match(out, /^Here:\n[\s\S]*\ndone$/);
 });
+
+test("a private key cut by the output limit is still redacted", async (t) => {
+  const key = `-----BEGIN PRIVATE KEY-----\n${"QUJD".repeat(8000)}\n-----END PRIVATE KEY-----`;
+  const text = `${"a".repeat(23900)}\n${key}`;
+  const res = await callModel({ provider: "openrouter", system: "S", messages: [{ role: "user", content: "q" }], consent: true, env: { OPENROUTER_API_KEY: "sk-or-v1-testkey-0000000000", CDA_CONFIG_HOME: tmp(t) }, fetchImpl: fakeFetch({ choices: [{ message: { content: text } }] }) });
+  assert.ok(!res.text.includes("QUJDQUJD"));
+  assert.ok(sanitizeModelMarkdown("x\n-----BEGIN RSA PRIVATE KEY-----\nQUJDQUJDQUJD").endsWith("[REDACTED KEY]"));
+});
+
+test("terminal /explain defaults to the newest reports and says how many were left out", async (t) => {
+  const { chatTerminal } = await import("../tools/chat.mjs");
+  const { StateStore } = await import("../tools/scope.mjs");
+  const root = tmp(t);
+  const store = new StateStore(root);
+  for (let i = 0; i < 21; i += 1) {
+    const name = `r${String(i).padStart(2, "0")}`;
+    store.write("reports", name, { ...webReport, findings: [{ id: `W${i}`, priority: i === 20 ? "P0" : "P3", title: `t${i}`, evidence: "e", fix: "f" }] });
+    const when = new Date(Date.now() - (21 - i) * 60000);
+    fs.utimesSync(store.file("reports", name), when, when);
+  }
+  let sent = "";
+  const answers = ["t", "/explain", "t", "/exit"];
+  const rl = { question: async () => answers.shift() ?? "/exit", close() {} };
+  await chatTerminal({ provider: "openrouter", rl, store, call: async (req) => { sent = req.messages.at(-1).content; return { text: "ok", provider: "openrouter", model: "m", ms: 1 }; } });
+  assert.match(sent, /"P0": 1/);
+});

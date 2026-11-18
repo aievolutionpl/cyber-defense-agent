@@ -2,6 +2,8 @@
 export function redact(value, limit = 1600) {
   return String(value)
     .replace(/-----BEGIN [^-]*(?:PRIVATE KEY|CERTIFICATE)-----[\s\S]*?-----END [^-]+-----/g, '[REDACTED KEY]')
+    // A key block without its END marker (truncated output) is removed to the end, conservatively.
+    .replace(/-----BEGIN [^-]*PRIVATE KEY-----[\s\S]*$/g, '[REDACTED KEY]')
     .replace(/\b(?:gh[pousr]_[A-Za-z0-9_]{10,}|github_pat_[A-Za-z0-9_]+|AKIA[A-Z0-9]{16}|sk-[A-Za-z0-9_-]{12,})\b/g, '[REDACTED TOKEN]')
     .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\b/g, '[REDACTED JWT]')
     .replace(/\b(Bearer|Basic)\s+\S+/gi, '$1 [REDACTED]')

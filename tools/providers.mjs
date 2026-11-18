@@ -504,7 +504,8 @@ export async function callModel({
   return {
     provider,
     model: result.model || chosen || "default",
-    text: text.slice(0, MAX_OUTPUT_CHARS),
+    // Redact the complete response first so a secret spanning the cut-off cannot survive truncation.
+    text: redact(text, Infinity).slice(0, MAX_OUTPUT_CHARS),
     usage: result.usage,
     ms: Date.now() - started,
   };
