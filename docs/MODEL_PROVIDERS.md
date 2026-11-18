@@ -3,7 +3,7 @@
 Cyber Defense Agent works two ways:
 
 1. **As a skill** inside an agent host (Claude Code, Codex, Cursor, Antigravity, Hermes). The host's model reads `skills/cyber-defense/SKILL.md` and drives the trusted CLI under the consent ladder.
-2. **As a standalone program.** The CLI collects evidence itself and, optionally, asks a model you connect to explain the results, answer questions and plan fixes — in the terminal (`chat`, `explain`, `ask`) or in the local panel (`ui`, card 04).
+2. **As a standalone program.** The CLI collects evidence itself and, optionally, asks a model you connect to explain the results, answer questions and plan fixes — in the terminal (`chat`, `explain`, `ask`) or in the local Command Center (`ui`, view "AI expert", key `4`), where every finding also has an "Ask the expert" button that sends only that finding's priority, area and scrubbed title and fix hint.
 
 In program mode the model is an **advisor without hands**: it gets no tools, no files and no shell. It receives a fixed defensive system prompt plus a bounded, redacted brief of findings you chose to send.
 

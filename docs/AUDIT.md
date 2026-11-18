@@ -22,9 +22,9 @@ Date: 18 November 2026. Scope: CLI (`tools/`), local panel (`tools/ui.mjs`), age
 
 ## Recommended next steps (not done here)
 
-1. **Panel i18n.** The EN switch translates prompts and API output, but static labels in `ui.mjs` stay Polish. Move strings to a dictionary like `welcome.mjs`.
+1. ~~**Panel i18n.**~~ Done: the Command Center (`tools/panel/`) is fully translated PL/EN.
 2. **Non-blocking bounded actions.** `runBoundedAction` uses `execFileSync` (up to 35 s) inside the HTTP handler, freezing the panel during `advisories`. Reuse the async step runner from guided audits.
-3. **Split `ui.mjs`.** ~2 000 lines with inline HTML/CSS/JS. Serve the page from a static file and keep the server logic small and testable.
+3. ~~**Split `ui.mjs`.**~~ Done: the page lives in `tools/panel/` (HTML, CSS, JS) under a strict CSP; `ui.mjs` dropped from ~2 100 to ~1 400 lines.
 4. **Streaming answers.** `chat` waits for the full answer. Streaming for the HTTP providers would improve perceived speed; keep the same caps and sanitising.
 5. **Unused site components.** `protection-map`, `onboarding`, `guided-demo`, `skill-blueprint`, `live-session`, `trust-section` are no longer mounted. Either reuse them or remove them in a dedicated change; `scripts/motion-acceptance.js` still targets `#protection`.
 6. **Default branch.** README and `lib/config.ts` point at `codex/node-v0.1`. Once merged to the default branch, update `BRANCH` in one place.

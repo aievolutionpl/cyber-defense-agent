@@ -177,7 +177,12 @@ Source `d1e5f28faa9a355fa94f91477dd5b163b240b6f5` passed [Website motion accepta
 
 Observed in a Linux container (Node 22.23.5):
 
-- `npm run check`: 104 unit tests pass, ESLint, TypeScript and the static Next.js export succeed.
+- `npm run check`: 108 unit tests pass, ESLint, TypeScript and the static Next.js export succeed.
 - `node tools/demo.mjs` → `explain --from demo-before --dry-run` printed the brief without sending. `explain --send-summary --provider claude-code` through a logged-in Claude Code CLI wrote a Polish plan labelled model judgment (≈28 s). `ask --send-question` returned the expected echo. OpenRouter, Anthropic, OpenAI, Codex and Ollama paths were exercised with network/process doubles only; they were not called live.
 - Mini UI (Playwright, 1440 px): provider card renders six providers, no console errors.
 - Static site (Playwright): at 1440 px the overlay becomes active on load with three cursors on distinct paths and the construction frame tracking the section; the header button sets `data-motion=paused`. At 390 px touch, one cursor, no horizontal overflow. Not verified: Windows/macOS browsers, physical devices, frame rate.
+
+## v0.3 Command Center panel (18 November 2026)
+
+- New panel (`tools/panel/`) served by `ui.mjs` under `default-src 'none'; script-src 'self'; style-src 'self'` with no inline scripts or handlers. Playwright at 1440 px and 390 px (touch): all seven views render, no console errors or CSP violations, no horizontal overflow, bottom tab bar on mobile, PL/EN switch.
+- Live: "Ask the expert" on a demo finding through the logged-in Claude Code CLI returned a formatted Polish answer in about 27 s; without consent the panel refused and showed a notice.

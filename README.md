@@ -16,7 +16,7 @@
 <p align="center">
   <img alt="Node 22+" src="https://img.shields.io/badge/node-22%2B-34d399?style=flat-square" />
   <img alt="zero npm deps in CLI" src="https://img.shields.io/badge/CLI-zero%20npm%20deps-34d399?style=flat-square" />
-  <img alt="tests" src="https://img.shields.io/badge/tests-104%20passing-34d399?style=flat-square" />
+  <img alt="tests" src="https://img.shields.io/badge/tests-108%20passing-34d399?style=flat-square" />
   <img alt="license MIT" src="https://img.shields.io/badge/license-MIT-38bdf8?style=flat-square" />
   <img alt="models" src="https://img.shields.io/badge/models-Claude%20%C2%B7%20Codex%20%C2%B7%20OpenRouter%20%C2%B7%20Ollama-a78bfa?style=flat-square" />
 </p>
@@ -71,7 +71,7 @@ node tools/cda.mjs connect --provider openrouter --key-stdin < klucz.txt   # klu
 node tools/cda.mjs explain --from demo-before --dry-run        # pokaż DOKŁADNIE, co zostałoby wysłane
 node tools/cda.mjs explain --from demo-before --send-summary   # plan naprawy po polsku → .cda/reports/explain-*.md
 node tools/cda.mjs chat                                        # rozmowa z ekspertem w terminalu (/explain, /provider, /model)
-node tools/cda.mjs ui                                          # panel: karta „04 / Połączenie z modelem”
+node tools/cda.mjs ui                                          # Command Center w przeglądarce: widok „Ekspert AI” (klawisz 4)
 ```
 
 **Granice są w kodzie, nie w obietnicach:** model nie ma narzędzi, plików ani powłoki; dostaje tylko zredagowany skrót ustaleń (priorytet, obszar, tytuł, wskazówka naprawy) — bez treści plików, ścieżek, cookies i sekretów. Każde wysłanie wymaga flagi zgody (`--send-summary`, `--send-question`), stała lista adresów, bez przekierowań, limity rozmiaru i czasu. Odpowiedź jest oczyszczana i zawsze oznaczona jako **ocena modelu** — nie zamyka żadnego ustalenia bez retestu. Szczegóły: [docs/MODEL_PROVIDERS.md](docs/MODEL_PROVIDERS.md).
@@ -158,8 +158,24 @@ node tools/cda.mjs agent --host codex --mission pc --lang pl
 ```
 
 <p align="center">
-  <img src="docs/assets/mini-interface-preview.png" alt="Cyber Defense Agent — Lokalny Mini Interfejs Graficzny i Mostek Claude Code CLI & Codex CLI" width="100%" />
+  <img src="docs/assets/mini-interface-preview.png" alt="Cyber Defense Agent — Command Center: wskaźnik ochrony, priorytety P0–P3, obszary i pokrycie" width="100%" />
 </p>
+
+### 🖥️ Command Center (`node tools/cda.mjs ui`) — nowość v0.3
+
+Lokalny panel w przeglądarce (tylko `127.0.0.1`, token sesji, ścisłe CSP bez skryptów inline), w pełni po polsku i angielsku:
+
+| Widok (klawisz) | Co daje |
+|---|---|
+| **Przegląd** (`1`) | Wskaźnik ochrony 0–100, werdykt, liczniki P0–P3, potwierdzone poprawki, obszary i pokrycie dowodów |
+| **Audyt** (`2`) | Prowadzony audyt komputera, projektu, strony lub demo z osobną zgodą na każdy krok i osią czasu kroków |
+| **Ustalenia** (`3`) | Wyszukiwarka i filtry (priorytet, obszar), szczegóły z poprawką i retestem, eksport do Markdown |
+| **Ekspert AI** (`4`) | Czat z Twoim modelem (Claude Code, Codex, OpenRouter, Anthropic, OpenAI, Ollama); „Zapytaj eksperta” przy każdym ustaleniu |
+| **Agenci CLI** (`5`) | Przekazanie zadania Claude Code / Codex / Hermes w tle lub skopiowanie komendy |
+| **Raporty** (`6`) | Wszystkie pliki HTML/MD/JSON/PDF/SARIF z `.cda/reports` |
+| **System** (`7`) | Diagnostyka środowiska bez sieci i granice bezpieczeństwa |
+
+Skróty: `/` szuka w ustaleniach, `R` odświeża, `L` zmienia język.
 
 ### Najważniejsze polecenia CLI (v0.3)
 
@@ -255,7 +271,7 @@ node tools/demo.mjs
 ```sh
 npm ci
 npm run dev     # serwer deweloperski: http://localhost:3107
-npm run check   # check:skills + 104 testów jednostkowych + ESLint + TypeScript + Next.js static build
+npm run check   # check:skills + 108 testów jednostkowych + ESLint + TypeScript + Next.js static build
 npm run demo    # lokalne demo na danych syntetycznych
 ```
 
