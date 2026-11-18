@@ -99,7 +99,7 @@ export async function chatWithModel(payload = {}, { rootDir, call = callModel } 
   const raw = Array.isArray(payload.messages) ? payload.messages.slice(-30) : [];
   const messages = raw
     .filter((m) => m && typeof m.content === "string" && m.content.trim())
-    .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content.slice(0, 8000) }));
+    .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: m.content.slice(0, 40000) }));
   if (!messages.length || messages.at(-1).role !== "user") throw Object.assign(new Error("INVALID_MESSAGES"), { code: "INVALID_MESSAGES" });
   const last = messages.at(-1);
   let attached = null;
@@ -121,5 +121,6 @@ export async function chatWithModel(payload = {}, { rootDir, call = callModel } 
     attached = `reports:${brief.included}/${brief.total}`;
   }
   const res = await call({ provider, model, system: systemPrompt(lang), messages: fitHistory(messages), consent: true, rootDir });
-  return { ok: true, provider: res.provider, model: res.model, seconds: Math.round(res.ms / 100) / 10, attached, text: sanitizeModelMarkdown(res.text) };
+  // The client stores this exact, already scrubbed turn so later questions stay grounded in what was approved.
+  return { ok: true, provider: res.provider, model: res.model, seconds: Math.round(res.ms / 100) / 10, attached, sentContent: last.content, text: sanitizeModelMarkdown(res.text) };
 }

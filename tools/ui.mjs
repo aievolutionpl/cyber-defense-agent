@@ -1283,7 +1283,7 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         let body = "";
         for await (const chunk of req) {
           body += chunk;
-          if (body.length > 16384) throw new Error("PAYLOAD_TOO_LARGE");
+          if (body.length > (url.pathname === "/api/model/chat" ? 131072 : 16384)) throw new Error("PAYLOAD_TOO_LARGE");
         }
         const payload = JSON.parse(body || "{}");
 

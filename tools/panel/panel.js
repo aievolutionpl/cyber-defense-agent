@@ -31,7 +31,7 @@ const I18N = {
     "sys.doctor": "Diagnostyka (bez sieci)", "sys.rerun": "Sprawdź ponownie", "sys.bounds": "Granice bezpieczeństwa", "sys.keys": "Skróty klawiszowe",
     "sys.b1": "Panel słucha tylko na 127.0.0.1, sprawdza Host/Origin i wymaga tokenu sesji dla każdej akcji.", "sys.b2": "Każdy krok, który czyta pliki, komputer lub sieć, wymaga Twojej zgody.", "sys.b3": "Model nie ma narzędzi, plików ani powłoki. Dostaje tylko zredagowany skrót.", "sys.b4": "Odpowiedź modelu to ocena modelu — tylko retest zamyka ustalenie.", "sys.b5": "Nic nie jest instalowane ani zmieniane w sprawdzanym projekcie.",
     "sys.k1": "przełącz widok", "sys.k2": "szukaj w ustaleniach", "sys.k3": "odśwież dane", "sys.k4": "zmień język",
-    "t.copied": "Skopiowano do schowka", "t.saved": "Zapisano wybór modelu", "t.started": "Uruchomiono audyt", "t.done": "Audyt zakończony", "t.failed": "Krok audytu zakończył się błędem", "t.consent": "Najpierw zaznacz zgodę", "t.launched": "Agent uruchomiony", "t.exported": "Zapisano plik Markdown", "t.url": "Podaj adres zaczynający się od https://",
+    "t.provider": "Zmieniono dostawcę: zgoda wyłączona, rozmowa wyczyszczona.", "t.copied": "Skopiowano do schowka", "t.saved": "Zapisano wybór modelu", "t.started": "Uruchomiono audyt", "t.done": "Audyt zakończony", "t.failed": "Krok audytu zakończył się błędem", "t.consent": "Najpierw zaznacz zgodę", "t.launched": "Agent uruchomiony", "t.exported": "Zapisano plik Markdown", "t.url": "Podaj adres zaczynający się od https://",
     "model.none": "model: brak", "updated": "aktualizacja", "never": "brak danych",
     "st.running": "trwa", "st.completed": "gotowe", "st.failed": "błąd", "st.cancelled": "anulowano", "st.pending": "czeka", "st.not_installed": "brak CLI", "st.auth_error": "logowanie",
   },
@@ -61,7 +61,7 @@ const I18N = {
     "sys.doctor": "Diagnostics (no network)", "sys.rerun": "Check again", "sys.bounds": "Safety boundaries", "sys.keys": "Keyboard shortcuts",
     "sys.b1": "The panel listens on 127.0.0.1 only, checks Host/Origin and needs a session token for every action.", "sys.b2": "Every step that reads files, the machine or the network needs your consent.", "sys.b3": "The model has no tools, files or shell. It receives a redacted brief only.", "sys.b4": "A model answer is model judgment — only a retest closes a finding.", "sys.b5": "Nothing is installed or changed in the audited project.",
     "sys.k1": "switch view", "sys.k2": "search findings", "sys.k3": "refresh data", "sys.k4": "switch language",
-    "t.copied": "Copied to clipboard", "t.saved": "Model choice saved", "t.started": "Audit started", "t.done": "Audit finished", "t.failed": "An audit step failed", "t.consent": "Tick consent first", "t.launched": "Agent launched", "t.exported": "Markdown file saved", "t.url": "Enter an address starting with https://",
+    "t.provider": "Provider changed: consent turned off, conversation cleared.", "t.copied": "Copied to clipboard", "t.saved": "Model choice saved", "t.started": "Audit started", "t.done": "Audit finished", "t.failed": "An audit step failed", "t.consent": "Tick consent first", "t.launched": "Agent launched", "t.exported": "Markdown file saved", "t.url": "Enter an address starting with https://",
     "model.none": "model: none", "updated": "updated", "never": "no data",
     "st.running": "running", "st.completed": "done", "st.failed": "failed", "st.cancelled": "cancelled", "st.pending": "pending", "st.not_installed": "no CLI", "st.auth_error": "login",
   },
@@ -336,16 +336,32 @@ function renderChat() {
   if (state.busy) { const ty = document.createElement("div"); ty.className = "typing"; ty.innerHTML = "<i></i><i></i><i></i>"; log.append(ty); }
   log.scrollTop = log.scrollHeight;
 }
+/** Newest complete turns within the server's character budget, starting on a user turn. */
+function boundedHistory(messages, budget = 45000) {
+  const kept = [];
+  let used = 0;
+  for (let i = messages.length - 1; i >= 0 && kept.length < 20; i -= 1) {
+    const len = messages[i].content.length;
+    if (used + len > budget && kept.length) break;
+    kept.unshift(messages[i]);
+    used += len;
+  }
+  while (kept.length > 1 && kept[0].role !== "user") kept.shift();
+  return kept;
+}
 async function send(text, { focus = null, attach = false } = {}) {
   if (state.busy || !text.trim()) return;
   if (!$("#ex-consent").checked) { setView("expert"); toast(t("ex.needConsent"), "err"); $("#ex-consent").focus(); return; }
   const attachReports = attach || $("#ex-attach").checked;
   state.chat.push({ role: "user", content: text, display: focus ? `${text}\n\n▸ [${focus.priority}] ${focus.title}` : attachReports ? `${text}\n\n▸ +reports` : text });
   state.busy = true; renderChat(); $("#chat-send").disabled = true;
-  const history = state.chat.filter((m) => !m.error).map(({ role, content }) => ({ role, content }));
+  const history = boundedHistory(state.chat.filter((m) => !m.error).map(({ role, content }) => ({ role, content })));
   const data = await api("/api/model/chat", { provider: state.provider, model: $("#ex-model").value.trim(), messages: history, consent: true, lang: state.lang, focus, attachReports });
   state.busy = false; $("#chat-send").disabled = false; $("#ex-attach").checked = false;
-  if (data.ok) state.chat.push({ role: "assistant", content: data.text, meta: `${data.provider} · ${data.model} · ${data.seconds}s` });
+  if (data.ok) {
+    if (data.sentContent) state.chat.at(-1).content = data.sentContent;
+    state.chat.push({ role: "assistant", content: data.text, meta: `${data.provider} · ${data.model} · ${data.seconds}s` });
+  }
   else { state.chat.pop(); state.chat.push({ role: "assistant", error: true, content: `❌ ${data.error}${data.detail ? ` — ${data.detail}` : ""}` }); }
   renderChat();
 }
@@ -398,7 +414,16 @@ document.addEventListener("click", async (e) => {
   else if (d.copyMsg) copy(state.chat[Number(d.copyMsg)]?.content ?? "");
   else if (d.wf) { state.wf = d.wf; $("#wf-consent").checked = false; renderAudit(); }
   else if (d.run) { state.runId = d.run; renderAudit(); }
-  else if (d.provider) { if (state.provider !== d.provider) { $("#ex-model").value = ""; $("#ex-model").dataset.touched = "1"; } state.provider = d.provider; renderExpert(); }
+  else if (d.provider) {
+    if (state.provider !== d.provider) {
+      // A new destination needs its own consent; earlier messages were approved only for the old one.
+      $("#ex-model").value = ""; $("#ex-model").dataset.touched = "1";
+      const hadSomething = state.chat.length || $("#ex-consent").checked;
+      $("#ex-consent").checked = false; state.chat = []; renderChat();
+      if (hadSomething) toast(t("t.provider"));
+    }
+    state.provider = d.provider; renderExpert();
+  }
   else if (d.suggest) { if (d.suggest === "ex.s1") send(t(d.suggest), { attach: true }); else send(t(d.suggest)); }
   else if (d.host) { state.host = d.host; renderAgents(); refreshBridge(); }
   else if (d.copy) copy(d.copy === "cli" ? state.bridge?.cliCommand : state.bridge?.prompt);

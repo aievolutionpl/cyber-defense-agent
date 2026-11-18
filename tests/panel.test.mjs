@@ -56,6 +56,7 @@ test("panel chat needs consent, scrubs a focused finding and bounds history", as
   for (const leak of ["/srv/app", "10.0.0.5", "internal.acme.corp"]) assert.ok(!out.includes(leak), leak);
   assert.match(out, /<cda-data>/);
   assert.equal(focused.attached, "finding");
+  assert.equal(focused.sentContent, out, "the client receives the exact scrubbed turn to keep in history");
   assert.ok(!focused.text.includes("<script>"));
   const withReports = await chatWithModel({ provider: "openrouter", consent: true, messages: [{ role: "user", content: "Plan?" }], attachReports: true }, { rootDir: root, call });
   assert.match(withReports.attached, /^reports:2\/2$/);
@@ -91,4 +92,10 @@ test("panel serves its own files under a strict CSP and new APIs stay token-gate
   const noConsent = await fetch(`${ui.url}api/model/chat`, { method: "POST", headers: { "Content-Type": "application/json", "x-cda-token": ui.token }, body: JSON.stringify({ provider: "ollama", messages: [{ role: "user", content: "x" }] }) });
   assert.equal(noConsent.status, 403);
   assert.equal((await noConsent.json()).error, "CONSENT_REQUIRED");
+  // A long conversation fits the chat endpoint's own body allowance (other endpoints stay at 16 KB).
+  const big = { provider: "ollama", messages: [{ role: "user", content: "q" }, { role: "assistant", content: "a".repeat(17000) }, { role: "user", content: "next" }] };
+  const bigChat = await fetch(`${ui.url}api/model/chat`, { method: "POST", headers: { "Content-Type": "application/json", "x-cda-token": ui.token }, body: JSON.stringify(big) });
+  assert.equal((await bigChat.json()).error, "CONSENT_REQUIRED", "parsed, then refused for missing consent");
+  const bigOther = await fetch(`${ui.url}api/model/config`, { method: "POST", headers: { "Content-Type": "application/json", "x-cda-token": ui.token }, body: JSON.stringify({ pad: "x".repeat(20000) }) });
+  assert.equal((await bigOther.json()).error, "PAYLOAD_TOO_LARGE");
 });
