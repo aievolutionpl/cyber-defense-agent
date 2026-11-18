@@ -24,6 +24,7 @@ import { spawn, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { redact } from "./redact.mjs";
 import { collect } from "./visual.mjs";
+import { writeStateFile, readStateFile } from "./safe-write.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const REPO = "https://github.com/aievolutionpl/cyber-defense-agent";
@@ -121,7 +122,7 @@ function configFile(rootDir = ROOT) {
 /** Provider + model choice (never secrets). Stored in the trusted local state directory. */
 export function loadModelConfig(rootDir = ROOT) {
   try {
-    const raw = JSON.parse(fs.readFileSync(configFile(rootDir), "utf8"));
+    const raw = JSON.parse(readStateFile(rootDir, configFile(rootDir)));
     const provider = Object.hasOwn(PROVIDERS, raw?.provider) ? raw.provider : null;
     let model = null;
     try { model = validateModelName(raw?.model); } catch { model = null; }
@@ -134,8 +135,8 @@ export function loadModelConfig(rootDir = ROOT) {
 export function saveModelConfig({ provider, model = null, lang } = {}, rootDir = ROOT) {
   validateProvider(provider);
   const clean = { provider, model: validateModelName(model), lang: lang === "en" ? "en" : "pl", updatedAt: new Date().toISOString() };
-  fs.mkdirSync(path.dirname(configFile(rootDir)), { recursive: true });
-  fs.writeFileSync(configFile(rootDir), `${JSON.stringify(clean, null, 2)}\n`, "utf8");
+  // Link-safe and atomic, like StateStore: a symlinked .cda or config.json is refused.
+  writeStateFile(rootDir, configFile(rootDir), `${JSON.stringify(clean, null, 2)}\n`);
   return clean;
 }
 
@@ -148,7 +149,8 @@ export function credentialsFile(env = process.env) {
 
 function readStoredKeys(env = process.env) {
   try {
-    const data = JSON.parse(fs.readFileSync(credentialsFile(env), "utf8"));
+    const file = credentialsFile(env);
+    const data = JSON.parse(readStateFile(path.dirname(path.dirname(file)), file));
     return data && typeof data === "object" ? data : {};
   } catch {
     return {};
@@ -162,9 +164,10 @@ export function storeApiKey(provider, key, env = process.env) {
   const clean = String(key || "").trim();
   if (clean.length < 16 || clean.length > 400 || /\s/.test(clean)) fail("INVALID_API_KEY_FORMAT");
   const file = credentialsFile(env);
-  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  const base = path.dirname(path.dirname(file));
+  fs.mkdirSync(base, { recursive: true, mode: 0o700 });
   const data = { ...readStoredKeys(env), [spec.env]: clean };
-  fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+  writeStateFile(base, file, `${JSON.stringify(data, null, 2)}\n`);
   try { fs.chmodSync(file, 0o600); } catch { /* not supported on this filesystem */ }
   return { file, variable: spec.env };
 }
@@ -176,7 +179,7 @@ export function forgetApiKey(provider, env = process.env) {
   const data = readStoredKeys(env);
   if (spec.env && Object.hasOwn(data, spec.env)) {
     delete data[spec.env];
-    fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+    writeStateFile(path.dirname(path.dirname(file)), file, `${JSON.stringify(data, null, 2)}\n`);
     return true;
   }
   return false;

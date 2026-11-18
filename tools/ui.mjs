@@ -17,6 +17,7 @@ import {
 } from "./providers.mjs";
 import { buildOverview, chatWithModel, readStoredReports } from "./panel-api.mjs";
 import { StateStore } from "./scope.mjs";
+import { writeStateFile, readStateFile, ensureRealDir } from "./safe-write.mjs";
 import { runDoctor } from "./doctor.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -328,15 +329,13 @@ export function detectAgentAuthError(text, host = "claude", lang = "pl") {
 const activeAgentProcesses = new Map();
 
 function sessionsDir(rootDir = ROOT) {
-  const dir = resolveContainedPath(rootDir, ".cda", "sessions");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+  return ensureRealDir(rootDir, resolveContainedPath(rootDir, ".cda", "sessions"));
 }
 
 function saveSessionState(session, rootDir = ROOT) {
   const dir = sessionsDir(rootDir);
   const file = resolveContainedPath(dir, `${session.sessionId}.json`);
-  fs.writeFileSync(file, JSON.stringify(session, null, 2), "utf8");
+  writeStateFile(rootDir, file, JSON.stringify(session, null, 2));
   return session;
 }
 
@@ -350,7 +349,7 @@ export function getAgentSessions(rootDir = ROOT) {
       .filter((f) => f.endsWith(".json"))
       .map((f) => {
         try {
-          return JSON.parse(fs.readFileSync(resolveContainedPath(dir, f), "utf8"));
+          return JSON.parse(readStateFile(rootDir, resolveContainedPath(dir, f)));
         } catch {
           return null;
         }
@@ -370,7 +369,7 @@ export function stopAgentSession(sessionId, rootDir = ROOT) {
   const dir = sessionsDir(rootDir);
   const file = resolveContainedPath(dir, `${cleanId}.json`);
   if (!fs.existsSync(file)) throw new Error("SESSION_NOT_FOUND");
-  const session = JSON.parse(fs.readFileSync(file, "utf8"));
+  const session = JSON.parse(readStateFile(rootDir, file));
   const proc = activeAgentProcesses.get(cleanId);
   if (proc) {
     try {
@@ -416,16 +415,15 @@ export function launchAgentSession(
     executablePath: hostInfo.executablePath || safeHost,
   });
 
-  const cdaDir = resolveContainedPath(rootDir, ".cda");
-  fs.mkdirSync(cdaDir, { recursive: true });
+  const cdaDir = ensureRealDir(rootDir, resolveContainedPath(rootDir, ".cda"));
   const promptFile = resolveContainedPath(cdaDir, `last-agent-prompt-${safeHost}.txt`);
-  fs.writeFileSync(promptFile, bridge.prompt, "utf8");
+  writeStateFile(rootDir, promptFile, bridge.prompt);
 
   const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
   const sessionId = `agent-${safeHost}-${stamp}-${crypto.randomBytes(3).toString("hex")}`;
   const sDir = sessionsDir(rootDir);
   const sessionPromptFile = resolveContainedPath(sDir, `${sessionId}-prompt.txt`);
-  fs.writeFileSync(sessionPromptFile, bridge.prompt, "utf8");
+  writeStateFile(rootDir, sessionPromptFile, bridge.prompt);
 
   const session = {
     sessionId,
@@ -590,16 +588,14 @@ export function listReportsSummary(rootDir = ROOT) {
 const activeWorkflowChildren = new Map();
 
 function runsDir(rootDir = ROOT) {
-  const dir = resolveContainedPath(rootDir, ".cda", "runs");
-  fs.mkdirSync(dir, { recursive: true });
-  return dir;
+  return ensureRealDir(rootDir, resolveContainedPath(rootDir, ".cda", "runs"));
 }
 
 function saveRunState(run, rootDir = ROOT) {
   run.updatedAt = new Date().toISOString();
   const dir = runsDir(rootDir);
   const file = resolveContainedPath(dir, `${run.runId}.json`);
-  fs.writeFileSync(file, JSON.stringify(run, null, 2), "utf8");
+  writeStateFile(rootDir, file, JSON.stringify(run, null, 2));
   return run;
 }
 
@@ -608,7 +604,7 @@ export function getGuidedAudit(runId, rootDir = ROOT) {
   if (!cleanId) throw new Error("INVALID_RUN_ID");
   const file = resolveContainedPath(runsDir(rootDir), `${cleanId}.json`);
   if (!fs.existsSync(file)) throw new Error("RUN_NOT_FOUND");
-  return JSON.parse(fs.readFileSync(file, "utf8"));
+  return JSON.parse(readStateFile(rootDir, file));
 }
 
 export function listGuidedAudits(rootDir = ROOT) {
@@ -620,7 +616,7 @@ export function listGuidedAudits(rootDir = ROOT) {
       .filter((f) => f.endsWith(".json"))
       .map((f) => {
         try {
-          return JSON.parse(fs.readFileSync(resolveContainedPath(dir, f), "utf8"));
+          return JSON.parse(readStateFile(rootDir, resolveContainedPath(dir, f)));
         } catch {
           return null;
         }
