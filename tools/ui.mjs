@@ -16,6 +16,7 @@ import {
   validateProvider,
 } from "./providers.mjs";
 import { buildOverview, chatWithModel, readStoredReports } from "./panel-api.mjs";
+import { StateStore } from "./scope.mjs";
 import { runDoctor } from "./doctor.mjs";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
@@ -1138,7 +1139,6 @@ export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, ca
   const provider = validateProvider(payload.provider || config.provider || "");
   // A string (even empty) is the operator's explicit choice; only an omitted field falls back to the saved model.
   const model = typeof payload.model === "string" ? payload.model.trim() || null : config.provider === provider ? config.model : null;
-  const reportsDir = path.join(rootDir, ".cda", "reports");
   const requested = Array.isArray(payload.reports) ? payload.reports.filter((n) => typeof n === "string" && /^[a-zA-Z0-9_-]{1,64}$/.test(n)) : [];
   // Reads go through StateStore (no symlinked or hard-linked state). Without an explicit selection,
   // explain the 20 most recently written reports and say how many were left out.
@@ -1152,9 +1152,8 @@ export async function explainReportsWithModel(payload = {}, { rootDir = ROOT, ca
   const res = await call({ provider, model, system: systemPrompt(lang), messages: [{ role: "user", content: briefPrompt(brief, lang, question) }], consent: true, rootDir });
   const md = renderExplanation({ provider: res.provider, model: res.model, text: res.text, brief, sources: names, lang, question });
   const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
-  const file = resolveContainedPath(reportsDir, `explain-${stamp}.md`);
-  fs.mkdirSync(reportsDir, { recursive: true });
-  fs.writeFileSync(file, md, { encoding: "utf8", mode: 0o600 });
+  // StateStore.write refuses linked targets and ancestors and replaces the file atomically.
+  const file = new StateStore(rootDir).write("reports", `explain-${stamp}`, md, "md");
   return { ok: true, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, reportsUsed: names, excludedReports, rawEvidenceSent: false, report: path.basename(file), text: md };
 }
 
@@ -1255,7 +1254,10 @@ export async function startMiniUi({ port = 3109, lang = "pl", openBrowser = true
         const rawSegment = decodeURIComponent(url.pathname.slice("/report/".length));
         const reportsDir = resolveContainedPath(rootDir, ".cda", "reports");
         const filePath = resolveContainedPath(reportsDir, rawSegment);
-        if (!fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+        // Same rule as StateStore: no symlinked or hard-linked report files and no linked state directories.
+        const linked = [path.join(rootDir, ".cda"), reportsDir].some((d) => fs.existsSync(d) && fs.lstatSync(d).isSymbolicLink());
+        const stat = !linked && fs.existsSync(filePath) ? fs.lstatSync(filePath) : null;
+        if (!stat || !stat.isFile() || stat.nlink > 1) {
           res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
           res.end("Report not found. Run Demo or Guided Audit first.");
           return;

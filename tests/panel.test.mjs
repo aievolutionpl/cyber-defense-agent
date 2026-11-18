@@ -126,3 +126,32 @@ test("reports reached through symlinks never enter the overview or a model brief
   await explainReportsWithModel({ provider: "openrouter", consent: true, reports: ["linked", "site"] }, { rootDir: root, call: async (req) => { sent = req.messages[0].content; return { provider: "openrouter", model: "m", text: "ok", ms: 1 }; } });
   assert.ok(sent && !sent.includes("CONFIDENTIAL"));
 });
+
+test("explanations are written through StateStore and linked report files are never served", { skip: process.platform === "win32" && "symlinks need extra privileges on Windows" }, async (t) => {
+  const root = tmp(t);
+  const dir = seed(root);
+  const outside = tmp(t);
+  const victim = path.join(outside, "victim.txt");
+  fs.writeFileSync(victim, "KEEP ME");
+  const { explainReportsWithModel } = await import("../tools/ui.mjs");
+  const call = async () => ({ provider: "openrouter", model: "m", text: "ok", ms: 1 });
+  const realNow = Date.now;
+  Date.now = () => Date.parse("2026-01-02T03:04:05.000Z");
+  const RealDate = Date;
+  globalThis.Date = class extends RealDate { constructor(...a) { super(...(a.length ? a : [RealDate.parse("2026-01-02T03:04:05.000Z")])); } static now() { return RealDate.parse("2026-01-02T03:04:05.000Z"); } };
+  try {
+    fs.symlinkSync(victim, path.join(dir, "explain-20260102030405.md"));
+    await assert.rejects(explainReportsWithModel({ provider: "openrouter", consent: true }, { rootDir: root, call }), /STATE_LINK_BLOCKED/);
+  } finally {
+    globalThis.Date = RealDate;
+    Date.now = realNow;
+  }
+  assert.equal(fs.readFileSync(victim, "utf8"), "KEEP ME");
+  fs.symlinkSync(victim, path.join(dir, "leak.txt.md"));
+  const ui = await startMiniUi({ port: 0, openBrowser: false, rootDir: root });
+  t.after(() => ui.server.close());
+  const res = await fetch(`${ui.url}report/leak.txt.md`);
+  assert.equal(res.status, 404);
+  assert.ok(!(await res.text()).includes("KEEP ME"));
+  assert.equal((await fetch(`${ui.url}report/site.json`)).status, 200);
+});
