@@ -21,7 +21,10 @@ const I18N = {
     "consent.pc": "Zgadzam się na lokalny odczyt listy programów i otwartych portów.", "consent.project": "Zgadzam się na przygotowanie zakresu dla podanych plików.", "consent.web": "Potwierdzam, że to moja strona lub mam zgodę właściciela; wykonam kilka pasywnych zapytań GET (--authorized).", "consent.demo": "Demo działa na danych syntetycznych — zgoda nie jest potrzebna.",
     "audit.files": "Ścieżki względne, po jednej w wierszu", "audit.approve": "Zatwierdź krok", "audit.scope": "Zatwierdź odczyt poniższych plików.", "audit.share": "Wyślij nazwy i wersje pakietów do OSV.dev oraz pobierz listę CISA KEV.", "t.files": "Podaj dokładne ścieżki plików.",
     "st.awaiting_approval": "czeka na zgodę",
-    "target.project": "Ścieżka projektu (puste = to repozytorium)", "target.web": "Adres strony (https://…)",
+    "audit.progress": "Postęp audytu", "audit.filter": "Filtruj historię według stanu", "audit.all": "Wszystkie stany", "audit.noMatches": "Brak uruchomień dla tego stanu.", "t.target": "Podaj katalog projektu.",
+    "ag.m.changes": "Przegląd zmian", "ag.m.retest": "Plan retestu", "ag.m.ocr": "Plan użycia OpenCodeReview", "ag.preview": "Podgląd promptu",
+    "rp.search": "Szukaj raportów", "rp.format": "Format raportu", "rp.allFormats": "Wszystkie formaty", "rp.noMatches": "Brak raportów dla tych filtrów.", "t.network": "Nie udało się połączyć z lokalnym panelem.",
+    "target.project": "Ścieżka projektu", "target.web": "Adres strony (https://…)",
     "f.search": "Szukaj w ustaleniach… ( / )", "f.all": "Wszystkie", "f.ideas": "Pomysły", "f.allAreas": "Wszystkie obszary", "f.export": "⇩ Eksport Markdown", "f.area": "Obszar",
     "f.summary": "Pokazano {n} z {t} ustaleń", "f.none": "Brak ustaleń dla tych filtrów.", "f.impact": "Wpływ", "f.evidence": "Dowód", "f.fix": "Poprawka", "f.verify": "Weryfikacja", "f.source": "Źródło", "f.ask": "🧠 Zapytaj eksperta", "f.copy": "Kopiuj poprawkę", "f.model": "ocena modelu", "f.reopened": "wróciło",
     "ex.eyebrow": "TWÓJ MODEL", "ex.title": "Podłącz model", "ex.lead": "Subskrypcja (Claude Code, Codex), klucz API (OpenRouter, Anthropic, OpenAI) albo lokalna Ollama. Model nie ma narzędzi ani plików.", "ex.model": "Model (opcjonalnie)", "ex.model.ph": "domyślny dla dostawcy", "ex.save": "💾 Zapamiętaj wybór", "ex.consent.t": "Zgoda na wysyłanie", "ex.consent": "Wiadomości i — tylko gdy zaznaczysz — zredagowany skrót ustaleń trafią do wybranego dostawcy. Bez plików, ścieżek i sekretów.", "ex.attach": "Dołącz skrót najnowszych raportów do następnej wiadomości", "ex.chat": "Rozmowa z ekspertem", "ex.clear": "Wyczyść", "ex.empty": "Zadaj pytanie albo wybierz podpowiedź.", "ex.ph": "Np. Co naprawić najpierw przed publikacją? (Enter — wyślij, Shift+Enter — nowa linia)", "ex.send": "Wyślij",
@@ -53,7 +56,10 @@ const I18N = {
     "consent.pc": "I consent to reading the list of installed software and open ports locally.", "consent.project": "I consent to preparing a scope for the files listed.", "consent.web": "I own this site or have the owner's permission; run a few passive GET requests (--authorized).", "consent.demo": "The demo uses synthetic data — no consent needed.",
     "audit.files": "Relative paths, one per line", "audit.approve": "Approve step", "audit.scope": "Approve reading the files listed below.", "audit.share": "Send package names and versions to OSV.dev and download the CISA KEV list.", "t.files": "Enter the exact file paths.",
     "st.awaiting_approval": "awaiting approval",
-    "target.project": "Project path (empty = this repository)", "target.web": "Website address (https://…)",
+    "audit.progress": "Audit progress", "audit.filter": "Filter history by status", "audit.all": "All statuses", "audit.noMatches": "No runs with this status.", "t.target": "Enter the project directory.",
+    "ag.m.changes": "Review changes", "ag.m.retest": "Plan a retest", "ag.m.ocr": "Plan OpenCodeReview use", "ag.preview": "Prompt preview",
+    "rp.search": "Search reports", "rp.format": "Report format", "rp.allFormats": "All formats", "rp.noMatches": "No reports match these filters.", "t.network": "Could not connect to the local panel.",
+    "target.project": "Project path", "target.web": "Website address (https://…)",
     "f.search": "Search findings… ( / )", "f.all": "All", "f.ideas": "Ideas", "f.allAreas": "All areas", "f.export": "⇩ Export Markdown", "f.area": "Area",
     "f.summary": "Showing {n} of {t} findings", "f.none": "No findings for these filters.", "f.impact": "Impact", "f.evidence": "Evidence", "f.fix": "Fix", "f.verify": "Verify", "f.source": "Source", "f.ask": "🧠 Ask the expert", "f.copy": "Copy fix", "f.model": "model judgment", "f.reopened": "reopened",
     "ex.eyebrow": "YOUR MODEL", "ex.title": "Connect a model", "ex.lead": "A subscription (Claude Code, Codex), an API key (OpenRouter, Anthropic, OpenAI) or local Ollama. The model gets no tools or files.", "ex.model": "Model (optional)", "ex.model.ph": "provider default", "ex.save": "💾 Remember choice", "ex.consent.t": "Consent to send", "ex.consent": "Messages and — only when you tick it — a redacted brief of findings go to the chosen provider. No files, paths or secrets.", "ex.attach": "Attach a brief of the newest reports to the next message", "ex.chat": "Conversation with the expert", "ex.clear": "Clear", "ex.empty": "Ask a question or pick a suggestion.", "ex.ph": "e.g. What should I fix first before release? (Enter — send, Shift+Enter — new line)", "ex.send": "Send",
@@ -91,7 +97,12 @@ const t = (key, vars = {}) => (I18N[state.lang][key] ?? I18N.pl[key] ?? key).rep
 /* ---------- API ---------- */
 async function api(path, body) {
   const init = body === undefined ? {} : { method: "POST", headers: { "Content-Type": "application/json", "x-cda-token": TOKEN }, body: JSON.stringify(body) };
-  const res = await fetch(path, init);
+  let res;
+  try {
+    res = await fetch(path, init);
+  } catch {
+    return { ok: false, error: t("t.network") };
+  }
   const data = await res.json().catch(() => ({ ok: false, error: `HTTP_${res.status}` }));
   if (!res.ok && data.ok !== false) data.ok = false;
   return data;
@@ -171,6 +182,11 @@ function setView(view, focus = true) {
 async function refresh({ spin = false } = {}) {
   if (spin) $("#refresh-btn").classList.add("spin");
   const [overview, status, providers] = await Promise.all([api("/api/overview"), api("/api/status"), api("/api/providers")]);
+  if (overview.ok === false || status.ok === false || providers.ok === false) {
+    if (spin) toast(overview.error ?? status.error ?? providers.error, "err");
+    $("#refresh-btn").classList.remove("spin");
+    return;
+  }
   state.overview = overview;
   state.status = status;
   state.providers = providers.providers ?? [];
@@ -178,7 +194,7 @@ async function refresh({ spin = false } = {}) {
   if (!state.provider) state.provider = state.config.provider || state.providers.find((p) => p.ready)?.id || "claude-code";
   for (const run of status.runs ?? []) {
     const prev = state.lastRunStatus[run.runId];
-    if (prev === "running" && run.status !== "running") toast(run.status === "completed" ? `${t("t.done")}: ${run.title}` : `${t("t.failed")}: ${run.title}`, run.status === "completed" ? "ok" : "err");
+    if (prev === "running" && ["completed", "failed"].includes(run.status)) toast(run.status === "completed" ? `${t("t.done")}: ${run.title}` : `${t("t.failed")}: ${run.title}`, run.status === "completed" ? "ok" : "err");
     state.lastRunStatus[run.runId] = run.status;
   }
   renderAll();
@@ -238,6 +254,7 @@ function renderAudit() {
   if (needsTarget) $("#wf-target-label").textContent = t(`target.${state.wf}`);
   $("#wf-target").placeholder = state.wf === "web" ? "https://example.com" : "./";
   $("#wf-consent-box").hidden = state.wf === "demo";
+  $("#wf-share-box").hidden = state.wf !== "pc";
   $("#wf-consent-text").textContent = t(`consent.${state.wf}`);
   const runs = state.status?.runs ?? [];
   const run = runs.find((r) => r.runId === state.runId) ?? runs[0];
@@ -247,6 +264,10 @@ function renderAudit() {
   const st = $("#run-status");
   st.textContent = run ? t(`st.${run.status}`) : "—";
   st.className = `chip ${run?.status === "completed" ? "ok" : run?.status === "running" ? "run" : run ? "err" : ""}`;
+  const progress = $("#run-progress");
+  progress.hidden = !run;
+  progress.max = Math.max(1, run?.steps.length ?? 0);
+  progress.value = run?.steps.filter((step) => step.status === "completed").length ?? 0;
   $("#run-steps").innerHTML = run
     ? run.steps.map((s, i) => `<li><span class="step-dot ${esc(s.status)}">${s.status === "completed" ? "✓" : s.status === "failed" ? "!" : i + 1}</span><div>${esc(s.label.replace(/^\d+\.\s*/, ""))}<small>${esc(t(`st.${s.status}`))}${s.error ? ` · ${esc(s.error.slice(0, 160))}` : ""}</small></div></li>`).join("")
     : `<li class="empty">${esc(t("audit.noRun"))}</li>`;
@@ -258,9 +279,11 @@ function renderAudit() {
   $("#run-scope").hidden = approval?.kind !== "scope";
   $("#run-scope").textContent = approval?.kind === "scope" ? [approval.root, ...approval.files].join("\n") : "";
   $("#run-reports").innerHTML = (run?.reports ?? []).map((r) => `<a class="chip run" href="/report/${encodeURIComponent(r)}" target="_blank" rel="noopener">📄 ${esc(r)}</a>`).join("");
-  $("#run-history").innerHTML = runs.length
-    ? runs.slice(0, 10).map((r) => `<li class="clickable" data-run="${esc(r.runId)}"><div><strong>${esc(r.title)}</strong><small>${esc(timeAgo(r.createdAt))} · ${esc(r.runId)}</small></div><span class="chip ${r.status === "completed" ? "ok" : r.status === "running" ? "run" : "err"}">${esc(t(`st.${r.status}`))}</span></li>`).join("")
-    : `<li class="empty">${esc(t("audit.noRun"))}</li>`;
+  const status = $("#run-filter").value;
+  const history = runs.filter((item) => status === "all" || item.status === status);
+  $("#run-history").innerHTML = history.length
+    ? history.map((r) => `<li><button type="button" class="btn history-item" data-run="${esc(r.runId)}" aria-pressed="${r.runId === state.runId}"><span><strong>${esc(r.title)}</strong><small>${esc(timeAgo(r.createdAt))} · ${esc(r.runId)}</small></span><span class="chip ${r.status === "completed" ? "ok" : r.status === "running" ? "run" : "err"}">${esc(t(`st.${r.status}`))}</span></button></li>`).join("")
+    : `<li class="empty">${esc(t(runs.length ? "audit.noMatches" : "audit.noRun"))}</li>`;
 }
 
 async function startAudit(workflow = state.wf) {
@@ -269,8 +292,10 @@ async function startAudit(workflow = state.wf) {
   const target = $("#wf-target").value.trim();
   if (workflow === "web" && !/^https?:\/\//i.test(target)) { toast(t("t.url"), "err"); return; }
   const files = workflow === "project" ? $("#wf-files").value.split(/\r?\n/).map((file) => file.trim()).filter(Boolean) : [];
+  if (workflow === "project" && !target) { toast(t("t.target"), "err"); return; }
   if (workflow === "project" && !files.length) { toast(t("t.files"), "err"); return; }
-  const data = await api("/api/workflows/start", { workflow, consent, target: target || undefined, files, lang: state.lang });
+  const sharePackageNames = workflow === "pc" && $("#wf-share").checked;
+  const data = await api("/api/workflows/start", { workflow, consent, target: target || undefined, files, sharePackageNames, lang: state.lang });
   if (!data.ok) { toast(`❌ ${data.error}`, "err"); return; }
   state.runId = data.run.runId;
   state.lastRunStatus[data.run.runId] = "running";
@@ -400,10 +425,15 @@ async function deliver(text, { focus, attach }) {
 }
 
 /* ---------- agents ---------- */
+let bridgeRequest = 0;
 async function refreshBridge() {
   const q = new URLSearchParams({ host: state.host, mission: $("#ag-mission").value, target: $("#ag-target").value, lang: state.lang });
-  state.bridge = await api(`/api/bridge?${q}`);
-  $("#ag-command").textContent = state.bridge.cliCommand ?? "";
+  const request = ++bridgeRequest;
+  const bridge = await api(`/api/bridge?${q}`);
+  if (request !== bridgeRequest) return;
+  state.bridge = bridge.ok === false ? null : bridge;
+  $("#ag-command").textContent = state.bridge?.cliCommand ?? bridge.error ?? "";
+  $("#ag-prompt").textContent = state.bridge?.prompt ?? "";
 }
 function renderAgents() {
   const agents = state.status?.agents ?? {};
@@ -419,10 +449,13 @@ function renderAgents() {
 
 /* ---------- reports & system ---------- */
 function renderReports() {
-  const reports = state.status?.reports ?? [];
+  const all = state.status?.reports ?? [];
+  const query = $("#rp-search").value.trim().toLowerCase();
+  const format = $("#rp-format").value;
+  const reports = all.filter((report) => (format === "all" || report.ext.toLowerCase() === format) && report.name.toLowerCase().includes(query));
   $("#report-grid").innerHTML = reports.length
     ? reports.map((r) => `<a class="report" href="/report/${encodeURIComponent(r.name)}" target="_blank" rel="noopener"><span class="ext ${esc(r.ext)}">${esc(r.ext)}</span><strong>${esc(r.name)}</strong><small>${esc(size(r.size))} · ${esc(timeAgo(r.updatedAt))}</small></a>`).join("")
-    : `<div class="empty"><b>📄</b>${esc(t("rp.empty"))}</div>`;
+    : `<div class="empty"><b>📄</b>${esc(t(all.length ? "rp.noMatches" : "rp.empty"))}</div>`;
 }
 async function loadDoctor() {
   const d = await api("/api/doctor");
@@ -445,7 +478,7 @@ document.addEventListener("click", async (e) => {
   else if (d.ask) { const f = state.overview.findings.find((x) => x.id === d.ask); setView("expert"); send(t("ex.focus"), { focus: { priority: f.priority, area: f.area, title: f.title, fix: f.fix } }); }
   else if (d.copyFix) copy(state.overview.findings.find((x) => x.id === d.copyFix)?.fix ?? "");
   else if (d.copyMsg) copy(state.chat[Number(d.copyMsg)]?.content ?? "");
-  else if (d.wf) { state.wf = d.wf; $("#wf-consent").checked = false; renderAudit(); }
+  else if (d.wf) { state.wf = d.wf; $("#wf-consent").checked = false; $("#wf-share").checked = false; renderAudit(); }
   else if (d.run) { state.runId = d.run; renderAudit(); }
   else if (d.provider) {
     if (state.provider !== d.provider) {
@@ -464,6 +497,11 @@ document.addEventListener("click", async (e) => {
   else if (d.action === "run-demo") startAudit("demo");
   else if (d.action === "explain-all") { setView("expert"); send(t("ex.s1"), { attach: true }); }
 });
+$("#wf-target").addEventListener("input", () => { $("#wf-consent").checked = false; });
+$("#wf-files").addEventListener("input", () => { $("#wf-consent").checked = false; });
+$("#run-filter").addEventListener("change", renderAudit);
+$("#rp-search").addEventListener("input", renderReports);
+$("#rp-format").addEventListener("change", renderReports);
 $("#wf-start").addEventListener("click", () => startAudit());
 $("#wf-cancel").addEventListener("click", async () => { await api("/api/workflows/cancel", { runId: state.runId }); refresh(); });
 $("#wf-approve").addEventListener("click", async () => {

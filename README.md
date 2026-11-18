@@ -184,6 +184,8 @@ Skróty: `/` szuka w ustaleniach, `R` odświeża, `L` zmienia język.
 
 Dla projektu podaj dokładne ścieżki plików, po jednej w wierszu. Zatwierdź wyświetlony zakres przed odczytem. Inwentaryzacja komputera działa lokalnie, a wyszukiwanie podatności wymaga osobnej zgody na udostępnienie nazw i wersji pakietów.
 
+W panelu można filtrować historię i raporty oraz przejrzeć prompt przed uruchomieniem agenta. Lista zadań obejmuje przegląd zmian, plan retestu i plan użycia OpenCodeReview. [Plan rozwoju i kryteria odbioru](docs/CONTROL_CENTER_ROADMAP.md).
+
 ### Najważniejsze polecenia CLI (v0.3)
 
 ```sh

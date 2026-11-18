@@ -119,6 +119,10 @@
             <label class="switch"><input type="checkbox" id="wf-consent" /><span></span></label>
             <div><strong data-i18n="audit.consent.t">Zgoda na ten krok</strong><p id="wf-consent-text" class="muted"></p></div>
           </div>
+          <div class="consent-box" id="wf-share-box" hidden>
+            <label class="switch"><input type="checkbox" id="wf-share" aria-describedby="wf-share-text" /><span></span></label>
+            <label for="wf-share" id="wf-share-text" data-i18n="audit.share">Wyślij nazwy i wersje pakietów do OSV.dev oraz pobierz listę CISA KEV.</label>
+          </div>
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="wf-start" data-i18n="audit.start">▶ Rozpocznij audyt</button>
             <button type="button" class="btn btn-danger" id="wf-cancel" hidden data-i18n="audit.cancel">⏹ Anuluj</button>
@@ -128,6 +132,7 @@
         <div class="grid-2">
           <div class="card">
             <div class="card-head"><h3 data-i18n="audit.active">Bieżące uruchomienie</h3><span class="chip" id="run-status">—</span></div>
+            <progress id="run-progress" max="1" value="0" hidden data-i18n-aria="audit.progress"></progress>
             <ol class="timeline" id="run-steps"></ol>
             <div class="callout" id="run-next" hidden></div>
             <div class="callout" id="run-approval" hidden>
@@ -139,6 +144,14 @@
           </div>
           <div class="card">
             <div class="card-head"><h3 data-i18n="audit.history">Historia</h3></div>
+            <select id="run-filter" data-i18n-aria="audit.filter">
+              <option value="all" data-i18n="audit.all">Wszystkie stany</option>
+              <option value="running" data-i18n="st.running">trwa</option>
+              <option value="awaiting_approval" data-i18n="st.awaiting_approval">czeka na zgodę</option>
+              <option value="completed" data-i18n="st.completed">gotowe</option>
+              <option value="failed" data-i18n="st.failed">błąd</option>
+              <option value="cancelled" data-i18n="st.cancelled">anulowano</option>
+            </select>
             <ul class="history" id="run-history"></ul>
           </div>
         </div>
@@ -217,6 +230,9 @@
                 <option value="code" data-i18n="ag.m.code">Audyt kodu i zależności</option>
                 <option value="pc" data-i18n="ag.m.pc">Audyt komputera</option>
                 <option value="web" data-i18n="ag.m.web">Pasywny audyt strony</option>
+                <option value="changes" data-i18n="ag.m.changes">Przegląd zmian</option>
+                <option value="retest" data-i18n="ag.m.retest">Plan retestu</option>
+                <option value="ocr" data-i18n="ag.m.ocr">Plan użycia OpenCodeReview</option>
                 <option value="report" data-i18n="ag.m.report">Raport HTML/PDF</option>
               </select>
             </div>
@@ -226,6 +242,10 @@
             </div>
           </div>
           <pre class="code" id="ag-command"></pre>
+          <details>
+            <summary data-i18n="ag.preview">Podgląd promptu</summary>
+            <pre class="code" id="ag-prompt"></pre>
+          </details>
           <div class="btn-row">
             <button type="button" class="btn btn-primary" id="ag-launch" data-i18n="ag.launch">⚡ Uruchom w tle</button>
             <button type="button" class="btn" data-copy="cli" data-i18n="ag.copyCli">Kopiuj komendę</button>
@@ -242,6 +262,17 @@
       <section class="view" data-view="reports" hidden>
         <div class="card">
           <div class="card-head"><h3 data-i18n="rp.title">Pliki w .cda/reports</h3><a class="btn btn-ghost" href="/report/dashboard.html" target="_blank" rel="noopener" data-i18n="act.dashboard">Dashboard ↗</a></div>
+          <div class="form-2">
+            <input type="search" id="rp-search" data-i18n-ph="rp.search" data-i18n-aria="rp.search" placeholder="Szukaj raportów" />
+            <select id="rp-format" data-i18n-aria="rp.format">
+              <option value="all" data-i18n="rp.allFormats">Wszystkie formaty</option>
+              <option value="html">HTML</option>
+              <option value="md">Markdown</option>
+              <option value="json">JSON</option>
+              <option value="pdf">PDF</option>
+              <option value="sarif">SARIF</option>
+            </select>
+          </div>
           <div class="report-grid" id="report-grid"></div>
         </div>
       </section>

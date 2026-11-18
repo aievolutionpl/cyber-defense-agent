@@ -1,5 +1,11 @@
 # Verification record
 
+## Merge of the audit planner and Command Center updates — 18 November 2026
+
+- On Linux with Node 24, `npm run check` passed with 135 passing tests and one Windows-only test skipped. Skill checks, ESLint, TypeScript and the static export passed. The synthetic demo passed without network calls.
+- The static site passed the Chromium motion acceptance suite in both languages at 320, 390, 768 and 1440 px. The local Command Center passed 35 Chromium checks, including history and report filters, prompt preview, exact-file approval, the separate advisory opt-in and the bundled demo.
+- The browser tests used synthetic data and intercepted the computer-inventory request. They exercised no live provider session or advisory request.
+
 ## Website planner and agent-security skill — 13 November 2026
 
 Branch `codex/fix-panel-workflows`, Windows, Node.js 26.12.1. This extends the panel repair below; it does not add a scanner, network integration or OS collector.
@@ -215,3 +221,11 @@ Observed in a Linux container (Node 22.23.5):
 
 - New panel (`tools/panel/`) served by `ui.mjs` under `default-src 'none'; script-src 'self'; style-src 'self'` with no inline scripts or handlers. Playwright at 1440 px and 390 px (touch): all seven views render, no console errors or CSP violations, no horizontal overflow, bottom tab bar on mobile, PL/EN switch.
 - Live: "Ask the expert" on a demo finding through the logged-in Claude Code CLI returned a formatted Polish answer in about 27 s; without consent the panel refused and showed a notice.
+
+## Control center refresh (2026-11-16)
+
+- `npm run check`: passed, including 85 Node tests, skill consistency, ESLint, TypeScript and static site build.
+- `npm run demo`: passed on bundled synthetic data. Confirmed local fix, insufficient-data paths and out-of-scope rejection observed; no target code or external network used.
+- Added regressions for separately consented advisory lookup, missing exact file scope at the HTTP boundary, generated client syntax, script-termination escaping and planning-only bridge missions.
+- Browser acceptance was attempted with Playwright and system Chromium. Chromium could not start: the environment denied its process-singleton socket (`Operation not permitted`). Therefore viewport, keyboard, clipboard, reduced-motion and visual behavior are **not browser-verified**. These are pending checks, not passes.
+- Existing static marketing site is unchanged. No model-backed Claude/Codex/Hermes session was launched, no OpenCodeReview review executed, and no real asset audited during this change.

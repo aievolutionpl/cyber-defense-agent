@@ -36,6 +36,40 @@ async (page) => {
   await page.waitForFunction(() => document.querySelector('#run-status')?.textContent === 'done', undefined, { timeout: 20000 });
   assert(await page.locator('#run-reports a').count() >= 2, 'real synthetic CLI demo reports');
 
+  assert(await page.locator('#run-progress').evaluate(progress => progress.value === progress.max), 'completed step progress');
+  await page.locator('#run-filter').selectOption('failed');
+  assert(await page.locator('#run-history [data-run]').count() === 0, 'history filtered by status');
+  await page.locator('#run-filter').selectOption('all');
+  assert(await page.locator('#run-history [data-run]').count() > 0, 'history restored');
+
+  await page.keyboard.press('5');
+  await page.locator('#ag-mission').selectOption('ocr');
+  await page.locator('details:has(#ag-prompt) summary').click();
+  await page.waitForFunction(() => document.querySelector('#ag-prompt')?.textContent.includes('not implemented'));
+  assert(await page.locator('#ag-prompt').isVisible(), 'planning-only prompt preview');
+  await page.keyboard.press('6');
+  await page.locator('#rp-search').fill('demo-report');
+  await page.locator('#rp-format').selectOption('html');
+  assert(await page.locator('#report-grid a').count() === 1, 'report name and format filters');
+
+  await page.goto(base + '?lang=pl#' + 'audit');
+  await page.locator('[data-wf="pc"]').click();
+  assert(!(await page.locator('#wf-share').isChecked()), 'computer inventory defaults to offline');
+  const computerRequests = [];
+  await page.route('**/api/workflows/start', route => {
+    computerRequests.push(route.request().postDataJSON());
+    return route.fulfill({ json: { ok: true, run: { runId: 'fixture-computer', title: 'Synthetic inventory' } } });
+  });
+  for (const share of [false, true]) {
+    await page.locator('#wf-consent').check();
+    await page.locator('#wf-share').setChecked(share);
+    const request = page.waitForResponse(response => response.url().endsWith('/api/workflows/start'));
+    await page.locator('#wf-start').click();
+    await request;
+  }
+  assert(computerRequests[0]?.sharePackageNames === false && computerRequests[1]?.sharePackageNames === true, 'sharing requires the separate switch');
+  await page.unroute('**/api/workflows/start');
+
   for (const locale of ['pl', 'en']) {
     const run = { runId: 'run-approval-fixture', status: 'awaiting_approval', title: 'Synthetic approval', steps: [], reports: [], pendingApproval: { kind: 'scope', token: 'synthetic-approval-token', root: '/synthetic/project', files: ['package.json', 'src/example.ts'] } };
     let approved = false;

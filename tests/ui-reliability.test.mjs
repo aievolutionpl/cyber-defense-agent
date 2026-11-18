@@ -121,19 +121,6 @@ test("background Codex sessions use the noninteractive exec entry point", (t) =>
   child.emit("close", 0);
 });
 
-test("computer workflow pauses before sharing package names", async (t) => {
-  const rootDir = fixture(t);
-  const executed = [];
-  const run = await startGuidedAudit({ workflow: "pc", consent: true }, {
-    rootDir,
-    awaitCompletion: true,
-    stepRunner: async (step) => { executed.push(step.id); return "{}"; },
-  });
-  assert.deepEqual(executed, ["inventory"]);
-  assert.equal(run.status, "awaiting_approval");
-  assert.equal(run.pendingApproval.kind, "package_names");
-});
-
 test("project workflow requires an explicit file list", (t) => {
   const rootDir = fixture(t);
   fs.writeFileSync(path.join(rootDir, "package.json"), "{}");
@@ -143,15 +130,24 @@ test("project workflow requires an explicit file list", (t) => {
 test("approval tokens authorize one pending step and resume cannot bypass them", async (t) => {
   const rootDir = fixture(t);
   const executed = [];
-  const stepRunner = async (step) => { executed.push(step.id); return "{}"; };
-  const run = await startGuidedAudit({ workflow: "pc", consent: true }, { rootDir, stepRunner, awaitCompletion: true });
+  const stepRunner = async (step) => {
+    executed.push(step.id);
+    return step.id === "scope"
+      ? JSON.stringify({ approved: false, root: rootDir, files: ["package.json"] })
+      : "{}";
+  };
+  const run = await startGuidedAudit(
+    { workflow: "project", target: rootDir, files: ["package.json"], consent: true },
+    { rootDir, stepRunner, awaitCompletion: true },
+  );
   await resumeGuidedAudit(run.runId, { rootDir, stepRunner, awaitCompletion: true });
-  assert.deepEqual(executed, ["inventory"]);
+  assert.deepEqual(executed, ["scope"]);
   const pending = getGuidedAudit(run.runId, rootDir);
+  assert.equal(pending.pendingApproval.kind, "scope");
   await assert.rejects(approveGuidedAudit(run.runId, { rootDir, approvalToken: "wrong" }), /APPROVAL_REQUIRED/);
   const completed = await approveGuidedAudit(run.runId, { rootDir, approvalToken: pending.pendingApproval.token, stepRunner, awaitCompletion: true });
   assert.equal(completed.status, "completed");
-  assert.deepEqual(executed, ["inventory", "advisories", "report"]);
+  assert.deepEqual(executed, ["scope", "approve", "review", "report"]);
 });
 
 test("concurrent resumes wait for cancellation and execute unfinished steps once", async (t) => {

@@ -69,7 +69,7 @@ The separate PR runner uses an explicitly authorized base-branch policy to read 
 
 `node tools/cda.mjs ui --lang pl` opens the local panel on `127.0.0.1:3109`. It checks the actual listener port in Host, Origin and Referer headers. POST actions require the session token. Reports, prompts, sessions and run state use guarded local paths. Session and run JSON use the same atomic state store as evidence reports. Linked state files and directories are rejected.
 
-A project audit requires an explicit list of relative files. The panel displays the CLI's canonical root and complete proposed list before approval. The approval passes the proposal digest to the CLI. Replacing a proposal invalidates that approval. A computer audit first inventories locally, then asks separately before sharing package names and versions with OSV.dev and downloading CISA KEV.
+A project audit requires an explicit list of relative files. The panel displays the CLI's canonical root and complete proposed list before approval. The approval passes the proposal digest to the CLI. Replacing a proposal invalidates that approval. Computer audits default to local inventory. The panel offers a separate opt-in before sending package names and versions to OSV.dev and downloading CISA KEV.
 
 Each run has its own report names and step history. Cancellation is retained when child processes close. Resume waits for the previous attempt to settle and continues from the first unfinished step. Each local evidence step has a five-minute timeout and a two-megabyte combined output limit. Existing interrupted computer audits retain the separate data-sharing gate when resumed.
 
@@ -80,5 +80,7 @@ Agent sessions submit one prompt using Claude Code print mode or `codex exec`. T
 ## Agent review and website planner
 
 The agent-security playbook adds a read-only review route for AI applications, skills and MCP configuration, informed by OWASP Agentic 2026, ASVS 5.0.0 and the MCP security documentation checked on 13 November 2026. It is expert guidance, not a new scanner or connector. Existing local agent rules remain bounded pattern checks. No network destination, OS collector, dependency or implicit permission was added.
+
+The agent missions `changes`, `retest` and `ocr` prepare prompts for the host. The OpenCodeReview mission prepares an integration plan. See the [implementation roadmap](CONTROL_CENTER_ROADMAP.md).
 
 The website's seven-scenario planner generates a localized brief for Codex or Claude Code, with expected evidence and explicit limits. It runs entirely in the browser without target inputs, persistence or audit requests; copying a brief does not grant consent. The evidence-review method adds coverage, counter-evidence and decision framing to the skill. Host/model behavioral acceptance remains separate from document and browser validation.
