@@ -525,8 +525,7 @@ export function sanitizeModelMarkdown(text) {
   return String(text)
     .replace(/[\u0000-\u0008\u000b-\u001f\u007f‪-‮⁦-⁩]/g, "")
     .replace(/<\/?(script|iframe|object|embed|style|link|meta|img|svg)[^>]*>/gi, "")
-    .split(/\n/)
-    .map((line) => redact(line, MAX_OUTPUT_CHARS))
-    .join("\n")
+    // Redact the whole response at once so multi-line secrets (PEM blocks) still match; newlines survive.
+    .replace(/^[\s\S]*$/, (all) => redact(all, MAX_OUTPUT_CHARS * 2))
     .slice(0, MAX_OUTPUT_CHARS);
 }

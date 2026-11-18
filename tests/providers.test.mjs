@@ -360,3 +360,11 @@ test("a CLI that closes stdin early yields a provider error instead of crashing"
   };
   await assert.rejects(callModel({ provider: "claude-code", system: "S", messages: [{ role: "user", content: "q" }], consent: true, rootDir: tmp(t), spawnImpl, execImpl }), /CLI_FAILED/);
 });
+
+test("multi-line private keys in model output are redacted", () => {
+  const pem = ["Here:", "-----BEGIN PRIVATE KEY-----", "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQ", "-----END PRIVATE KEY-----", "done"].join("\n");
+  const out = sanitizeModelMarkdown(pem);
+  assert.ok(!out.includes("MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQ"));
+  assert.match(out, /\[REDACTED KEY\]/);
+  assert.match(out, /^Here:\n[\s\S]*\ndone$/);
+});
