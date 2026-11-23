@@ -708,6 +708,7 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
         requiresApproval: "scope",
         label: pl ? "2. Zatwierdzenie zakresu tylko do odczytu (24h)" : "2. Approve read-only scope (24h)",
         script: cda,
+        // "--proposal <digest>" is appended once the scope step has produced the proposal.
         args: ["approve", "--scope", scopeName, "--root", targetRoot, "--yes"],
         reportName: null,
       },

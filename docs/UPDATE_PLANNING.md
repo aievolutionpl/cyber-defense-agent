@@ -27,7 +27,7 @@ Create the usual exact-file scope, show it to the user, and wait for approval be
 ```sh
 node tools/cda.mjs scope --root /path/to/export --allow updates.json --name maintenance
 # Only after explicit approval of the returned scope:
-node tools/cda.mjs approve --scope maintenance --root /path/to/export --yes
+node tools/cda.mjs approve --scope maintenance --root /path/to/export --proposal <digest-from-scope-output> --yes
 node tools/cda.mjs updates --scope maintenance --input updates.json --name maintenance-plan
 ```
 

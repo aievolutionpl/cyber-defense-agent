@@ -1,5 +1,15 @@
 # Verification record
 
+## Skill audit: pinned approvals, CLI contract checks, CI and container playbooks — 23 November 2026
+
+Linux, Node.js 22.23.5. Skill and CLI changes only; no site files changed, so ESLint, TypeScript and the static export were not re-run in this iteration.
+
+- **Fixed:** `scope` did not print the proposal digest the skill told agents to show, and `approve` accepted a call without `--proposal`, so approval was not pinned to the list the user saw. `scope` now prints `proposal` and the exact approve command; `approve` refuses with `PROPOSAL_REQUIRED` or `SCOPE_PROPOSAL_CHANGED`. The Command Center already passed the digest and is unchanged in behaviour. A CLI test covers both refusals.
+- `node --test tests/*.test.mjs`: 135 passed, one Windows-only test skipped. The synthetic demo passed. A manual scope → refused unpinned approve → pinned approve → review → revoke run against `examples/demo-repo` behaved as documented.
+- `check-skills` now validates, besides links: heading anchors, every documented `cda.mjs` invocation against the CLI's command/flag table (37 spans), and that `references/cli-errors.md` explains every refusal code the tools can raise (82 codes). Deliberately broken flag and anchor edits were rejected.
+- New playbooks `supply-chain-and-ci.md` and `containers-and-cloud.md`; GitHub Actions secure-use, `pull_request_target` and Kubernetes Pod Security Standards pages were retrieved on 23 November as sources. This is document research, not an audit of any asset.
+- Skill text now covers the optional model connection as an L3 data-sharing step (`explain --dry-run` before `--send-summary`), `--git-staged`, `pr-comment`, `benchmark`, a hand-off gate and handling of instructions embedded in reviewed content. Behavioural cases were reviewed against the text; no live host or model session was run.
+
 ## Merge of the audit planner and Command Center updates — 18 November 2026
 
 - On Linux with Node 24, `npm run check` passed with 135 passing tests and one Windows-only test skipped. Skill checks, ESLint, TypeScript and the static export passed. The synthetic demo passed without network calls.
