@@ -203,8 +203,10 @@ test("normal CLI entry points import, compare, export SARIF and isolate dashboar
   const tools = fileURLToPath(new URL("../tools", import.meta.url));
   fs.cpSync(tools, path.join(trusted.root, "tools"), { recursive: true });
   const cli = (...args) => execFileSync(process.execPath, [path.join(trusted.root, "tools/cda.mjs"), ...args], { encoding: "utf8", timeout: 10000 });
-  cli("scope", "--root", target.root, "--allow", "config.js", "--allow", "scan.json", "--name", "project");
-  cli("approve", "--scope", "project", "--root", target.root, "--yes");
+  const proposal = JSON.parse(cli("scope", "--root", target.root, "--allow", "config.js", "--allow", "scan.json", "--name", "project").split("\nAwaiting explicit approval.")[0]).proposal;
+  assert.throws(() => cli("approve", "--scope", "project", "--root", target.root, "--yes"), /PROPOSAL_REQUIRED/);
+  assert.throws(() => cli("approve", "--scope", "project", "--root", target.root, "--yes", "--proposal", "0".repeat(64)), /SCOPE_PROPOSAL_CHANGED/);
+  cli("approve", "--scope", "project", "--root", target.root, "--yes", "--proposal", proposal);
   cli("review", "--scope", "project", "--name", "before");
   target.write("config.js", "const config = { rejectUnauthorized: true };\n");
   cli("review", "--scope", "project", "--name", "after");

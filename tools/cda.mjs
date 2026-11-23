@@ -100,8 +100,8 @@ Connect a model (optional; the model gets no tools, files or shell)
   (OPENROUTER_API_KEY, ANTHROPIC_API_KEY, OPENAI_API_KEY) or a user-level file outside the repository.
 
 Files you approve (read-only, exact allowlist, 24 h)
-  node tools/cda.mjs scope --root <directory> --allow <file> [--allow <file>] --name <scope>
-  node tools/cda.mjs approve --scope <scope> --root <directory> --yes
+  node tools/cda.mjs scope --root <directory> (--allow <file> [--allow <file>] | --git-staged) --name <scope>
+  node tools/cda.mjs approve --scope <scope> --root <directory> --proposal <digest> --yes
   node tools/cda.mjs show --scope <scope>
   node tools/cda.mjs onboarding --scope <scope>
   node tools/cda.mjs review --scope <scope> --name <report>
@@ -216,6 +216,40 @@ async function modelCommand(command, v) {
   process.stdout.write(`${JSON.stringify({ output, provider: res.provider, model: res.model, findingsSent: brief.included, findingsTotal: brief.total, rawEvidenceSent: false, seconds: Math.round(res.ms / 100) / 10, basis: "model judgment" })}\n`);
 }
 
+/** Every CLI command and the only flags it accepts. tools/check-skills.mjs validates the skill docs against this. */
+export const COMMANDS = Object.freeze({
+  start: ["lang"],
+  ui: ["lang", "port"],
+  agent: ["host", "mission", "target", "lang"],
+  benchmark: ["name", "lang"],
+  doctor: ["lang", "json"],
+  providers: ["json"],
+  connect: ["provider", "model", "key-stdin", "forget-key", "lang"],
+  explain: ["from", "scope", "question", "provider", "model", "name", "lang", "send-summary", "dry-run"],
+  ask: ["question", "provider", "model", "lang", "send-question"],
+  chat: ["provider", "model", "lang"],
+  scope: ["root", "allow", "git-staged", "name"],
+  approve: ["scope", "root", "yes", "proposal"],
+  show: ["scope"],
+  onboarding: ["scope"],
+  summary: ["scope", "report", "name"],
+  review: ["scope", "name"],
+  import: ["scope", "input", "name", "format"],
+  updates: ["scope", "input", "name"],
+  deps: ["scope", "input", "name"],
+  inventory: ["name", "yes"],
+  advisories: ["inventory", "name", "share-package-names"],
+  web: ["url", "name", "authorized"],
+  finding: ["name", "priority", "area", "title", "impact", "evidence", "fix", "verify"],
+  report: ["name", "from", "title", "lang", "pdf", "scope"],
+  dashboard: ["lang", "scope"],
+  retest: ["scope", "before", "after", "name"],
+  "pr-comment": ["scope", "retest"],
+  compare: ["scope", "before", "after", "name"],
+  sarif: ["scope", "report", "name"],
+  revoke: ["scope"],
+});
+
 async function main() {
   const { positionals, values: v } = parseArgs({
     allowPositionals: true,
@@ -269,38 +303,7 @@ async function main() {
   }
   if (positionals.length !== 1) deny("INVALID_ARGUMENTS");
   const command = positionals[0];
-  const permitted = {
-    start: ["lang"],
-    ui: ["lang", "port"],
-    agent: ["host", "mission", "target", "lang"],
-    benchmark: ["name", "lang"],
-    doctor: ["lang", "json"],
-    providers: ["json"],
-    connect: ["provider", "model", "key-stdin", "forget-key", "lang"],
-    explain: ["from", "scope", "question", "provider", "model", "name", "lang", "send-summary", "dry-run"],
-    ask: ["question", "provider", "model", "lang", "send-question"],
-    chat: ["provider", "model", "lang"],
-    scope: ["root", "allow", "git-staged", "name"],
-    approve: ["scope", "root", "yes", "proposal"],
-    show: ["scope"],
-    onboarding: ["scope"],
-    summary: ["scope", "report", "name"],
-    review: ["scope", "name"],
-    import: ["scope", "input", "name", "format"],
-    updates: ["scope", "input", "name"],
-    deps: ["scope", "input", "name"],
-    inventory: ["name", "yes"],
-    advisories: ["inventory", "name", "share-package-names"],
-    web: ["url", "name", "authorized"],
-    finding: ["name", "priority", "area", "title", "impact", "evidence", "fix", "verify"],
-    report: ["name", "from", "title", "lang", "pdf", "scope"],
-    dashboard: ["lang", "scope"],
-    retest: ["scope", "before", "after", "name"],
-    "pr-comment": ["scope", "retest"],
-    compare: ["scope", "before", "after", "name"],
-    sarif: ["scope", "report", "name"],
-    revoke: ["scope"],
-  };
+  const permitted = COMMANDS;
   if (
     !permitted[command] ||
     Object.keys(v).some((k) => !permitted[command].includes(k))
@@ -318,7 +321,7 @@ async function main() {
     const ui = await startMiniUi({ port, lang: v.lang || "pl", openBrowser: true });
     process.stdout.write(
       `\n\x1b[38;2;52;211;153m╭──────────────────────────────────────────────────────────────────────────╮\x1b[0m\n` +
-        `\x1b[38;2;52;211;153m│\x1b[0m  🛡️  \x1b[1mCYBER DEFENSE AGENT v0.2 — MINI INTERFACE & AGENT BRIDGE\x1b[0m            \x1b[38;2;52;211;153m│\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m│\x1b[0m  🛡️  \x1b[1mCYBER DEFENSE AGENT v0.3 — MINI INTERFACE & AGENT BRIDGE\x1b[0m            \x1b[38;2;52;211;153m│\x1b[0m\n` +
         `\x1b[38;2;52;211;153m│\x1b[0m  🌐 URL: \x1b[1m\x1b[38;2;56;189;248m${ui.url}\x1b[0m                                        \x1b[38;2;52;211;153m│\x1b[0m\n` +
         `\x1b[38;2;52;211;153m│\x1b[0m  🤖 Claude Code CLI & Codex CLI Bridge + Local 1-Click Runner            \x1b[38;2;52;211;153m│\x1b[0m\n` +
         `\x1b[38;2;52;211;153m╰──────────────────────────────────────────────────────────────────────────╯\x1b[0m\n` +
@@ -349,7 +352,7 @@ async function main() {
     });
     process.stdout.write(
       `\n\x1b[38;2;52;211;153m╭────────────────────────────────────────────────────────────────────────────╮\x1b[0m\n` +
-        `\x1b[38;2;52;211;153m│\x1b[0m  🤖 \x1b[1mCYBER DEFENSE AGENT v0.2 — ${pl ? "MOSTEK CLAUDE CODE & CODEX CLI" : "CLAUDE CODE & CODEX CLI BRIDGE"}\x1b[0m             \x1b[38;2;52;211;153m│\x1b[0m\n` +
+        `\x1b[38;2;52;211;153m│\x1b[0m  🤖 \x1b[1mCYBER DEFENSE AGENT v0.3 — ${pl ? "MOSTEK CLAUDE CODE & CODEX CLI" : "CLAUDE CODE & CODEX CLI BRIDGE"}\x1b[0m             \x1b[38;2;52;211;153m│\x1b[0m\n` +
         `\x1b[38;2;52;211;153m├────────────────────────────────────────────────────────────────────────────┤\x1b[0m\n` +
         `\x1b[38;2;52;211;153m│\x1b[0m  • Claude Code CLI: ${agents.claude.installed ? `\x1b[38;2;52;211;153m✓ (${agents.claude.version})\x1b[0m` : "\x1b[38;2;251;191;36m○ skill ready (.claude/skills/cyber-defense)\x1b[0m"}\n` +
         `\x1b[38;2;52;211;153m│\x1b[0m  • OpenAI Codex CLI: ${agents.codex.installed ? `\x1b[38;2;52;211;153m✓ (${agents.codex.version})\x1b[0m` : "\x1b[38;2;251;191;36m○ skill ready (.agents/skills/cyber-defense)\x1b[0m"}\n` +
@@ -368,8 +371,11 @@ async function main() {
     ];
     const scope = propose(v.root, allowed);
     store.write("scopes", v.name, scope);
+    // The digest is what the user approves: `approve` must repeat it, so a changed proposal
+    // can never inherit an earlier yes.
     process.stdout.write(
-      `${JSON.stringify(scope, null, 2)}\nAwaiting explicit approval. No file content read.\n`,
+      `${JSON.stringify({ ...scope, proposal: scopeDigest(scope) }, null, 2)}\nAwaiting explicit approval. No file content read.\n` +
+        `Approve this exact list with: node tools/cda.mjs approve --scope ${v.name} --root <same-directory> --proposal ${scopeDigest(scope)} --yes\n`,
     );
     return;
   }
@@ -472,7 +478,9 @@ async function main() {
   }
   const scope = store.read("scopes", v.scope);
   if (command === "approve") {
-    if (v.proposal && v.proposal !== scopeDigest(scope)) deny("SCOPE_PROPOSAL_CHANGED");
+    // Approval is pinned to the digest the user was shown; there is no unpinned approval path.
+    if (typeof v.proposal !== "string" || !v.proposal) deny("PROPOSAL_REQUIRED");
+    if (v.proposal !== scopeDigest(scope)) deny("SCOPE_PROPOSAL_CHANGED");
     store.write("scopes", v.scope, approve(scope, v.root, v.yes));
     process.stdout.write(
       "Read scope approved. Target execution is unavailable; these files are never sent anywhere by the CLI.\n",

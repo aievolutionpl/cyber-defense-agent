@@ -191,7 +191,7 @@ W panelu można filtrować historię i raporty oraz przejrzeć prompt przed uruc
 ```sh
 # 1. Wyznacz zakres (np. tylko pliki zmienione w Git przed commitem) i zatwierdź:
 node tools/cda.mjs scope --root /sciezka/do/projektu --git-staged --name audit
-node tools/cda.mjs approve --scope audit --root /sciezka/do/projektu --yes
+node tools/cda.mjs approve --scope audit --root /sciezka/do/projektu --proposal <digest-z-wyniku-scope> --yes
 
 # 2. Uruchom lokalny przegląd bezpieczeństwa (8 reguł v0.2: sekrety, TLS, eval, XSS, config agentów):
 node tools/cda.mjs review --scope audit --name before
