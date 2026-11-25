@@ -427,6 +427,8 @@ export function retest(scope, before, after) {
   const reader = authorized(scope);
   const report = {
     format: "cda.retest.v1",
+    baselineDigest: sha(JSON.stringify(before)),
+    currentDigest: sha(JSON.stringify(after)),
     version: VERSION,
     createdAt: new Date().toISOString(),
     scope: { rootKey: sha(scope.root) },

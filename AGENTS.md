@@ -38,3 +38,16 @@ Keep the site truthful about v0.2. Its static demo is not a real audit or upload
 For tool changes, run security tests and the synthetic demo. For UI changes, also verify EN/PL, keyboard use, clipboard, policy links, 320/390/768/1440 layouts and reduced motion against the static export. Record observed results in `docs/VERIFICATION.md`; do not describe host/model sessions as verified based on wrapper tests.
 
 Use a review branch and pull request. Publication and merge require the user's authorization. Preserve existing work, never force-push or bypass secret scanning, and never commit `.cda/`, credentials or private evidence. Keep privacy, capabilities and operator guidance consistent with actual code.
+## Local dashboard implementation
+
+`tools/workbench.mjs` provides bounded report-sharing previews, source selection,
+snapshot comparisons and conversation naming. Report-sharing consent is bound to a
+summary digest; never send raw report evidence by default. Native Codex resumes must
+use the stored thread ID, never `--last`. Retest snapshot digests in `tools/engine.mjs`
+bind historical confirmations to the exact compared evidence.
+
+`tools/panel.mjs` renders the bilingual dashboard; `tools/panel/` contains local
+styles, the decorative globe and client interactions. `tools/pdf.mjs` handles
+asynchronous isolated PDF printing. `tools/ui.mjs` owns consented workflow routes
+and validates local requests. `tools/guided-reviews.mjs` owns review execution, `tools/agent-sessions.mjs` owns CLI sessions, and `tools/projects.mjs` stores project labels and archive state. Local context identifiers must never be interpolated into an advisory prompt. Keep the advisory console separate from
+audit permission steps and never add arbitrary shell execution to its endpoint.

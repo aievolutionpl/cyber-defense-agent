@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import os from "node:os";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 import { deny } from "./scope.mjs";
@@ -151,8 +152,8 @@ export function collect(named, { rootKey } = {}) {
 const T = {
   en: {
     report: "Security audit report", dashboard: "Defense dashboard", generated: "Generated", sources: "evidence sources",
-    verdict: { act: "Act today", attention: "Needs attention this week", routine: "Routine maintenance", clear: "No findings in the checked scope", incomplete: "Incomplete coverage: review missing checks" },
-    verdictNote: { act: "At least one issue is critical or actively exploited.", attention: "High-priority issues were found.", routine: "Only medium and low priority items were found.", clear: "This is not proof of security. See coverage.", incomplete: "Some results were truncated or unavailable, so no conclusion can be drawn yet." },
+    verdict: { act: "Act today", attention: "Needs attention this week", routine: "Routine maintenance", clear: "No findings in the checked scope", incomplete: "Incomplete review coverage" },
+    verdictNote: { act: "At least one issue is critical or actively exploited.", attention: "High-priority issues were found.", routine: "Only medium and low priority items were found.", clear: "This is not proof of security. See coverage.", incomplete: "Some checks were unavailable or evidence was insufficient. See the coverage section before drawing conclusions." },
     incompleteNote: "Incomplete checks or unverified scanner coverage. Review the source reports before relying on these totals. Reports:",
     status: { open: "Open", reopened: "Problem returned" }, open: "Open findings", fixed: "Confirmed fixes", checked: "Packages checked", listed: "Packages listed", ideas: "Improvement ideas",
     top: "Start here", topSub: "The three things that matter most", by: "Where the risk is", findings: "Findings", improve: "Worth improving",
@@ -164,11 +165,11 @@ const T = {
   },
   pl: {
     report: "Raport z audytu bezpieczeństwa", dashboard: "Panel obrony", generated: "Wygenerowano", sources: "źródeł dowodów",
-    verdict: { act: "Działaj dziś", attention: "Wymaga uwagi w tym tygodniu", routine: "Rutynowa konserwacja", clear: "Brak ustaleń w sprawdzonym zakresie", incomplete: "Niepełne: uruchom sprawdzenie ponownie" },
-    verdictNote: { act: "Co najmniej jeden problem jest krytyczny lub aktywnie wykorzystywany.", attention: "Znaleziono problemy o wysokim priorytecie.", routine: "Znaleziono tylko pozycje o średnim i niskim priorytecie.", clear: "To nie jest dowód bezpieczeństwa. Zobacz pokrycie.", incomplete: "Część wyników została obcięta lub była niedostępna, więc nie można jeszcze wyciągać wniosków." },
+    verdict: { act: "Działaj dziś", attention: "Wymaga uwagi w tym tygodniu", routine: "Rutynowa konserwacja", clear: "Brak ustaleń w sprawdzonym zakresie", incomplete: "Niepełny zakres sprawdzenia" },
+    verdictNote: { act: "Co najmniej jeden problem jest krytyczny lub aktywnie wykorzystywany.", attention: "Znaleziono problemy o wysokim priorytecie.", routine: "Znaleziono tylko pozycje o średnim i niskim priorytecie.", clear: "To nie jest dowód bezpieczeństwa. Zobacz pokrycie.", incomplete: "Nie wszystkie kontrole zostały wykonane lub nie ma wystarczających danych. Szczegóły znajdziesz w sekcji pokrycia." },
     incompleteNote: "Niepełne kontrole lub niezweryfikowane pokrycie skanera. Sprawdź raporty źródłowe przed oceną wyników. Raporty:",
     status: { open: "Otwarte", reopened: "Problem powrócił" }, open: "Otwarte ustalenia", fixed: "Potwierdzone poprawki", checked: "Sprawdzone pakiety", listed: "Pakiety na liście", ideas: "Pomysły na ulepszenia",
-    top: "Zacznij tutaj", topSub: "Trzy najważniejsze rzeczy", by: "Gdzie jest ryzyko", findings: "Ustalenia", improve: "Warto dopracować",
+    top: "Zacznij tutaj", topSub: "Najważniejsze działania", by: "Gdzie jest ryzyko", findings: "Ustalenia", improve: "Warto dopracować",
     what: "Co może się stać", saw: "Co zaobserwowano", fix: "Jak to naprawić", verify: "Jak sprawdzić poprawkę", verified: "Weryfikacja", coverage: "Pokrycie i ograniczenia",
     notChecked: "pakietów nie ma publicznej bazy i nie zostało sprawdzonych automatycznie.", none: "Brak pozycji w tej kategorii.",
     footer: "Defensywna kontrola tylko do odczytu. Ustalenia są sygnałami do zbadania, a nie certyfikatem bezpieczeństwa. Brak ustalenia nie dowodzi bezpieczeństwa. Każdą zmianę wdrażasz samodzielnie.",
@@ -219,8 +220,21 @@ ul.lim{margin:10px 0 0;padding-left:18px;color:#a9b9ad;font-size:12.5px}footer{m
 @keyframes pulse{70%{box-shadow:0 0 0 9px #6fd79f00}}@keyframes rise{from{opacity:0;transform:translateY(10px)}}
 @media screen{.card{animation:rise .5s both}.top .card:nth-child(2){animation-delay:.06s}.top .card:nth-child(3){animation-delay:.12s}}
 @media screen and (max-width:760px){.page{padding:24px 16px}.hero,.top,.grid{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(2,1fr)}.bar{grid-template-columns:110px 1fr 28px}h1{font-size:30px}}
-@media print{.page{padding:34px 38px;max-width:none}.card{animation:none}h2,h2+.lead{break-after:avoid}.kpis{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1.35fr .65fr}.donut{width:120px;height:120px}h1{font-size:34px}.finding h3{font-size:15px}}@media (prefers-reduced-motion:reduce){*{animation:none!important}}`;
+@media print{.page{padding:34px 38px;max-width:none}.card{animation:none}h2,h2+.lead{break-after:avoid}.kpis{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1.35fr .65fr}.donut{width:120px;height:120px}h1{font-size:34px}.finding h3{font-size:15px}}@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+@media print{@page{size:A4;margin:14mm}html,body{background:#fff!important;color:#193c32!important}.page{padding:0;max-width:none}header,.sub,.meta,footer,ul.lim,.kpi span,.legend{color:#4b6055!important}.brand,h2,.ok{color:#18543f!important}.card,.kpi,.tag{background:#fff!important;border-color:#bdcabc!important;box-shadow:none}.verdict>b{color:#193c32!important}.verdict p,.top p,.grid p,.grid .fix p,.grid div b{color:#30483d!important}.warn{color:#7d530a!important}.tag{color:#30483d!important}.donut-n{fill:#193c32}.donut-l{fill:#4b6055}table{table-layout:fixed;width:100%;font-size:10px}th{color:#4b6055}td,th{border-color:#bdcabc}.card{border-radius:8px;padding:16px}.kpi{padding:10px}.kpi b{font-size:23px}.top{grid-template-columns:1fr}.top .card{padding:12px}.top h3{margin-top:4px}.finding{break-inside:avoid}h1{font-size:29px;margin-top:24px}.grid{gap:10px 16px}.grid p{font-size:11px}.mono{font-size:10px;word-break:break-word}.live:before{box-shadow:none}}
+`;
 const MARK = `<svg viewBox="0 0 40 44" fill="none" aria-hidden="true"><path d="M20 3 35 9v12c0 9-6.5 15.5-15 20C11.5 36.5 5 30 5 21V9L20 3Z" stroke="currentColor" stroke-width="2.4"/><path d="m13 21 5 5 10-11" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+
+/** Decision page for owners; detailed evidence follows on the next printed page. */
+export function ownerSummary(data, lang = 'en') {
+  const pl = lang === 'pl';
+  const urgent = (data.counts.P0 || 0) + (data.counts.P1 || 0);
+  const actions = data.findings.slice(0, 3);
+  const scope = pl
+    ? `Źródła dowodów: ${data.sources.length}. Ustalenia w tym zestawie dowodów: ${data.total}.`
+    : `Evidence sources: ${data.sources.length}. Findings in this evidence set: ${data.total}.`;
+  return `<section class="owner-summary"><style>@media print{.owner-summary{break-after:page;min-height:220mm}.owner-summary h1{font-size:32px}.owner-summary li{font-size:12px;line-height:1.6;margin:12px 0}}.owner-summary{padding:28px 0 40px}.owner-summary li{margin:18px 0}.owner-summary .lead{max-width:720px}</style><p class="brand">${pl ? 'DLA WŁAŚCICIELA / DECYZJE' : 'FOR THE OWNER / DECISIONS'}</p><h1>${pl ? 'Co warto zrobić teraz?' : 'What should happen next?'}</h1><p class="lead">${urgent ? (pl ? `Ustalenia wymagające pilnej oceny: ${urgent}.` : `${urgent} high or critical priority findings need review.`) : (pl ? 'Nie wykryto ustaleń o wysokim lub krytycznym priorytecie w tym wyniku.' : 'No high or critical priority findings were recorded in this result.')}</p><div class="card"><h3>${pl ? 'Co to oznacza' : 'What it means'}</h3><p>${pl ? 'To lista sygnałów do sprawdzenia, nie potwierdzenie włamania. Znaczenie każdego problemu zależy od sposobu użycia systemu i dostępności zagrożonego elementu.' : 'These are signals to investigate, not proof of a breach. Each finding depends on how the system is used and whether the affected component is reachable.'}</p></div><p>${scope}</p><h2>${pl ? 'Plan kolejnych kroków' : 'Next-step plan'}</h2><ol>${actions.length ? actions.map(f=>`<li><strong>${esc(f.priority)} · ${esc(f.title)}</strong><br>${esc(f.fix || (pl ? 'Zweryfikuj dowody w części technicznej.' : 'Review the evidence in the technical section.'))}</li>`).join('') : `<li>${pl ? 'Sprawdź pokrycie i ustal, czy wszystkie ważne obszary zostały ocenione.' : 'Review coverage and decide whether all important areas were assessed.'}</li>`}</ol><div class="card"><h3>${pl ? 'Czego ten raport nie potwierdza' : 'What this report does not establish'}</h3><p>${data.incomplete.length ? (pl ? 'Pokrycie jest niepełne. Część danych lub kontroli nie wystarcza do oceny.' : 'Coverage is incomplete. Some data or checks are insufficient for an assessment.') : (pl ? 'Ocena dotyczy wyłącznie zapisanych kontroli i ich zakresu.' : 'The assessment covers only the recorded checks and scope.')}</p><p>${pl ? 'Brak ustaleń nie jest gwarancją bezpieczeństwa. Poprawki zatwierdzasz osobno; ich skuteczność wymaga ponownego sprawdzenia. Dowody i ograniczenia znajdziesz na kolejnych stronach.' : 'No findings is not a security guarantee. Changes need separate approval and a fresh check. Evidence and limitations follow on the next pages.'}</p></div></section>`;
+}
 
 /** Self-contained dark HTML: no scripts, no external resources. Every dynamic string is escaped. */
 export function renderVisual(data, { title, lang = "en", mode = "report", now = Date.now() } = {}) {
@@ -233,8 +247,9 @@ export function renderVisual(data, { title, lang = "en", mode = "report", now = 
   const card = (f) => `<article class="card finding" style="--c:${COLOR[f.priority]}"><div class="meta"><span class="tag">${f.priority}</span><span class="chip">${esc(t.area[f.area])}</span><span class="chip">${esc(f.basis)}</span><span class="chip">${esc(t.status[f.status] ?? t.status.open)}</span><span class="mono">${esc(f.source)}</span></div><h3>${esc(f.title)}</h3><div class="grid">${f.impact ? `<div><b>${t.what}</b><p>${esc(f.impact)}</p></div>` : ""}${f.evidence ? `<div><b>${t.saw}</b><p>${esc(f.evidence)}</p></div>` : ""}<div class="fix"><b>${t.fix}</b><p>${esc(f.fix)}</p></div>${f.verify ? `<div><b>${t.verify}</b><p>${esc(f.verify)}</p></div>` : ""}</div></article>`;
   const max = Math.max(1, ...data.areas.map(([, n]) => n));
   const hidden = data.total - data.findings.length;
-  return `<!doctype html><html lang="${lang === "pl" ? "pl" : "en"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">${dash ? '<meta http-equiv="refresh" content="5">' : ""}<title>${esc(title ?? (dash ? t.dashboard : t.report))}</title><style>${CSS}</style></head><body><div class="page">
+  return `<!doctype html><html lang="${lang === "pl" ? "pl" : "en"}"><head><meta charset="utf-8"><meta name="cda-report-sources" content="${esc(data.sources.map(s => s.name).filter(name => /^[A-Za-z0-9_-]{1,64}$/.test(name)).join(','))}"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:">${dash ? '<meta http-equiv="refresh" content="5">' : ""}<title>${esc(title ?? (dash ? t.dashboard : t.report))}</title><style>${CSS}</style></head><body><div class="page">
 <header><span class="brand">${MARK}Cyber Defense Agent</span><span>${dash ? `<span class="live">${t.live}</span>` : `${t.generated} ${esc(new Date(now).toISOString().slice(0, 16).replace("T", " "))} UTC`}</span></header>
+${!dash && mode !== 'comparison' ? ownerSummary(data, lang) : ''}
 <h1>${esc(title ?? (dash ? t.dashboard : t.report))}</h1><p class="sub">${data.sources.length} ${t.sources}${data.sources.length ? ": " + esc(data.sources.map((s) => s.kind).filter((k, i, a) => a.indexOf(k) === i).join(" · ")) : ""}</p>
 ${!data.sources.length ? `<div class="card"><p>${t.empty}</p></div>` : `${data.incomplete.length ? `<div class="card" style="border-color:${COLOR.P1};margin-bottom:14px"><p class="warn" style="margin:0">${t.incompleteNote} <span class="mono">${esc(data.incomplete.join(", "))}</span></p></div>` : ""}<section class="hero"><div class="card verdict" style="--v:${vColor}"><b>${t.verdict[data.verdict]}</b><p>${t.verdictNote[data.verdict]}</p><div class="kpis"><div class="kpi"><b>${data.total - data.counts.IDEA}</b><span>${t.open}</span></div><div class="kpi"><b class="ok">${fixedCount}</b><span>${t.fixed}</span></div><div class="kpi"><b>${data.stats.checked || data.stats.packages}</b><span>${data.stats.checked ? t.checked : t.listed}</span></div><div class="kpi"><b>${data.counts.IDEA}</b><span>${t.ideas}</span></div></div></div>
 <div class="card ring">${donut(data.counts)}<div class="legend">${["P0", "P1", "P2", "P3"].map((p) => `<span><i style="background:${COLOR[p]}"></i>${p} &nbsp;<b>${data.counts[p]}</b></span>`).join("")}</div></div></section>
@@ -243,7 +258,7 @@ ${data.areas.length ? `<h2>${t.by}</h2><div class="card bars">${data.areas.map((
 <h2>${t.findings}</h2>${real.length ? real.map(card).join("") : `<div class="card"><p>${t.none}</p></div>`}
 ${soft.length ? `<h2>${t.improve}</h2>${soft.map(card).join("")}` : ""}${hidden > 0 ? `<p class="sub">+${hidden} ${t.more}</p>` : ""}
 ${data.verified.length ? `<h2>${t.verified}</h2><div class="card"><table><tr><th>Check</th><th>Status</th><th>Report</th></tr>${data.verified.map((v) => `<tr><td class="mono">${esc(v.label)}</td><td class="${v.status === "confirmed_fixed" ? "ok" : "warn"}">${esc(v.status)}</td><td class="mono">${esc(v.source)}</td></tr>`).join("")}</table></div>` : ""}
-<h2>${dash ? t.reports : t.coverage}</h2><div class="card"><table><tr><th>Report</th><th>Evidence</th><th>Date</th></tr>${data.sources.map((s) => `<tr><td class="mono">${esc(s.name)}</td><td>${esc(s.kind)}</td><td class="mono">${esc(String(s.createdAt).slice(0, 16).replace("T", " "))}</td></tr>`).join("")}</table>${data.stats.notChecked ? `<p class="warn" style="margin:12px 0 0">${data.stats.notChecked} ${t.notChecked}</p>` : ""}<ul class="lim">${data.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>`}
+<h2>${dash ? t.reports : t.coverage}</h2><div class="card"><table><tr><th>${lang === 'pl' ? 'Raport' : 'Report'}</th><th>${lang === 'pl' ? 'Źródło dowodu' : 'Evidence source'}</th><th>${lang === 'pl' ? 'Data' : 'Date'}</th></tr>${data.sources.map((s) => `<tr><td class="mono">${esc(s.name)}</td><td>${esc(s.kind)}</td><td class="mono">${esc(String(s.createdAt).slice(0, 16).replace("T", " "))}</td></tr>`).join("")}</table>${data.stats.notChecked ? `<p class="warn" style="margin:12px 0 0">${data.stats.notChecked} ${t.notChecked}</p>` : ""}<ul class="lim">${data.limitations.map((l) => `<li>${esc(l)}</li>`).join("")}</ul></div>`}
 <footer>${t.footer}</footer></div></body></html>`;
 }
 
@@ -275,13 +290,19 @@ export function findBrowser(platform = process.platform, env = process.env) {
 /** Prints our own generated HTML file to PDF with a locally installed Chromium-based browser. No network, no other page. */
 export function printPdf(htmlFile, pdfFile, { browser = findBrowser(), run = execFileSync } = {}) {
   if (!browser) return { pdf: false, reason: "NO_CHROMIUM_BROWSER_FOUND" };
-  const args = ["--headless", "--disable-gpu", "--no-pdf-header-footer", "--disable-extensions", "--no-first-run", `--print-to-pdf=${pdfFile}`];
+  const temporaryRoot = fs.realpathSync(os.tmpdir());
+  const profile = fs.mkdtempSync(path.join(temporaryRoot, "cda-print-"));
+  const args = ["--headless", "--disable-gpu", "--no-pdf-header-footer", "--disable-extensions", "--disable-background-networking", "--disable-sync", "--no-first-run", `--user-data-dir=${profile}`, `--print-to-pdf=${pdfFile}`];
   if (process.platform === "linux" && process.getuid?.() === 0) args.push("--no-sandbox");
   args.push(pathToFileURL(htmlFile).href);
   try {
     run(browser, args, { timeout: 90_000, stdio: "ignore", windowsHide: true, shell: false });
   } catch {
     return { pdf: false, reason: "PDF_PRINT_FAILED" };
+  } finally {
+    if (path.dirname(profile) === temporaryRoot && path.basename(profile).startsWith("cda-print-")) {
+      try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 }); } catch { /* A closing browser may still hold its isolated profile. */ }
+    }
   }
-  return fs.existsSync(pdfFile) && fs.statSync(pdfFile).size > 1000 ? { pdf: true } : { pdf: false, reason: "PDF_PRINT_FAILED" };
+  return fs.existsSync(pdfFile) && fs.statSync(pdfFile).size > 1000 && fs.readFileSync(pdfFile).subarray(0, 5).toString() === "%PDF-" ? { pdf: true } : { pdf: false, reason: "PDF_PRINT_FAILED" };
 }

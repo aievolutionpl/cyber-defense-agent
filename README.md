@@ -24,6 +24,12 @@
 
 ---
 
+## Uruchom lokalny panel
+
+W katalogu repozytorium, z Node.js 22 lub nowszym, wpisz `node tools/cda.mjs ui --lang pl`. Otwórz adres lokalny podany przez CLI. W **Projektach** nadaj nazwę pracy i wybierz **Nowe sprawdzenie → Demo**. Ekran wyniku pozwala otworzyć HTML, pobrać PDF i omówić wynik z Codexem. Generowanie PDF wymaga lokalnego Chrome lub Edge. W razie problemów otwórz HTML i wybierz **Drukuj → Zapisz jako PDF**.
+
+W **Ustawieniach** możesz sprawdzić połączenie z Codex CLI. Rozmowy i zadania przypisane do projektu pozostają dostępne po restarcie. Wcześniejsze sprawdzenia znajdziesz w grupie **Bez projektu**. Do udostępnienia agentowi streszczenia użyj **Wyjaśnij mi to** przy raporcie i sprawdź podgląd przed wysłaniem.
+
 ## 💡 O co chodzi w 30 sekund?
 
 Bezpieczeństwo zaczyna się od konkretnych pytań: kto ma dostęp do danych, jakie uprawnienia ma agent i co potwierdza, że poprawka działa.
@@ -224,3 +230,37 @@ Więcej dokumentacji technicznej:
 
 Projekt stworzony i rozwijany przez **[AI Evolution Polska](https://github.com/aievolutionpl)** (`@aievolutionpl`).
 Kod źródłowy udostępniany jest na otwartej licencji **[MIT](LICENSE)**.
+# Local dashboard and Codex console
+
+The dashboard now connects six workflows:
+
+1. **Explain this** opens a report-source selector and the exact privacy-limited
+   summary to share with Codex. Nothing is sent until you approve it.
+2. Type `sprawdz projekt`, `sprawdź stronę`, `check computer` or choose a shortcut
+   in **AI terminal**. Review the plan and approve it; progress and reports appear
+   below the conversation. The existing approval steps remain in force.
+3. Name conversations, select them from history and continue after reopening the
+   panel. New conversations resume their exact native Codex thread. Responses support
+   bold text and fenced code with copying; status shows real phases and elapsed time.
+4. New reports start with a decision page for the owner, followed by technical evidence.
+5. **Compare results** shows added, remaining, unverified-disappeared and historically
+   confirmed findings, with HTML/PDF export. Confirmation needs a matching saved retest.
+6. **Codex connection & model** checks installed CLI and sign-in and accepts an optional
+   model ID from your account. Login remains in your own terminal (`codex login`).
+
+Legacy sessions replay bounded context; new sessions use the stored Codex thread ID.
+Local chat transcripts and reports remain private files under ignored `.cda/`.
+
+Start `node tools/cda.mjs ui --lang pl --port 3111` and open http://127.0.0.1:3111.
+The overview shows actual review history and completed steps, not a security score.
+Choose **New review** to run the synthetic demo or select an explicitly approved target.
+Open **My reports** for self-contained HTML and **Create PDF**. PDF export runs local
+Chrome/Edge with an isolated temporary profile; the generated file is downloaded separately.
+
+**AI terminal** connects to the installed, signed-in Codex CLI. Sending a message
+starts a read-only `codex exec` turn with the canonical Cyber Defense skill and a
+bounded fallback context (up to 40 recent messages). It is an advisory chat,
+not an unrestricted shell. Reviews and PDF generation use their approval controls.
+Messages are sent to the configured Codex provider under your account and billing;
+do not paste secrets. Stop cancels the current process; New chat resets the selected
+context without deleting local session history. Sessions and reports remain in ignored `.cda/`.

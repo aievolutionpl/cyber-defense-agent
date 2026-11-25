@@ -75,7 +75,7 @@ export function Landing({ locale }: { locale: Locale }) {
                   : "Code, dependencies, AI agent configuration. Gather evidence, decide what to fix first and check the result. Cyber Defense guides the review within the scope you approve."}
               </p>
               <div className="hero-ctas">
-                <a href="#missions" className="button button-primary">{pl ? "Wybierz swój przegląd" : "Plan your review"}<ArrowRight size={17} /></a>
+                <a href="#install" className="button button-primary">{pl ? "Uruchom lokalny panel" : "Start the local dashboard"}<ArrowRight size={17} /></a>
                 <a href="#scan" className="button button-secondary">
                   {pl ? "Zobacz, jak działa" : "Watch it work"}
                   <ArrowDown size={16} />

@@ -218,8 +218,11 @@ test("local panel serves both languages with valid scripts and blocks linked rep
     assert.equal(response.headers.get("cache-control"), "no-store");
     const html = await response.text();
     assert.match(html, new RegExp(`<html lang="${lang}">`));
-    assert.doesNotThrow(() => new Script(html.match(/<script>([\s\S]*?)<\/script>/)[1]));
-    assert.ok(html.includes(lang === "pl" ? "Uruchom prowadzony audyt" : "Start guided audit"));
+    assert.match(html, /<script src="\/assets\/panel.js" defer><\/script>/);
+    const script = await (await fetch(`${ui.url}assets/panel.js`)).text();
+    assert.doesNotThrow(() => new Script(script));
+    assert.ok(html.includes(lang === "pl" ? "Uruchom demo" : "Run demo"));
+    assert.doesNotMatch(response.headers.get("content-security-policy"), /script-src[^;]*unsafe-inline/);
   }
   const store = new StateStore(rootDir);
   store.write("reports", "test-report", "<p>synthetic</p>", "html");

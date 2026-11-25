@@ -8,7 +8,7 @@ type MissionId = 'demo' | 'code' | 'pc' | 'web';
 
 export function Installation({ locale }: { locale: Locale }) {
   const pl = locale === 'pl';
-  const [active, setActive] = useState('claude');
+  const [active, setActive] = useState('ui');
   const [mission, setMission] = useState<MissionId>('demo');
 
   const missions: { id: MissionId; label: [string, string]; cmd: string; promptSuffix: [string, string] }[] = [
@@ -70,7 +70,7 @@ export function Installation({ locale }: { locale: Locale }) {
     },
     {
       id: 'ui',
-      label: pl ? 'Mini Interfejs GUI' : 'Mini Web UI',
+      label: pl ? 'Panel lokalny' : 'Local dashboard',
       command: `node tools/cda.mjs ui --lang ${locale}`,
       prompt: currentMission.cmd,
       anchor: '#szybki-start-w-60-sekund',
@@ -104,7 +104,7 @@ export function Installation({ locale }: { locale: Locale }) {
         label={pl ? 'Środowisko agenta' : 'Agent environment'}
       />
 
-      <div className="mission-picker-bar" role="group" aria-label={pl ? 'Wybierz scenariusz' : 'Choose scenario'}>
+      {active !== 'ui' && <div className="mission-picker-bar" role="group" aria-label={pl ? 'Wybierz scenariusz' : 'Choose scenario'}>
         <span className="mission-picker-label">
           <Sparkles size={13} aria-hidden="true" />
           {pl ? 'Scenariusz:' : 'Mission:'}
@@ -120,8 +120,7 @@ export function Installation({ locale }: { locale: Locale }) {
             {m.label[i]}
           </button>
         ))}
-      </div>
-
+      </div>}
       {hosts.map(host => (
         <div
           key={host.id}
@@ -157,10 +156,18 @@ export function Installation({ locale }: { locale: Locale }) {
               </code>
             </pre>
 
+            {host.id === 'ui' ? (
+              <div className="install-status">
+                <strong>{pl ? 'Pierwszy raport' : 'Your first report'}</strong>
+                <p>{pl
+                  ? 'W panelu wybierz Projekty, dodaj nazwę i kliknij Nowe sprawdzenie. Uruchom demo. Przy gotowym wyniku wybierz Pobierz PDF lub Wyjaśnij mi to.'
+                  : 'Open Projects, add a name and choose New review. Run the demo. When the result is ready, choose Download PDF or Explain this.'}</p>
+              </div>
+            ) : (<>
             <div className="command-caption">
               <span>
                 02 /{' '}
-                {host.id === 'ui' || host.id === 'tui'
+                {host.id === 'tui'
                   ? pl
                     ? 'BEZPIECZNY PUNKT STARTU'
                     : 'A SAFE STARTING POINT'
@@ -178,6 +185,7 @@ export function Installation({ locale }: { locale: Locale }) {
               <code>{host.prompt}</code>
             </pre>
 
+            </>)}
             <p className="install-status">
               {pl
                 ? 'CLI i panel lokalny działają bez instalacji pakietów npm. Sesja AI wymaga zainstalowanego i zalogowanego Codexa lub Claude Code; obowiązują zasady i limity jego dostawcy.'

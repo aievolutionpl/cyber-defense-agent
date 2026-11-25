@@ -1,5 +1,78 @@
 # Verification record
 
+## Project workspace and public onboarding · 25 November 2026
+
+Windows, local review branch. The baseline passed 111 tests. The rebuilt workspace passed 113 tests, skill validation, lint, typecheck and static export. The synthetic CLI demo completed.
+
+- In Chrome, created a named project, ran the bundled example and downloaded the before report through the PDF dialog. PyMuPDF opened the three-page file and extracted its owner summary. The project comparison also downloaded as a two-page PDF with the saved-retest section.
+- Codex CLI `0.171.0-alpha.13.2` reported an authenticated session and answered a synthetic question in Polish. Shared a previewed synthetic report summary through the separate consent dialog and received an explanation. Searched, renamed, archived and restored a conversation. Reopened the project and conversation after restarting the panel.
+- Reviewed one temporary synthetic `package.json` through the project form. The UI displayed the proposed file and directory and waited for approval before continuing to a completed report. The fixture retained just its original file.
+- Tested the five dashboard destinations in PL and EN at 320, 390, 768 and 1440 pixels. Checked keyboard selection and the reduced-motion browser preference. Rechecked renaming followed immediately by archiving after correcting a status refresh race.
+- Served the static site export on localhost. In PL and EN, followed the installation link by keyboard, copied the local panel commands, read the clipboard back, opened the policy page, and checked all four widths after layout settled.
+- Downloaded specimens and screenshots are in ignored `output/workspace-2026-11-25/`. These checks used Windows and synthetic data. Provider availability, print support on other platforms and real asset inventories were outside this pass.
+
+
+## Connected workbench: all six improvements — 15 November 2026
+
+Continues `codex/friendly-dashboard-pdf`; no publication, push or merge.
+
+- Final `npm run check`: **111/111 tests passed**, skill validation, lint, typecheck
+  and static build passed. Synthetic demos passed, including a fresh Polish showcase.
+- Real installed Codex 0.169.0-alpha.11.1 returned responses. The connection control
+  confirmed sign-in. A conversation was named Orion, reloaded and resumed; after a
+  panel restart it again returned Orion. Both turns carried the same captured native
+  thread ID. The final resume sends only the new message plus trusted instructions.
+- A synthetic report was selected from its actual HTML sources, previewed, explicitly
+  shared and explained by Codex. The final preview adds bundled guidance for known
+  local rules. Tests reject absent sharing consent and stale preview digests before
+  spawning a provider process; raw evidence and private paths stay out of the summary.
+- `sprawdz demo` opened the review plan. Approving it ran the synthetic workflow and
+  displayed progress, before/after reports and PDF controls inside the terminal.
+  Real machine, website and project audits were not triggered for this verification.
+- Browser comparison showed a disappeared finding as requiring verification for old
+  unmatched evidence. A new digest-bound retest produced one historical confirmation.
+  Its PDF was created and downloaded through the browser.
+- Final local deliverables: `output/workbench-2026-11-15/Raport-demo.pdf` (3 A4 pages)
+  and `Porownanie.pdf` (2 A4 pages). Decision and comparison pages were visually
+  inspected; source technical text retains its original language where applicable.
+- PL/EN terminal and comparison views fit 320/390/768/1440 without horizontal overflow.
+  No browser console warnings/errors were observed in the final check. Enter submission,
+  naming, reload, history selection and native continuation were exercised.
+- The clipboard controls are implemented with a manual-copy fallback; OS clipboard
+  contents were not independently verified. Reduced-motion guards were inspected in
+  source; this pass did not emulate the browser media preference. The timeout and
+  sign-in-failure paths have bounded handling; no deliberate 10-minute timeout was run.
+- Historical confirmation applies only to the matched recorded retest. It does not
+  claim today's files are unchanged. New reports get the owner page; old HTML is not
+  rewritten. Installed CLI/model access remains dependent on the user's account.
+
+## Glass dashboard, Codex advisory console and PDF — 15 November 2026
+
+Branch `codex/friendly-dashboard-pdf`, Windows, Node 26.12.1. Local changes only.
+
+- `npm run check`: 103 tests passed, skill validation, lint, TypeScript and static build passed.
+  `npm run demo` passed, including the blocked out-of-scope read and conservative retest.
+- Actual installed Codex CLI answered from the canonical skill supplied through stdin.
+  A follow-up recalled the synthetic example name Aurora. The initial file-tool failure
+  prompted direct skill injection; this is not a claim that all host tools work.
+- A Windows EPERM during atomic session replacement was reproduced during live use.
+  Session persistence now retries transient locks without terminating the server;
+  a regression test checks the completed state survives the retry. Interrupted advisory
+  sessions are recognised when their owning server has stopped.
+- Browser review: PL/EN terminal, forms, reports and agent settings at 320/390/768/1440
+  showed no horizontal overflow. Earlier overview checks covered the same widths.
+  Enter submitted a real chat message. The final browser console reported no errors or warnings.
+- Actual PDF creation and browser download succeeded for the synthetic demo. Both pages
+  of the earlier A4 export were visually checked; the final export is saved under
+  ignored `output/dashboard-2026-11-15/Cyber-Defense-raport-demo.pdf`.
+- Desktop and mobile terminal screenshots are in that same ignored directory.
+  Reduced-motion guards were inspected in source; browser media emulation was not run.
+  The updated `scripts/mini-ui-acceptance.js` is provided for future automation and was
+  not executed in this session. Clipboard success feedback was observed earlier, but
+  clipboard contents could not be confirmed through the in-app browser API.
+- The terminal is advisory Codex exec with bounded replayed context, not an unrestricted
+  PTY or a native resumed Codex thread. No real machine/site audit was triggered for QA.
+
 ## Website planner and agent-security skill — 13 November 2026
 
 Branch `codex/fix-panel-workflows`, Windows, Node.js 26.12.1. This extends the panel repair below; it does not add a scanner, network integration or OS collector.

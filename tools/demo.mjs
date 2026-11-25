@@ -4,11 +4,15 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { parseArgs } from "node:util";
 import { StateStore, ScopedReader, propose, approve } from "./scope.mjs";
 import { review, importScan, retest, render } from "./engine.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const store = new StateStore(root);
+const { values } = parseArgs({ options: { pdf: { type: "boolean" }, prefix: { type: "string", default: "demo" }, lang: { type: "string", default: "en" } } });
+if (!/^[a-zA-Z0-9_-]{1,46}$/.test(values.prefix)) throw new Error("INVALID_DEMO_PREFIX");
+const nameOf = name => name.replace(/^demo/, values.prefix);
 const files = ["package.json", "reports/before.sarif", "reports/partial.json"];
 const fixture = new ScopedReader(path.join(root, "examples/demo-repo"), files);
 const scratch = fs.mkdtempSync(path.join(os.tmpdir(), "cda-demo-"));
@@ -19,10 +23,10 @@ for (const file of files) {
   fs.writeFileSync(target, fixture.read(file), { flag: "wx" });
 }
 const scope = approve(propose(scratch, files), scratch, true);
-store.write("scopes", "demo", scope);
+store.write("scopes", nameOf("demo"), scope);
 const save = (name, data) => {
-  store.write("reports", name, data);
-  store.write("reports", name, render(data), "md");
+  store.write("reports", nameOf(name), data);
+  store.write("reports", nameOf(name), render(data), "md");
   return data;
 };
 const before = save("demo-before", review(scope));
@@ -52,9 +56,9 @@ if (
 )
   throw new Error("DEMO_FAILED");
 // The demo ends the way every audit should: with a visual report, before any fixing starts.
-const visual = store.write("reports", "demo-report", renderVisual(collect([["demo-before", before], ["demo-import", imported]]), { title: "Demo audit: northstar / customer-portal" }), "html");
+const visual = store.write("reports", nameOf("demo-report"), renderVisual(collect([[nameOf("demo-before"), before], [nameOf("demo-import"), imported]]), { title: values.lang === "pl" ? "Przykładowy przegląd bezpieczeństwa" : "Sample security review", lang: values.lang }), "html");
 // Printing starts a browser process, so it happens only when asked for: node tools/demo.mjs --pdf
-const printed = process.argv.includes("--pdf") ? printPdf(path.join(store.repoRoot, visual), store.file("reports", "demo-report", "pdf", true)) : { pdf: false };
+const printed = values.pdf ? printPdf(path.join(store.repoRoot, visual), store.file("reports", nameOf("demo-report"), "pdf", true)) : { pdf: false };
 process.stdout.write(
-  `DEMO passed: SARIF import → evidence → remediate synthetic copy → retest.\nConfirmed fix: ${result.results[0].status}\nImported finding verification: ${importedRetest.results[0].status}\nIncomplete report: ${incomplete.results[0].status}\nOut of scope: ${blocked}\nReports: .cda/reports/demo-{before,import,after,retest,no-data}.md\nVisual report: ${visual}${printed.pdf ? " and .cda/reports/demo-report.pdf" : " (HTML only; add --pdf to print it with a local Chromium-based browser)"}\nDemo scope: ${scratch}\nNo fixture code executed. No network calls.\n`,
+  `DEMO passed: SARIF import → evidence → remediate synthetic copy → retest.\nConfirmed fix: ${result.results[0].status}\nImported finding verification: ${importedRetest.results[0].status}\nIncomplete report: ${incomplete.results[0].status}\nOut of scope: ${blocked}\nReports: .cda/reports/${values.prefix}-{before,import,after,retest,no-data}.md\nVisual report: ${visual}${printed.pdf ? ` and .cda/reports/${values.prefix}-report.pdf` : " (HTML only; add --pdf to print it with a local Chromium-based browser)"}\nDemo scope: ${scratch}\nNo fixture code executed. No network calls.\n`,
 );

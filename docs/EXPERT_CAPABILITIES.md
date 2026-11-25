@@ -75,3 +75,50 @@ Agent sessions submit one prompt using Claude Code print mode or `codex exec`. T
 The agent-security playbook adds a read-only review route for AI applications, skills and MCP configuration, informed by OWASP Agentic 2026, ASVS 5.0.0 and the MCP security documentation checked on 13 November 2026. It is expert guidance, not a new scanner or connector. Existing local agent rules remain bounded pattern checks. No network destination, OS collector, dependency or implicit permission was added.
 
 The website's seven-scenario planner generates a localized brief for Codex or Claude Code, with expected evidence and explicit limits. It runs entirely in the browser without target inputs, persistence or audit requests; copying a brief does not grant consent. The evidence-review method adds coverage, counter-evidence and decision framing to the skill. Host/model behavioral acceptance remains separate from document and browser validation.
+## Local dashboard console and PDF export
+
+### Connected workbench (15 November 2026)
+
+- The terminal recognises a small explicit set of review-intent phrases and displays
+  a deterministic plan form. Submitting it calls the existing workflow endpoint;
+  target consent, exact-file approval and package-sharing approval remain separate.
+  Model output never becomes a command or implicit approval.
+- Report explanation resolves source JSON from the selected generated HTML. The
+  operator previews the bounded summary and approves sharing it with the configured
+  Codex provider. Only counts, categories, coverage and bundled guidance for known
+  local rules are included. No source evidence, paths, package names or imported
+  descriptions are transmitted. A digest binds approval to the previewed facts.
+- `POST /api/codex/check` requires `consent: true` before running the fixed local
+  `codex login status` command (10-second timeout). Raw authentication output is not
+  returned. CLI discovery is refreshed; no login secrets or account files are read.
+- New Codex sessions capture the JSON `thread.started` identifier. A continuation
+  uses `codex exec --sandbox read-only resume --json` with that stored identifier,
+  never `--last`. Optional model IDs are bounded literal arguments. Legacy sessions
+  replay bounded context. Completed sessions can be named and selected after reload.
+- A chat stops after 3 minutes without process output or 10 minutes overall. These
+  are recovery limits, not estimated task duration. Reconnection does not submit a
+  new model request automatically. The local history shows up to 100 recent turns.
+- Comparisons accept compatible validated snapshots. A historical confirmation is
+  shown only when a stored retest matches both snapshot digests and the asset key.
+  Older retests without these digests cannot establish a matched confirmation.
+  Historical confirmation does not assert the current filesystem is unchanged.
+- Owner decision pages precede technical evidence in new HTML/PDF reports. Existing
+  reports retain their original contents; rerun a review to generate the new layout.
+- Tests: `tests/workbench.test.mjs`, `tests/terminal.test.mjs` and existing adversarial,
+  workflow, PDF and report tests. No new provider destination or dependency was added.
+
+- `POST /api/launch-agent` accepts an explicit `consent: true` with a bounded chat
+  message for Codex only. It starts the installed CLI with `exec --sandbox read-only
+  --json --color never`, shell-less and hidden on Windows. The canonical skill is
+  named in every turn. The advisory prompt directs audits to the existing consented
+  dashboard workflows. This prompt is guidance, not a replacement for OS sandboxing.
+- Conversation content goes to the user's configured Codex provider; the dashboard
+  adds no provider API, credentials or destination. The UI explains this before send.
+  Only completed parent conversations are accepted; one chat turn runs at a time.
+  JSON events are parsed as data and rendered as text. Output remains bounded and redacted.
+- `POST /api/reports/pdf` requires `consent: true`, a generated contained HTML report
+  and the local session token. An isolated Chrome/Edge process prints a local snapshot.
+  No report is uploaded. A validated PDF is cached by source hash and offered as a download.
+- Regression coverage: `tests/terminal.test.mjs`, `tests/panel-pdf.test.mjs` and
+  `tests/ui-reliability.test.mjs`. This is not a raw interactive PTY and does not bypass
+  Codex authentication or approval requirements.
