@@ -71,6 +71,31 @@
 html[lang="pl"] .workspace-switch [lang="en"], html[lang="en"] .workspace-switch [lang="pl"] { display: none; }
 .glass-shell dialog { background-color: #15252e; }
 .glass-shell dialog::backdrop { background: #050b14b8; }
+.review-shortcut:not([hidden]) {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 18px;
+  margin: 0 0 18px; padding: clamp(16px, 2.2vw, 32px);
+  color: var(--glass-ink); background: var(--glass-fill);
+  border: 1px solid var(--glass-edge); border-inline-start: 3px solid var(--glass-accent);
+  border-radius: 14px; box-shadow: var(--glass-depth);
+}
+.shortcut-glyph {
+  display: grid; place-items: center; width: 52px; height: 60px;
+  color: #244947; background: #dbece5; border-radius: 4px 12px 4px 4px;
+}
+.shortcut-glyph svg { width: 26px; height: 26px; }
+.shortcut-copy { flex: 1 1 180px; min-width: 0; }
+.shortcut-copy h2 { margin: 5px 0; font-size: clamp(20px, 2vw, 28px); letter-spacing: -.035em; }
+.shortcut-copy p { margin: 0; }
+.shortcut-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.project-shell .overview-metrics {
+  gap: 0; padding-block: 6px; border-block: 1px solid var(--glass-edge);
+}
+.project-shell .overview-metric {
+  padding: 12px clamp(10px, 1.5vw, 20px); min-height: auto; border: 0;
+  border-radius: 0; background: transparent; box-shadow: none;
+}
+.project-shell .overview-metric .metric-mark { display: none; }
+.project-shell .overview-metric strong { font-size: 26px; }
 @media (max-width: 700px) {
   .glass-shell { background-attachment: scroll; }
   .glass-shell :is(.topbar, .topbar-actions, .top-actions) { flex-wrap: wrap; height: auto; }

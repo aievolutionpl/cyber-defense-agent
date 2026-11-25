@@ -25,3 +25,7 @@ Polish applied a reduced-motion guard and incorrectly mapped long decorative ani
 ## Editorial checks
 
 PASS: one concrete audience/situation, claim-to-capability match, actual repository destination, explicit synthetic demo, operator responsibility and data boundaries. Visual/interaction tests and final deployment evidence are recorded separately. No ads, analytics or budgets are started. Test conversion only with a separately defined experiment and informed tracking policy.
+
+## Sample report and local results
+
+The public page opens on a light report sheet within a dark glass frame. The sheet summarizes the bundled PDF and labels the data as synthetic. A separate control opens the interactive walkthrough. The local workspace uses the same document motif for the latest review and resolves its actions from the saved run and available files.

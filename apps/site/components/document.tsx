@@ -10,6 +10,7 @@ import '@/app/blueprint.css';
 import '@/app/cinematic-build.css';
 import '@/app/mission-workbench.css';
 import '@/app/model-connect.css';
+import '@/app/report-preview.css';
 import { SITE_URL, type Locale } from '@/lib/config';
 
 export function pageMetadata(locale: Locale): Metadata {

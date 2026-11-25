@@ -19,6 +19,18 @@ try {
       const missing = await page.locator('a[href^="#"]').evaluateAll(links => links.map(a => a.getAttribute('href')).filter(href => href.length > 1 && !document.getElementById(href.slice(1))));
       assert.deepEqual(missing, [], 'all section links resolve');
       if (width === 1440) {
+        const sample = page.locator('.hero-ctas a').first();
+        const pdf = await page.request.get(await sample.evaluate(link => link.href));
+        assert.equal(pdf.status(), 200, 'sample PDF available');
+        assert.match(pdf.headers()['content-type'], /application\/pdf/);
+        assert.equal((await pdf.body()).subarray(0, 5).toString(), '%PDF-');
+        const views = page.locator('.preview-switch button');
+        await views.last().focus();
+        await page.keyboard.press('Enter');
+        await page.locator('.sample-viewer .hero-signal').waitFor();
+        await views.first().focus();
+        await page.keyboard.press('Enter');
+        await page.locator('.report-sheet').waitFor();
         await page.context().grantPermissions(['clipboard-read', 'clipboard-write'], { origin: new URL(base).origin });
         for (const mission of ['agents', 'computer']) {
           await page.locator(`#mission-${mission}`).focus();
