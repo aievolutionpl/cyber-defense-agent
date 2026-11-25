@@ -225,6 +225,25 @@
     $('main').focus();
     window.scrollTo(0, 0);
   }
+  function renderReviewShortcut(run, reports) {
+    const section = $('review-shortcut');
+    if (!section) return;
+    section.hidden = !run;
+    if (!run) return;
+    const available = reportNames(run).filter(name => reports.some(report => report.name === name));
+    const name = available.find(name => name.endsWith('-after-report.html')) || available[0];
+    const hasReport = run.status === 'completed' && name;
+    $('shortcut-title').textContent = workflowName(run.workflow);
+    $('shortcut-status').textContent = [statusName(run.status), date(run.createdAt)].join(' · ');
+    const actions = $('shortcut-actions');
+    actions.replaceChildren();
+    if (hasReport) {
+      actions.append(reportLink(name, name.endsWith('-after-report.html') ? t('Raport po poprawce', 'Report after the fix') : t('Otwórz raport', 'Open report')),
+        button(t('Pobierz PDF', 'Download PDF'), () => openPdf(name), 'primary'));
+    } else {
+      actions.append(button(t('Zobacz szczegóły', 'View details'), () => openRun(run)));
+    }
+  }
   function renderOverview() {
     const reports = state.reports.filter(report => report.ext === 'html' && report.name !== 'dashboard.html');
     const signature = JSON.stringify([state.runs, reports]); if (signatures.overview === signature) return; signatures.overview = signature;
@@ -236,6 +255,7 @@
       [t('Raporty w historii', 'Reports in history'), reports.length, t('Wśród ostatnich plików', 'Among recent files')],
     ]) { const metric = node('div', undefined, 'overview-metric'); metric.append(node('span', label), node('strong', String(value)), node('small', hint), node('i', undefined, 'metric-mark')); metrics.append(metric); }
     const latest = state.runs[0];
+    renderReviewShortcut(latest, reports);
     const done = latest?.steps?.filter(step => step.status === 'completed').length || 0, total = latest?.steps?.length || 0;
     const percent = total ? Math.round(done / total * 100) : null;
     $('overview-progress').textContent = percent === null ? '—' : percent + '%';

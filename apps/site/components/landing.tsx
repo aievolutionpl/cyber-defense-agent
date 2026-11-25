@@ -1,8 +1,9 @@
-import { ArrowDown, ArrowRight, ArrowUpRight, ChevronDown, GitBranch, LockKeyhole, Sparkles, Terminal } from "lucide-react";
+import { ArrowRight, ArrowUpRight, ChevronDown, GitBranch, LockKeyhole, Sparkles, Terminal } from "lucide-react";
 import { Navigation } from "./navigation";
 import { Installation } from "./installation";
 import { AgentBuildScroll } from "./motion-system";
-import { HeroSignal } from "./hero-signal";
+import { SampleReportViewer } from "./sample-report-viewer";
+import { samplePdf } from "@/lib/sample-report";
 import { HostWorkflows } from "./host-workflows";
 import { Missions } from "./missions";
 import { ConsentLadder } from "./skill-story";
@@ -31,10 +32,6 @@ export function Landing({ locale }: { locale: Locale }) {
     ["Will the agent fix issues automatically?", "It prepares a proposed change and rollback. Applying it requires your decision. Retesting confirms only what can be checked again in the same scope; an alert disappearing from an imported report is not proof of a fix."],
     ["What does it cost?", "The project is MIT licensed. The local CLI and synthetic demo need Node.js 22+ and a repository download, without npm package installation. Your chosen AI host has its own account requirements, limits and possible charges."],
   ];
-  const stats: [number, string][] = pl
-    ? [[8, "lokalnych reguł analizy"], [7, "scenariuszy przeglądu"], [2, "formaty raportu: HTML i PDF"], [0, "automatycznych napraw"]]
-    : [[8, "local analysis rules"], [7, "review scenarios"], [2, "report formats: HTML & PDF"], [0, "automatic remediations"]];
-
   return (
     <>
       <a className="skip-link" href="#main">
@@ -42,7 +39,7 @@ export function Landing({ locale }: { locale: Locale }) {
       </a>
       <Navigation locale={locale} />
       <main id="main">
-        <section className="hero" aria-labelledby="hero-title">
+        <section className="hero evidence-hero" aria-labelledby="hero-title">
           <div className="hero-grid section-shell">
             <div
               className="hero-copy"
@@ -50,64 +47,26 @@ export function Landing({ locale }: { locale: Locale }) {
               data-agent-label={pl ? "Budowanie systemu obrony" : "Building your defense"}
             >
               <div className="eyebrow hero-eyebrow">
-                <span className="status-dot" />
-                {pl
-                  ? "POLSKI SKILL I PROGRAM OPEN SOURCE · V0.3 · AI EVOLUTION POLSKA"
-                  : "OPEN-SOURCE AI SKILL & PROGRAM · V0.3 · BY AI EVOLUTION POLSKA"}
+                {pl ? "CYBER DEFENSE / SKILL OPEN SOURCE" : "CYBER DEFENSE / OPEN-SOURCE SKILL"}
               </div>
               <h1 id="hero-title">
-                {pl ? (
-                  <>
-                    Wiesz, co poprawić.
-                    <br />
-                    <span>Masz na to dowód.</span>
-                  </>
-                ) : (
-                  <>
-                    Know what to fix.
-                    <br />
-                    <span>See the evidence.</span>
-                  </>
-                )}
+                {pl ? "Od kodu" : "From code"}<br />
+                <span>{pl ? "do raportu." : "to report."}</span>
               </h1>
               <p className="hero-description">
                 {pl
-                  ? "Kod, zależności, konfiguracja agentów AI. Zbierz dowody, ustal kolejność napraw i sprawdź wynik po zmianie. Cyber Defense prowadzi Cię przez cały przegląd, w zakresie, który zatwierdzisz."
-                  : "Code, dependencies, AI agent configuration. Gather evidence, decide what to fix first and check the result. Cyber Defense guides the review within the scope you approve."}
+                  ? "Zrób przegląd bezpieczeństwa ze swoim agentem AI. Wybierasz zakres. Agent pomaga ocenić ustalenia i wyjaśnia, co poprawić w pierwszej kolejności."
+                  : "Review security with your AI agent. You choose the scope. Your agent helps assess the findings and explains which issues to fix first."}
               </p>
               <div className="hero-ctas">
-                <a href="#install" className="button button-primary">{pl ? "Uruchom lokalny panel" : "Start the local dashboard"}<ArrowRight size={17} /></a>
-                <a href="#scan" className="button button-secondary">
-                  {pl ? "Zobacz, jak działa" : "Watch it work"}
-                  <ArrowDown size={16} />
-                </a>
-              </div>
-              <div className="hero-assurance">
-                <LockKeyhole size={14} />
-                {pl
-                  ? "Zatwierdzony zakres · Konkretne dowody · Plan naprawy"
-                  : "Approved scope · Concrete evidence · A repair plan"}
-              </div>
-              <div className="hero-terminal">
-                <span className="terminal-prompt">$</span>
-                <code>node tools/cda.mjs start</code>
-                <span className="terminal-sep">·</span>
-                <code>node tools/cda.mjs ui</code>
-                <span className="terminal-caret" aria-hidden="true" />
+                <a href={samplePdf(locale)} className="button button-primary">{pl ? "Otwórz przykładowy PDF" : "Open sample PDF"}<ArrowUpRight size={17} /></a>
+                <a href="#install" className="button button-secondary">{pl ? "Uruchom u siebie" : "Run it locally"}<ArrowRight size={16} /></a>
               </div>
             </div>
             <div className="hero-product">
-              <HeroSignal locale={locale} />
+              <SampleReportViewer locale={locale} />
             </div>
           </div>
-          <dl className="hero-stats section-shell">
-            {stats.map(([value, label]) => (
-              <div key={label}>
-                <dt>{label}</dt>
-                <dd data-count={value}>{value}</dd>
-              </div>
-            ))}
-          </dl>
         </section>
 
         <HostWorkflows locale={locale} />
@@ -266,7 +225,7 @@ export function Landing({ locale }: { locale: Locale }) {
             </span>
           </a>
           <span className="footer-license">
-            MIT · v0.2 · © 2026{" "}
+            MIT · v0.3 · © 2026{" "}
             <a href="https://github.com/aievolutionpl" className="footer-credit-link">
               AI Evolution Polska
             </a>

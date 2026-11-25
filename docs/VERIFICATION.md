@@ -320,3 +320,10 @@ Observed in a Linux container (Node 22.23.5):
 - Added regressions for separately consented advisory lookup, missing exact file scope at the HTTP boundary, generated client syntax, script-termination escaping and planning-only bridge missions.
 - Browser acceptance was attempted with Playwright and system Chromium. Chromium could not start: the environment denied its process-singleton socket (`Operation not permitted`). Therefore viewport, keyboard, clipboard, reduced-motion and visual behavior are **not browser-verified**. These are pending checks, not passes.
 - Existing static marketing site is unchanged. No model-backed Claude/Codex/Hermes session was launched, no OpenCodeReview review executed, and no real asset audited during this change.
+
+## Sample report redesign (2026-11-25)
+
+- Local static export and workspace in Chrome, Polish and English at 320, 390, 768 and 1440 CSS pixels. No horizontal overflow. Verified keyboard switching between report and walkthrough, policy routes, both localized PDF responses and the workspace shortcut to the PDF consent dialog.
+- Read both bundled five-page PDFs. The overview matches 10 open findings, zero confirmed fixes and priority counts of 1, 2, 5 and 2. The sample uses synthetic data.
+- Repository checks, synthetic CLI demo and browser acceptance passed, including mission clipboard, section navigation, playback, keyboard controls and reduced motion.
+- Downloaded the PDF from a completed local demo using the new shortcut and opened its three pages. With an empty status fixture the shortcut was hidden and the existing demo setup was reachable.
