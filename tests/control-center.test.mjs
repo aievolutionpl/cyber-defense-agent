@@ -13,6 +13,10 @@ test('computer workflow defaults to offline inventory and shares only with separ
   assert.equal(offline.status, 'completed');
   assert.deepEqual(offline.steps.map(step => step.id), ['inventory', 'report']);
   assert.ok(!offline.steps.flatMap(s=>s.args).includes('--share-package-names'));
+  const planned = await startGuidedAudit({workflow:'pc', consent:true, planAdvisories:true}, options);
+  assert.equal(planned.status, 'awaiting_approval');
+  assert.equal(planned.pendingApproval.kind, 'package_names');
+  assert.equal(planned.steps.find(step => step.id === 'advisories').status, 'pending');
   const online=await startGuidedAudit({workflow:'pc',consent:true,sharePackageNames:true},options);
   assert.equal(online.status, 'completed');
   assert.deepEqual(online.steps.map(step => step.id), ['inventory', 'advisories', 'report']);

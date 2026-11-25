@@ -155,6 +155,7 @@ function md(text) {
 /* ---------- i18n ---------- */
 function applyLang() {
   document.documentElement.lang = state.lang;
+  document.getElementById('workspace-switch').href = '/workspace?lang=' + state.lang;
   $$("[data-i18n]").forEach((el) => { el.textContent = t(el.dataset.i18n); });
   $$("[data-i18n-ph]").forEach((el) => { el.placeholder = t(el.dataset.i18nPh); });
   $$("[data-i18n-title]").forEach((el) => { el.title = t(el.dataset.i18nTitle); });

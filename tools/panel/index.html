@@ -9,8 +9,9 @@
   <title>Cyber Defense Agent · Command Center</title>
   <link rel="icon" href="/panel-icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="/panel.css" />
+  <link rel="stylesheet" href="/assets/glass.css">
 </head>
-<body>
+<body class="glass-shell command-shell">
   <a class="skip" href="#main" data-i18n="skip">Przejdź do treści</a>
   <div class="app">
     <aside class="sidebar" aria-label="Command Center">
@@ -45,6 +46,7 @@
           <h1 id="view-title">Przegląd</h1>
         </div>
         <div class="topbar-actions">
+          <a class="workspace-switch" id="workspace-switch" href="/workspace?lang=__CDA_LANG__"><span lang="pl">Projekty i raporty</span><span lang="en">Projects &amp; reports</span> ↗</a>
           <span class="chip" id="chip-model" title="">—</span>
           <span class="chip" id="chip-updated">—</span>
           <div class="lang lang-top" role="group" aria-label="Język / Language"><button type="button" data-lang="pl">PL</button><button type="button" data-lang="en">EN</button></div>

@@ -3764,3 +3764,15 @@ html[lang="pl"] .metric-label {
     font-size: 14px;
   }
 }
+
+@media (max-width: 420px) {
+  .site-header .nav-shell {
+    width: calc(100% - 24px);
+    gap: 8px;
+  }
+  .site-header .nav-actions { gap: 6px; }
+  .site-header .brand { font-size: 18px; gap: 6px; }
+  .site-header .brand-mark.small { width: 22px; }
+  .hero .hero-grid.section-shell { width: calc(100% - 32px); }
+  .hero .hero-terminal { display: flex; flex-wrap: wrap; max-width: 100%; }
+}
