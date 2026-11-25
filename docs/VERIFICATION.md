@@ -1,5 +1,14 @@
 # Verification record
 
+## Glass workspace integrated with Command Center · 25 November 2026
+
+The v0.3 Command Center remains at `/`. Its bilingual Projects & reports link opens `/workspace` on the same localhost server. Both use the shared glass stylesheet. The project workspace has a separate status projection and shares the existing token and origin checks.
+
+- Windows: the integrated suite reported 147 passing, 5 skipped and 0 failed. Skill checks, lint, type checking, static export and the synthetic CLI demo passed.
+- Chrome: opened both dashboards in PL and EN, switched using the keyboard, and checked widths of 320, 390, 768 and 1440 px. All five project navigation views fit. Ran a synthetic review through the workspace, created the PDF from its result, downloaded it and verified its PDF signature. No browser console errors or uncaught exceptions were observed.
+- Offline computer inventory remains the default. The workspace can plan an optional advisory lookup, which pauses for separate sharing consent; the workflow regression covers that pause.
+
+
 ## Project workspace and public onboarding · 25 November 2026
 
 Windows, local review branch. The baseline passed 111 tests. The rebuilt workspace passed 113 tests, skill validation, lint, typecheck and static export. The synthetic CLI demo completed.
@@ -72,6 +81,21 @@ Branch `codex/friendly-dashboard-pdf`, Windows, Node 26.12.1. Local changes only
   clipboard contents could not be confirmed through the in-app browser API.
 - The terminal is advisory Codex exec with bounded replayed context, not an unrestricted
   PTY or a native resumed Codex thread. No real machine/site audit was triggered for QA.
+## Skill audit: pinned approvals, CLI contract checks, CI and container playbooks — 23 November 2026
+
+Linux, Node.js 22.23.5. Skill and CLI changes only; no site files changed, so ESLint, TypeScript and the static export were not re-run in this iteration.
+
+- **Fixed:** `scope` did not print the proposal digest the skill told agents to show, and `approve` accepted a call without `--proposal`, so approval was not pinned to the list the user saw. `scope` now prints `proposal` and the exact approve command; `approve` refuses with `PROPOSAL_REQUIRED` or `SCOPE_PROPOSAL_CHANGED`. The Command Center already passed the digest and is unchanged in behaviour. A CLI test covers both refusals.
+- `node --test tests/*.test.mjs`: 135 passed, one Windows-only test skipped. The synthetic demo passed. A manual scope → refused unpinned approve → pinned approve → review → revoke run against `examples/demo-repo` behaved as documented.
+- `check-skills` now validates, besides links: heading anchors, every documented `cda.mjs` invocation against the CLI's command/flag table (37 spans), and that `references/cli-errors.md` explains every refusal code the tools can raise (82 codes). Deliberately broken flag and anchor edits were rejected.
+- New playbooks `supply-chain-and-ci.md` and `containers-and-cloud.md`; GitHub Actions secure-use, `pull_request_target` and Kubernetes Pod Security Standards pages were retrieved on 23 November as sources. This is document research, not an audit of any asset.
+- Skill text now covers the optional model connection as an L3 data-sharing step (`explain --dry-run` before `--send-summary`), `--git-staged`, `pr-comment`, `benchmark`, a hand-off gate and handling of instructions embedded in reviewed content. Behavioural cases were reviewed against the text; no live host or model session was run.
+
+## Merge of the audit planner and Command Center updates — 18 November 2026
+
+- On Linux with Node 24, `npm run check` passed with 135 passing tests and one Windows-only test skipped. Skill checks, ESLint, TypeScript and the static export passed. The synthetic demo passed without network calls.
+- The static site passed the Chromium motion acceptance suite in both languages at 320, 390, 768 and 1440 px. The local Command Center passed 35 Chromium checks, including history and report filters, prompt preview, exact-file approval, the separate advisory opt-in and the bundled demo.
+- The browser tests used synthetic data and intercepted the computer-inventory request. They exercised no live provider session or advisory request.
 
 ## Website planner and agent-security skill — 13 November 2026
 
@@ -274,3 +298,25 @@ Local lint, TypeScript and static export passed before final section tagging. Lo
 Source `d1e5f28faa9a355fa94f91477dd5b163b240b6f5` passed [Website motion acceptance 42887300281](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300281). Both languages passed 320/390/768/1440 Chromium viewport checks, anchor integrity, automatic stage changes, local pause with readable evidence, left-to-right host motion outside hover, keyboard stage selection, reduced-motion cleanup, cursor movement during construction and completed content restoration. Nine screenshots are attached to that run. Desktop and phone screenshots were visually reviewed; these are Chromium viewport checks, not physical iPhone/Safari tests.
 
 [Cross-platform CI 42887300297](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300297) passed Windows, macOS and Ubuntu. [Defensive PR review 42887300671](https://github.com/aievolutionpl/cyber-defense-agent/actions/runs/42887300671) passed. Final refinements keep individual grid cards on the cursor timeline and reveal all text when playback stops. Both downloadable GIFs decode and have a six-second loop. The PR has not deployed a Pages artifact.
+
+## v0.3 model connection and restored motion (18 November 2026)
+
+Observed in a Linux container (Node 22.23.5):
+
+- `npm run check`: 118 unit tests pass, ESLint, TypeScript and the static Next.js export succeed.
+- `node tools/demo.mjs` → `explain --from demo-before --dry-run` printed the brief without sending. `explain --send-summary --provider claude-code` through a logged-in Claude Code CLI wrote a Polish plan labelled model judgment (≈28 s). `ask --send-question` returned the expected echo. OpenRouter, Anthropic, OpenAI, Codex and Ollama paths were exercised with network/process doubles only; they were not called live.
+- Mini UI (Playwright, 1440 px): provider card renders six providers, no console errors.
+- Static site (Playwright): at 1440 px the overlay becomes active on load with three cursors on distinct paths and the construction frame tracking the section; the header button sets `data-motion=paused`. At 390 px touch, one cursor, no horizontal overflow. Not verified: Windows/macOS browsers, physical devices, frame rate.
+
+## v0.3 Command Center panel (18 November 2026)
+
+- New panel (`tools/panel/`) served by `ui.mjs` under `default-src 'none'; script-src 'self'; style-src 'self'` with no inline scripts or handlers. Playwright at 1440 px and 390 px (touch): all seven views render, no console errors or CSP violations, no horizontal overflow, bottom tab bar on mobile, PL/EN switch.
+- Live: "Ask the expert" on a demo finding through the logged-in Claude Code CLI returned a formatted Polish answer in about 27 s; without consent the panel refused and showed a notice.
+
+## Control center refresh (2026-11-16)
+
+- `npm run check`: passed, including 85 Node tests, skill consistency, ESLint, TypeScript and static site build.
+- `npm run demo`: passed on bundled synthetic data. Confirmed local fix, insufficient-data paths and out-of-scope rejection observed; no target code or external network used.
+- Added regressions for separately consented advisory lookup, missing exact file scope at the HTTP boundary, generated client syntax, script-termination escaping and planning-only bridge missions.
+- Browser acceptance was attempted with Playwright and system Chromium. Chromium could not start: the environment denied its process-singleton socket (`Operation not permitted`). Therefore viewport, keyboard, clipboard, reduced-motion and visual behavior are **not browser-verified**. These are pending checks, not passes.
+- Existing static marketing site is unchanged. No model-backed Claude/Codex/Hermes session was launched, no OpenCodeReview review executed, and no real asset audited during this change.

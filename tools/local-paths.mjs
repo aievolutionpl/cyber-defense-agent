@@ -54,4 +54,3 @@ export function resolveContainedPath(baseDir, ...segments) {
   }
   return targetResolved;
 }
-

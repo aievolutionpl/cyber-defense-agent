@@ -198,6 +198,24 @@ export function buildAgentBridge({ host = "claude", mission = "demo", target = "
         ? `${prefix} Sprawdź pasywnie zabezpieczenia mojej strony WWW${cleanTarget ? ` (${cleanTarget})` : " (<podaj-url>)"}: HTTPS, HSTS, CSP, flagi cookies, CORS oraz certyfikat TLS po moim potwierdzeniu uprawnień (--authorized).`
         : `${prefix} Passively check the security posture of my website${cleanTarget ? ` (${cleanTarget})` : " (<your-url>)"}: HTTPS, HSTS, CSP, cookies, CORS and TLS certificate after my authorization (--authorized).`,
     },
+    changes: {
+      title: pl ? "Przegląd zmian przed publikacją" : "Pre-release change review",
+      prompt: pl
+        ? `${prefix} Zaplanuj przegląd zmian w projekcie ${cleanTarget || "<podaj katalog>"}. Ustal zakres i referencje Git, pokaż dokładną listę plików i uzyskaj zgodę przed odczytem. Nie wykonuj kodu projektu. Dla każdego ustalenia podaj plik, linię, dowód, pewność i retest. Wymień pliki sprawdzone, pominięte i powód pominięcia. Ocenę modelu oznacz jako model judgment.`
+        : `${prefix} Plan a change review for ${cleanTarget || "<project directory>"}. Establish scope and Git references, show the exact file list and obtain approval before reading. Never execute target code. For each finding provide file, line, evidence, confidence and retest. List reviewed and skipped files with reasons. Label model judgment.`,
+    },
+    retest: {
+      title: pl ? "Plan weryfikacji poprawek" : "Fix verification plan",
+      prompt: pl
+        ? `${prefix} Przygotuj retest dla ${cleanTarget || "wskazanego audytu"}. Najpierw ustal raport przed i po oraz zatwierdzony zakres. Użyj istniejącego konserwatywnego retestu. Zniknięcie alertu nie dowodzi naprawy. confirmed_fixed wymaga bieżącego dowodu; inaczej insufficient_data. Nie wdrażaj zmian.`
+        : `${prefix} Prepare a retest for ${cleanTarget || "the selected audit"}. Identify before/after reports and approved scope first. Use the existing conservative retest. A missing alert does not prove a fix. confirmed_fixed requires current evidence; otherwise insufficient_data. Do not apply changes.`,
+    },
+    ocr: {
+      title: pl ? "Plan integracji OpenCodeReview" : "OpenCodeReview integration plan",
+      prompt: pl
+        ? `${prefix} Zaplanuj użycie alibaba/open-code-review dla ${cleanTarget || "wskazanego projektu"}. To plan, adapter OCR nie jest wdrożony. Sprawdź oficjalną dokumentację, wybierz przegląd zmian lub pełnych plików i przygotuj listę pokrycia. Nie instaluj ani nie uruchamiaj OCR. Przed wykonaniem uzyskaj zgodę na dokładny zakres, model i przesyłanie kodu. Zakres CDA nie ogranicza automatycznie narzędzi OCR. Wyniki modelu wymagają weryfikacji i nie mogą potwierdzać naprawy.`
+        : `${prefix} Plan use of alibaba/open-code-review for ${cleanTarget || "the selected project"}. Planning only: the OCR adapter is not implemented. Check official docs, choose diff or full-file review and prepare a coverage manifest. Do not install or run OCR. Before execution obtain approval for exact scope, model and code transmission. CDA scope does not automatically constrain OCR tools. Model findings need verification and cannot confirm fixes.`,
+    },
     report: {
       title: pl ? "Raport Wizualny HTML / PDF" : "Visual HTML / PDF Report",
       prompt: pl
@@ -573,4 +591,3 @@ export async function checkCodexConnection(agent, { consent, run = execFile } = 
     resolve({ installed: true, version: agent.version, authenticated: !error && /logged in|authenticated/i.test(output), status: error?.killed ? 'timeout' : error ? 'needs_login' : /logged in|authenticated/i.test(output) ? 'ready' : 'unknown', checkedAt: new Date().toISOString() });
   }));
 }
-

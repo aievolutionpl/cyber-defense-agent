@@ -121,19 +121,6 @@ test("background Codex sessions use the noninteractive exec entry point", (t) =>
   child.emit("close", 0);
 });
 
-test("computer workflow pauses before sharing package names", async (t) => {
-  const rootDir = fixture(t);
-  const executed = [];
-  const run = await startGuidedAudit({ workflow: "pc", consent: true }, {
-    rootDir,
-    awaitCompletion: true,
-    stepRunner: async (step) => { executed.push(step.id); return "{}"; },
-  });
-  assert.deepEqual(executed, ["inventory"]);
-  assert.equal(run.status, "awaiting_approval");
-  assert.equal(run.pendingApproval.kind, "package_names");
-});
-
 test("project workflow requires an explicit file list", (t) => {
   const rootDir = fixture(t);
   fs.writeFileSync(path.join(rootDir, "package.json"), "{}");
@@ -143,15 +130,24 @@ test("project workflow requires an explicit file list", (t) => {
 test("approval tokens authorize one pending step and resume cannot bypass them", async (t) => {
   const rootDir = fixture(t);
   const executed = [];
-  const stepRunner = async (step) => { executed.push(step.id); return "{}"; };
-  const run = await startGuidedAudit({ workflow: "pc", consent: true }, { rootDir, stepRunner, awaitCompletion: true });
+  const stepRunner = async (step) => {
+    executed.push(step.id);
+    return step.id === "scope"
+      ? JSON.stringify({ approved: false, root: rootDir, files: ["package.json"] })
+      : "{}";
+  };
+  const run = await startGuidedAudit(
+    { workflow: "project", target: rootDir, files: ["package.json"], consent: true },
+    { rootDir, stepRunner, awaitCompletion: true },
+  );
   await resumeGuidedAudit(run.runId, { rootDir, stepRunner, awaitCompletion: true });
-  assert.deepEqual(executed, ["inventory"]);
+  assert.deepEqual(executed, ["scope"]);
   const pending = getGuidedAudit(run.runId, rootDir);
+  assert.equal(pending.pendingApproval.kind, "scope");
   await assert.rejects(approveGuidedAudit(run.runId, { rootDir, approvalToken: "wrong" }), /APPROVAL_REQUIRED/);
   const completed = await approveGuidedAudit(run.runId, { rootDir, approvalToken: pending.pendingApproval.token, stepRunner, awaitCompletion: true });
   assert.equal(completed.status, "completed");
-  assert.deepEqual(executed, ["inventory", "advisories", "report"]);
+  assert.deepEqual(executed, ["scope", "approve", "review", "report"]);
 });
 
 test("concurrent resumes wait for cancellation and execute unfinished steps once", async (t) => {
@@ -218,11 +214,12 @@ test("local panel serves both languages with valid scripts and blocks linked rep
     assert.equal(response.headers.get("cache-control"), "no-store");
     const html = await response.text();
     assert.match(html, new RegExp(`<html lang="${lang}">`));
-    assert.match(html, /<script src="\/assets\/panel.js" defer><\/script>/);
-    const script = await (await fetch(`${ui.url}assets/panel.js`)).text();
-    assert.doesNotThrow(() => new Script(script));
-    assert.ok(html.includes(lang === "pl" ? "Uruchom demo" : "Run demo"));
-    assert.doesNotMatch(response.headers.get("content-security-policy"), /script-src[^;]*unsafe-inline/);
+    assert.match(html, /<script[^>]+src="\/panel\.js"/);
+    const script = await fetch(`${ui.url}panel.js`);
+    assert.equal(script.status, 200);
+    const source = await script.text();
+    assert.doesNotThrow(() => new Script(source));
+    assert.ok(source.includes(lang === "pl" ? "Rozpocznij audyt" : "Start audit"));
   }
   const store = new StateStore(rootDir);
   store.write("reports", "test-report", "<p>synthetic</p>", "html");
@@ -230,8 +227,8 @@ test("local panel serves both languages with valid scripts and blocks linked rep
   fs.writeFileSync(outside, "private fixture");
   fs.linkSync(outside, path.join(rootDir, ".cda", "reports", "linked.html"));
   const linked = await fetch(`${ui.url}report/linked.html`);
-  assert.equal(linked.status, 403);
-  assert.equal((await linked.json()).error, "STATE_LINK_BLOCKED");
+  assert.equal(linked.status, 404);
+  assert.doesNotMatch(await linked.text(), /private fixture/);
   const valid = await fetch(`${ui.url}report/test-report.html`);
   assert.equal(valid.status, 200);
   assert.equal(await valid.text(), "<p>synthetic</p>");

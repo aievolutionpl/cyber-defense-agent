@@ -49,11 +49,14 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
 
   if (workflow === "pc") {
     if (params.consent !== true) throw new Error("CONSENT_REQUIRED");
+    const includeAdvisories = params.sharePackageNames === true || params.planAdvisories === true;
     const invName = `${runId}-inventory`;
     const advName = `${runId}-advisories`;
     const repName = `${runId}-report`;
     return {
-      title: pl ? "Prowadzony Audyt Komputera (Inwentarz + CVE + Katalog Windows)" : "Guided Computer Audit (Inventory + CVE + Windows Catalog)",
+      title: includeAdvisories
+        ? (pl ? "Audyt komputera i znanych podatności" : "Computer inventory and vulnerability lookup")
+        : (pl ? "Lokalna inwentaryzacja komputera" : "Local computer inventory"),
       steps: [
         {
           id: "inventory",
@@ -62,19 +65,19 @@ function buildWorkflowDefinition(workflow, runId, params = {}) {
           args: ["inventory", "--name", invName, "--yes"],
           reportName: `${invName}.json`,
         },
-        {
+        ...(includeAdvisories ? [{
           id: "advisories",
           requiresApproval: "package_names",
           label: pl ? "2. Weryfikacja luk (OSV.dev, CISA KEV i Katalog Windows)" : "2. Vulnerability check (OSV.dev, CISA KEV & Windows Catalog)",
           script: cda,
           args: ["advisories", "--inventory", invName, "--name", advName, "--share-package-names"],
           reportName: `${advName}.json`,
-        },
+        }] : []),
         {
           id: "report",
-          label: pl ? "3. Generowanie raportu wizualnego HTML i Dashboardu" : "3. Visual HTML report & Dashboard generation",
+          label: pl ? "Generowanie raportu wizualnego HTML" : "Generate visual HTML report",
           script: cda,
-          args: ["report", "--name", repName, "--from", invName, "--from", advName, "--lang", langArg],
+          args: ["report", "--name", repName, "--from", invName, ...(includeAdvisories ? ["--from", advName] : []), "--lang", langArg],
           reportName: `${repName}.html`,
         },
       ],

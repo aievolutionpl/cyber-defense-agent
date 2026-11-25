@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="__CDA_LANG__">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="cda-token" content="__CDA_TOKEN__" />
+  <meta name="cda-lang" content="__CDA_LANG__" />
+  <meta name="color-scheme" content="dark" />
+  <title>Cyber Defense Agent · Command Center</title>
+  <link rel="icon" href="/panel-icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/panel.css" />
+  <link rel="stylesheet" href="/assets/glass.css">
+</head>
+<body class="glass-shell command-shell">
+  <a class="skip" href="#main" data-i18n="skip">Przejdź do treści</a>
+  <div class="app">
+    <aside class="sidebar" aria-label="Command Center">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3Z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m8.5 12 2.4 2.4 4.6-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </span>
+        <span class="brand-text"><b>cyber<i>defense</i></b><small>COMMAND CENTER · V0.3</small></span>
+      </div>
+      <nav class="nav" aria-label="Widoki">
+        <button type="button" data-nav="overview" aria-current="page"><svg viewBox="0 0 24 24"><path d="M4 13h6V4H4v9Zm0 7h6v-5H4v5Zm10 0h6v-9h-6v9Zm0-16v5h6V4h-6Z"/></svg><span data-i18n="nav.overview">Przegląd</span><kbd>1</kbd></button>
+        <button type="button" data-nav="audit"><svg viewBox="0 0 24 24"><path d="M10 2h4v3h-4zM5 6h14l-1 15H6L5 6Zm4 4v7m6-7v7"/></svg><span data-i18n="nav.audit">Audyt</span><kbd>2</kbd></button>
+        <button type="button" data-nav="findings"><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm9 16-4-4"/></svg><span data-i18n="nav.findings">Ustalenia</span><b class="nav-badge" id="nav-findings-count" hidden></b><kbd>3</kbd></button>
+        <button type="button" data-nav="expert"><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-6 6c0 2 1 3.4 2 4.4V17h8v-3.6c1-1 2-2.4 2-4.4a6 6 0 0 0-6-6Zm-3 17h6"/></svg><span data-i18n="nav.expert">Ekspert AI</span><kbd>4</kbd></button>
+        <button type="button" data-nav="agents"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H4zM8 20h8M7 9l3 2-3 2m5 1h4"/></svg><span data-i18n="nav.agents">Agenci CLI</span><kbd>5</kbd></button>
+        <button type="button" data-nav="reports"><svg viewBox="0 0 24 24"><path d="M6 2h9l5 5v15H6zM14 2v6h6M9 13h8M9 17h6"/></svg><span data-i18n="nav.reports">Raporty</span><kbd>6</kbd></button>
+        <button type="button" data-nav="system"><svg viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.4 7.4 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7 7 0 0 0-2.2-1.3L14 2h-4l-.6 2.4a7 7 0 0 0-2.2 1.3l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.6l-2 1.6 2 3.4 2.4-1a7 7 0 0 0 2.2 1.3L10 22h4l.6-2.4a7 7 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.9.1-1.3Z"/></svg><span data-i18n="nav.system">System</span><kbd>7</kbd></button>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="guard"><span class="dot"></span><span data-i18n="guard">127.0.0.1 · tylko odczyt · token sesji</span></div>
+        <div class="lang" role="group" aria-label="Język / Language">
+          <button type="button" data-lang="pl">PL</button>
+          <button type="button" data-lang="en">EN</button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main" id="main" tabindex="-1">
+      <header class="topbar">
+        <div>
+          <span class="eyebrow" id="view-eyebrow">01</span>
+          <h1 id="view-title">Przegląd</h1>
+        </div>
+        <div class="topbar-actions">
+          <a class="workspace-switch" id="workspace-switch" href="/workspace?lang=__CDA_LANG__"><span lang="pl">Projekty i raporty</span><span lang="en">Projects &amp; reports</span> ↗</a>
+          <span class="chip" id="chip-model" title="">—</span>
+          <span class="chip" id="chip-updated">—</span>
+          <div class="lang lang-top" role="group" aria-label="Język / Language"><button type="button" data-lang="pl">PL</button><button type="button" data-lang="en">EN</button></div>
+          <button type="button" class="icon-btn" id="refresh-btn" data-i18n-title="refresh" title="Odśwież (R)"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v5h-5"/></svg></button>
+        </div>
+      </header>
+
+      <!-- 01 OVERVIEW -->
+      <section class="view" data-view="overview" aria-labelledby="view-title">
+        <div class="hero card">
+          <div class="score" id="score" aria-live="polite">
+            <svg viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="52" class="ring-bg"/><circle cx="60" cy="60" r="52" class="ring" id="score-ring"/></svg>
+            <div class="score-value"><b id="score-value">—</b><small data-i18n="score.label">wskaźnik</small></div>
+          </div>
+          <div class="hero-copy">
+            <span class="eyebrow" data-i18n="hero.eyebrow">STAN OCHRONY</span>
+            <h2 id="verdict-title">—</h2>
+            <p id="verdict-text" class="muted"></p>
+            <p class="fine" data-i18n="score.note">Wskaźnik pomocniczy z otwartych ustaleń (P0 −30, P1 −12, P2 −4, P3 −1). To nie certyfikat bezpieczeństwa.</p>
+            <div class="btn-row">
+              <button type="button" class="btn btn-primary" data-action="run-demo"><span data-i18n="act.demo">▶ Uruchom demo</span></button>
+              <button type="button" class="btn" data-nav-to="audit" data-i18n="act.audit">Nowy audyt</button>
+              <button type="button" class="btn" data-action="explain-all" data-i18n="act.explain">🧠 Wyjaśnij z AI</button>
+              <a class="btn btn-ghost" href="/report/dashboard.html" target="_blank" rel="noopener" data-i18n="act.dashboard">Dashboard ↗</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <button type="button" class="kpi p0" data-filter-priority="P0"><span>P0</span><b id="k-P0">0</b><small data-i18n="kpi.P0">działaj dziś</small></button>
+          <button type="button" class="kpi p1" data-filter-priority="P1"><span>P1</span><b id="k-P1">0</b><small data-i18n="kpi.P1">w tym tygodniu</small></button>
+          <button type="button" class="kpi p2" data-filter-priority="P2"><span>P2</span><b id="k-P2">0</b><small data-i18n="kpi.P2">zaplanuj</small></button>
+          <button type="button" class="kpi p3" data-filter-priority="P3"><span>P3</span><b id="k-P3">0</b><small data-i18n="kpi.P3">przy okazji</small></button>
+          <div class="kpi ok"><span>✓</span><b id="k-fixed">0</b><small data-i18n="kpi.fixed">potwierdzone poprawki</small></div>
+          <div class="kpi neutral"><span>⧉</span><b id="k-sources">0</b><small data-i18n="kpi.sources">źródła dowodów</small></div>
+        </div>
+
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3 data-i18n="ov.top">Najważniejsze ustalenia</h3><button type="button" class="link" data-nav-to="findings" data-i18n="ov.all">Wszystkie →</button></div>
+            <ul class="top-list" id="top-findings"></ul>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3 data-i18n="ov.areas">Obszary</h3></div>
+            <ul class="bars" id="area-bars"></ul>
+            <div class="card-head spaced"><h3 data-i18n="ov.coverage">Pokrycie</h3></div>
+            <dl class="facts" id="coverage"></dl>
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 AUDIT -->
+      <section class="view" data-view="audit" hidden>
+        <div class="card">
+          <span class="eyebrow" data-i18n="audit.eyebrow">PROWADZONY AUDYT</span>
+          <h2 data-i18n="audit.title">Co chcesz dziś sprawdzić?</h2>
+          <div class="wf-grid" role="radiogroup" data-i18n-aria="audit.title">
+            <button type="button" class="wf" role="radio" data-wf="pc"><b>💻</b><strong data-i18n="wf.pc">Komputer</strong><small data-i18n="wf.pc.d">Programy, porty, znane luki CVE</small></button>
+            <button type="button" class="wf" role="radio" data-wf="project"><b>📁</b><strong data-i18n="wf.project">Projekt</strong><small data-i18n="wf.project.d">Kod, sekrety, zależności</small></button>
+            <button type="button" class="wf" role="radio" data-wf="web"><b>🌐</b><strong data-i18n="wf.web">Strona WWW</strong><small data-i18n="wf.web.d">HTTPS, nagłówki, cookies, TLS</small></button>
+            <button type="button" class="wf" role="radio" data-wf="demo"><b>🚀</b><strong data-i18n="wf.demo">Demo</strong><small data-i18n="wf.demo.d">Dane syntetyczne, bez ryzyka</small></button>
+          </div>
+          <div class="field" id="wf-target-field">
+            <label for="wf-target" id="wf-target-label" data-i18n="audit.target">Ścieżka projektu lub adres URL</label>
+            <input id="wf-target" type="text" autocomplete="off" spellcheck="false" />
+          </div>
+          <div class="field" id="wf-files-field" hidden>
+            <label for="wf-files" data-i18n="audit.files">Ścieżki względne, po jednej w wierszu</label>
+            <textarea id="wf-files" rows="4" spellcheck="false" placeholder="package.json&#10;package-lock.json"></textarea>
+          </div>
+          <div class="consent-box" id="wf-consent-box">
+            <label class="switch"><input type="checkbox" id="wf-consent" /><span></span></label>
+            <div><strong data-i18n="audit.consent.t">Zgoda na ten krok</strong><p id="wf-consent-text" class="muted"></p></div>
+          </div>
+          <div class="consent-box" id="wf-share-box" hidden>
+            <label class="switch"><input type="checkbox" id="wf-share" aria-describedby="wf-share-text" /><span></span></label>
+            <label for="wf-share" id="wf-share-text" data-i18n="audit.share">Wyślij nazwy i wersje pakietów do OSV.dev oraz pobierz listę CISA KEV.</label>
+          </div>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="wf-start" data-i18n="audit.start">▶ Rozpocznij audyt</button>
+            <button type="button" class="btn btn-danger" id="wf-cancel" hidden data-i18n="audit.cancel">⏹ Anuluj</button>
+            <button type="button" class="btn" id="wf-resume" hidden data-i18n="audit.resume">↻ Wznów</button>
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3 data-i18n="audit.active">Bieżące uruchomienie</h3><span class="chip" id="run-status">—</span></div>
+            <progress id="run-progress" max="1" value="0" hidden data-i18n-aria="audit.progress"></progress>
+            <ol class="timeline" id="run-steps"></ol>
+            <div class="callout" id="run-next" hidden></div>
+            <div class="callout" id="run-approval" hidden>
+              <p id="run-approval-label"></p>
+              <pre id="run-scope" hidden></pre>
+              <button type="button" class="btn btn-primary" id="wf-approve" data-i18n="audit.approve">Zatwierdź krok</button>
+            </div>
+            <div class="chips" id="run-reports"></div>
+          </div>
+          <div class="card">
+            <div class="card-head"><h3 data-i18n="audit.history">Historia</h3></div>
+            <select id="run-filter" data-i18n-aria="audit.filter">
+              <option value="all" data-i18n="audit.all">Wszystkie stany</option>
+              <option value="running" data-i18n="st.running">trwa</option>
+              <option value="awaiting_approval" data-i18n="st.awaiting_approval">czeka na zgodę</option>
+              <option value="completed" data-i18n="st.completed">gotowe</option>
+              <option value="failed" data-i18n="st.failed">błąd</option>
+              <option value="cancelled" data-i18n="st.cancelled">anulowano</option>
+            </select>
+            <ul class="history" id="run-history"></ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- 03 FINDINGS -->
+      <section class="view" data-view="findings" hidden>
+        <div class="toolbar card">
+          <div class="search"><svg viewBox="0 0 24 24"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14Zm9 16-4-4"/></svg><input id="f-search" type="search" data-i18n-ph="f.search" placeholder="Szukaj w ustaleniach… ( / )" /></div>
+          <div class="seg" id="f-priority" role="group">
+            <button type="button" data-p="all" aria-pressed="true" data-i18n="f.all">Wszystkie</button>
+            <button type="button" data-p="P0" class="p0">P0</button>
+            <button type="button" data-p="P1" class="p1">P1</button>
+            <button type="button" data-p="P2" class="p2">P2</button>
+            <button type="button" data-p="P3" class="p3">P3</button>
+            <button type="button" data-p="IDEA" data-i18n="f.ideas">Pomysły</button>
+          </div>
+          <select id="f-area" data-i18n-aria="f.area"><option value="all" data-i18n="f.allAreas">Wszystkie obszary</option></select>
+          <button type="button" class="btn btn-ghost" id="f-export" data-i18n="f.export">⇩ Eksport Markdown</button>
+        </div>
+        <p class="muted small" id="f-summary"></p>
+        <div class="findings" id="findings-list"></div>
+      </section>
+
+      <!-- 04 EXPERT -->
+      <section class="view" data-view="expert" hidden>
+        <div class="expert">
+          <div class="card expert-side">
+            <span class="eyebrow" data-i18n="ex.eyebrow">TWÓJ MODEL</span>
+            <h3 data-i18n="ex.title">Podłącz model</h3>
+            <p class="muted small" data-i18n="ex.lead">Subskrypcja (Claude Code, Codex), klucz API (OpenRouter, Anthropic, OpenAI) albo lokalna Ollama. Model nie ma narzędzi ani plików.</p>
+            <div class="providers" id="providers"></div>
+            <div class="field">
+              <label for="ex-model" data-i18n="ex.model">Model (opcjonalnie)</label>
+              <input id="ex-model" type="text" autocomplete="off" spellcheck="false" data-i18n-ph="ex.model.ph" placeholder="domyślny dla dostawcy" />
+            </div>
+            <button type="button" class="btn" id="ex-save" data-i18n="ex.save">💾 Zapamiętaj wybór</button>
+            <div class="consent-box tight">
+              <label class="switch"><input type="checkbox" id="ex-consent" /><span></span></label>
+              <div><strong data-i18n="ex.consent.t">Zgoda na wysyłanie</strong><p class="muted small" data-i18n="ex.consent">Wiadomości i — tylko gdy zaznaczysz — zredagowany skrót ustaleń trafią do wybranego dostawcy. Bez plików, ścieżek i sekretów.</p></div>
+            </div>
+            <label class="check"><input type="checkbox" id="ex-attach" /><span data-i18n="ex.attach">Dołącz skrót najnowszych raportów do następnej wiadomości</span></label>
+          </div>
+          <div class="card chat">
+            <div class="chat-head">
+              <div><strong data-i18n="ex.chat">Rozmowa z ekspertem</strong><small class="muted" id="ex-target">—</small></div>
+              <button type="button" class="btn btn-ghost" id="ex-clear" data-i18n="ex.clear">Wyczyść</button>
+            </div>
+            <div class="chat-log" id="chat-log" aria-live="polite">
+              <div class="chat-empty" id="chat-empty">
+                <b>🛡️</b>
+                <p data-i18n="ex.empty">Zadaj pytanie albo wybierz podpowiedź.</p>
+                <div class="suggest" id="suggest"></div>
+              </div>
+            </div>
+            <form class="chat-input" id="chat-form">
+              <textarea id="chat-text" rows="2" data-i18n-ph="ex.ph" placeholder="Np. Co naprawić najpierw przed publikacją? (Enter — wyślij, Shift+Enter — nowa linia)"></textarea>
+              <button type="submit" class="btn btn-primary" id="chat-send" data-i18n="ex.send">Wyślij</button>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- 05 AGENTS -->
+      <section class="view" data-view="agents" hidden>
+        <div class="card">
+          <span class="eyebrow" data-i18n="ag.eyebrow">SKILL W AGENCIE</span>
+          <h2 data-i18n="ag.title">Przekaż zadanie agentowi CLI</h2>
+          <p class="muted" data-i18n="ag.lead">Agent czyta skill cyber-defense i prowadzi audyt sam, pytając o zgody. Uruchom w tle albo skopiuj komendę do własnego terminala.</p>
+          <div class="hosts" id="hosts"></div>
+          <div class="form-2">
+            <div class="field">
+              <label for="ag-mission" data-i18n="ag.mission">Zadanie</label>
+              <select id="ag-mission">
+                <option value="demo" data-i18n="ag.m.demo">Demo end-to-end</option>
+                <option value="code" data-i18n="ag.m.code">Audyt kodu i zależności</option>
+                <option value="pc" data-i18n="ag.m.pc">Audyt komputera</option>
+                <option value="web" data-i18n="ag.m.web">Pasywny audyt strony</option>
+                <option value="changes" data-i18n="ag.m.changes">Przegląd zmian</option>
+                <option value="retest" data-i18n="ag.m.retest">Plan retestu</option>
+                <option value="ocr" data-i18n="ag.m.ocr">Plan użycia OpenCodeReview</option>
+                <option value="report" data-i18n="ag.m.report">Raport HTML/PDF</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="ag-target" data-i18n="ag.target">Cel (ścieżka / URL)</label>
+              <input id="ag-target" type="text" autocomplete="off" spellcheck="false" />
+            </div>
+          </div>
+          <pre class="code" id="ag-command"></pre>
+          <details>
+            <summary data-i18n="ag.preview">Podgląd promptu</summary>
+            <pre class="code" id="ag-prompt"></pre>
+          </details>
+          <div class="btn-row">
+            <button type="button" class="btn btn-primary" id="ag-launch" data-i18n="ag.launch">⚡ Uruchom w tle</button>
+            <button type="button" class="btn" data-copy="cli" data-i18n="ag.copyCli">Kopiuj komendę</button>
+            <button type="button" class="btn" data-copy="prompt" data-i18n="ag.copyPrompt">Kopiuj prompt</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h3 data-i18n="ag.sessions">Sesje agentów</h3></div>
+          <ul class="history" id="sessions"></ul>
+        </div>
+      </section>
+
+      <!-- 06 REPORTS -->
+      <section class="view" data-view="reports" hidden>
+        <div class="card">
+          <div class="card-head"><h3 data-i18n="rp.title">Pliki w .cda/reports</h3><a class="btn btn-ghost" href="/report/dashboard.html" target="_blank" rel="noopener" data-i18n="act.dashboard">Dashboard ↗</a></div>
+          <div class="form-2">
+            <input type="search" id="rp-search" data-i18n-ph="rp.search" data-i18n-aria="rp.search" placeholder="Szukaj raportów" />
+            <select id="rp-format" data-i18n-aria="rp.format">
+              <option value="all" data-i18n="rp.allFormats">Wszystkie formaty</option>
+              <option value="html">HTML</option>
+              <option value="md">Markdown</option>
+              <option value="json">JSON</option>
+              <option value="pdf">PDF</option>
+              <option value="sarif">SARIF</option>
+            </select>
+          </div>
+          <div class="report-grid" id="report-grid"></div>
+        </div>
+      </section>
+
+      <!-- 07 SYSTEM -->
+      <section class="view" data-view="system" hidden>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head"><h3 data-i18n="sys.doctor">Diagnostyka (bez sieci)</h3><button type="button" class="link" id="sys-rerun" data-i18n="sys.rerun">Sprawdź ponownie</button></div>
+            <ul class="checks" id="doctor"></ul>
+          </div>
+          <div class="card">
+            <h3 data-i18n="sys.bounds">Granice bezpieczeństwa</h3>
+            <ul class="bounds">
+              <li data-i18n="sys.b1">Panel słucha tylko na 127.0.0.1, sprawdza Host/Origin i wymaga tokenu sesji dla każdej akcji.</li>
+              <li data-i18n="sys.b2">Każdy krok, który czyta pliki, komputer lub sieć, wymaga Twojej zgody.</li>
+              <li data-i18n="sys.b3">Model nie ma narzędzi, plików ani powłoki. Dostaje tylko zredagowany skrót.</li>
+              <li data-i18n="sys.b4">Odpowiedź modelu to ocena modelu — tylko retest zamyka ustalenie.</li>
+              <li data-i18n="sys.b5">Nic nie jest instalowane ani zmieniane w sprawdzanym projekcie.</li>
+            </ul>
+            <h3 class="spaced" data-i18n="sys.keys">Skróty klawiszowe</h3>
+            <dl class="facts keys">
+              <dt><kbd>1</kbd>–<kbd>7</kbd></dt><dd data-i18n="sys.k1">przełącz widok</dd>
+              <dt><kbd>/</kbd></dt><dd data-i18n="sys.k2">szukaj w ustaleniach</dd>
+              <dt><kbd>R</kbd></dt><dd data-i18n="sys.k3">odśwież dane</dd>
+              <dt><kbd>L</kbd></dt><dd data-i18n="sys.k4">zmień język</dd>
+            </dl>
+          </div>
+        </div>
+      </section>
+
+      <footer class="foot">Cyber Defense Agent · <a href="https://github.com/aievolutionpl/cyber-defense-agent" target="_blank" rel="noopener">AI Evolution Polska</a> · MIT</footer>
+    </main>
+  </div>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script type="module" src="/panel.js"></script>
+</body>
+</html>

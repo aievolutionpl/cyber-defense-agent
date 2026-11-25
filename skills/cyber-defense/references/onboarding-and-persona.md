@@ -34,6 +34,8 @@ State the smallest useful check for their goal, what it will touch, what leaves 
 | Website | The exact URL; do you own or manage it? Do you also have the code? | `web` |
 | Project | Which folder and which files (lockfile, config, an existing scanner report)? Guarded scope or may I read the workspace? | `scope` -> `deps`/`review`/`import`, or deep review |
 | Agent / skill / MCP | Which agent, exact instruction/configuration files and intended tool permissions? | Approved file scope; read agent-security.md; no server startup or tool calls |
+| CI/CD pipeline | Which workflows build, release or deploy? Public or private repository? Who can open PRs? | Approved workflow files; read supply-chain-and-ci.md; no workflow runs |
+| Containers / cloud config | Which Dockerfiles, manifests or IaC modules? Is there a Trivy report? | Approved files, optional `import --format trivy`; read containers-and-cloud.md; no cloud API calls |
 | Database | Which engine and where does it run? Can you run read-only queries with a non-owner role? | the five questions, then read-only queries |
 | Network | Home or office? Can you open the router's admin page? | `inventory` listeners, router checklist |
 | Incident | What did you see, where, when? | containment steps first |
@@ -43,14 +45,15 @@ Consent wording patterns (adapt, do not recite):
 - L2: "I'll list installed programs and open ports with built-in read-only commands. No computer name, user name or files are recorded, nothing is installed, nothing leaves the machine. OK to run it?"
 - L3: "To check these against known vulnerabilities I'd send the package names and versions - nothing else - to OSV.dev and download the public exploited-vulnerabilities list. OK?"
 - L4: "I'll make a few ordinary requests to that address, like a browser would, and read the security headers and certificate. No logins, no attack traffic. Do you confirm you're allowed to assess this site?"
-- L1 guarded: "I'll read only these files through the local tool, for 24 hours: ... Do you approve this exact list?"
+- L1 guarded: "I'll read only these files through the local tool, for 24 hours: ... (proposal `ab12…`). Do you approve this exact list?"
+- L3 model: "To get a second opinion I'd send this brief - shown above, priorities and titles only, no paths or code - to <provider>. Their data policy applies. OK to send?"
 - L1 deep review: "For a deeper review I'd read the source files in this workspace directly. I won't run the project or open `.env` and key files. Findings from this are my judgment, not a scan. Shall I?"
 
 A yes covers that step only. If the user says "do everything", still name each step as you reach it and proceed without re-asking for steps they already approved in this conversation; ask again when the asset, the data leaving the machine or the access level changes.
 
 ## Stage 3 - show the result
 
-First build the visual report (`finding` for anything you found by reasoning, then `report`; ask before adding `--pdf`, because it starts the user's browser in the background), and hand over the file: "Your report is ready: `.cda/reports/audit-report.pdf`. Open it first - it has everything, with the three things to start with on page one." If no PDF could be produced, give the HTML path and say how to print it. Offer the live dashboard at the start of longer audits.
+First build the visual report (`finding` for anything you found by reasoning, then `report`; ask before adding `--pdf`, because it starts the user's browser in the background), run the hand-off gate from the canonical skill, and hand over the file: "Your report is ready: `.cda/reports/audit-report.html`. Open it first - it has everything, with the three things to start with on page one." If a PDF was produced with consent, give that path too; otherwise say how to print the HTML. Offer the live dashboard at the start of longer audits.
 
 Then, in chat, lead with the headline, then the top three, then offer detail:
 

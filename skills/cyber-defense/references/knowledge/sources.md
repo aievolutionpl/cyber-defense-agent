@@ -10,6 +10,14 @@ The playbooks in this folder are original summaries written for this skill. They
 
 These are public documentation reads, not checks of a user asset. The [agent playbook](agent-security.md) is original guidance, not a bundled scanner. Recheck sources when a version-specific decision depends on them.
 
+## CI/CD and container sources checked on 23 November 2026
+
+- [GitHub Actions secure use reference](https://docs.github.com/en/actions/reference/security/secure-use): script-injection mitigations and pinning third-party actions to a full-length commit SHA. Used in [supply chain and CI](supply-chain-and-ci.md).
+- [Securely using `pull_request_target`](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target): GitHub's own insecure example of checking out PR head code in a privileged trigger.
+- [Kubernetes Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/): Privileged, Baseline and Restricted profiles and the fields each restricts. Used in [containers and cloud](containers-and-cloud.md).
+
+Background frameworks named in those playbooks (OWASP Top 10 CI/CD Security Risks, SLSA, OpenSSF Scorecard, OWASP Docker Security Cheat Sheet, CIS Benchmarks) frame questions; recheck them before quoting a specific requirement.
+
 ## Standards and catalogues
 
 | Source | Use it for |
@@ -62,6 +70,8 @@ Reports from these can be triaged with `import` when exported as SARIF or `cda.s
 | PyCQA/bandit, securego/gosec, eslint security plugins | language-specific code checks |
 | bridgecrewio/checkov, tfsec | infrastructure-as-code misconfiguration |
 | ossf/scorecard | supply-chain health of a repository |
+| zizmorcore/zizmor, rhysd/actionlint | GitHub Actions workflow security and correctness |
+| kubernetes Pod Security Admission, kyverno, open-policy-agent/gatekeeper | admission policy for Kubernetes workloads |
 | CISOfy/lynis | Linux and macOS host hardening audit |
 | drwetter/testssl.sh | TLS configuration detail |
 | OWASP ZAP (baseline scan), projectdiscovery/nuclei | web checks - active tools: authorized targets and a lab only |

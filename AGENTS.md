@@ -4,7 +4,7 @@
 
 This file guides contributors and coding agents working on this trusted repository. It does not grant permission to inspect another project. Product overview and first run: [README.md](README.md). Operator requirements: [docs/RESPONSIBLE_USE.md](docs/RESPONSIBLE_USE.md).
 
-Use Node.js >=22. The site is in apps/site. Local tools use only the Node standard library and never execute target code. Network access exists in exactly two consent-gated modules (`advisories.mjs`, `web.mjs`). Run npm run check and npm run demo before releasing.
+Use Node.js >=22. The site is in apps/site. Local tools use only the Node standard library and never execute target code. Network access exists in exactly three consent-gated modules (`advisories.mjs`, `web.mjs`, `providers.mjs`). Run npm run check and npm run demo before releasing.
 
 ## Ownership and architecture
 
@@ -21,6 +21,10 @@ Use Node.js >=22. The site is in apps/site. Local tools use only the Node standa
 - `tools/comparison.mjs`: validated snapshot comparison and redacted SARIF export. Absence is never a confirmed fix.
 - `tools/pr-review.mjs`: trusted base-policy review of separate repository snapshots. Never execute candidate code.
 - `tools/triage.mjs`: bounded model-input facts; no automatic transmission.
+- `tools/providers.mjs`: optional model connection (Claude Code / Codex CLI subscriptions, OpenRouter, Anthropic, OpenAI, local Ollama). Fixed URL allowlist, no redirects, consent flag per call, bounded redacted brief only, no tools for the model, keys from env or a user-level file outside the repository.
+- `tools/panel/` + `tools/panel-api.mjs`: the local Command Center page (served by `ui.mjs` under a strict CSP, no inline code) and its data: overview from stored reports, findings explorer, and model chat through `providers.callModel` with per-request consent.
+- `tools/safe-write.mjs`: link-safe, atomic writes and reads for state outside StateStore (model config, credentials, agent sessions, guided runs, saved prompts). Use it for every new state file.
+- `tools/chat.mjs`, `tools/doctor.mjs`: interactive expert chat (per-brief confirmation) and a local, network-free readiness check.
 - `tools/welcome.mjs`: deterministic terminal intake; no target access, persistence or consent side effects.
 - `apps/site/`: static presentation, EN/PL and synthetic examples. No real scan or model API.
 - `tests/`: meaningful adversarial and workflow regression tests. CI runs on Windows, Linux and macOS.
@@ -46,7 +50,7 @@ summary digest; never send raw report evidence by default. Native Codex resumes 
 use the stored thread ID, never `--last`. Retest snapshot digests in `tools/engine.mjs`
 bind historical confirmations to the exact compared evidence.
 
-`tools/panel.mjs` renders the bilingual dashboard; `tools/panel/` contains local
+`tools/panel.mjs` renders the bilingual dashboard; `tools/workspace-panel/` contains local
 styles, the decorative globe and client interactions. `tools/pdf.mjs` handles
 asynchronous isolated PDF printing. `tools/ui.mjs` owns consented workflow routes
 and validates local requests. `tools/guided-reviews.mjs` owns review execution, `tools/agent-sessions.mjs` owns CLI sessions, and `tools/projects.mjs` stores project labels and archive state. Local context identifiers must never be interpolated into an advisory prompt. Keep the advisory console separate from

@@ -28,7 +28,7 @@ From the trusted CDA checkout, agree the target root and exact files. For an exp
 
 ```sh
 node tools/cda.mjs scope --root /path/to/project --allow src/config.js --allow reports/gitleaks.json --name project
-node tools/cda.mjs approve --scope project --root /path/to/project --yes
+node tools/cda.mjs approve --scope project --root /path/to/project --proposal <digest-from-scope-output> --yes
 node tools/cda.mjs import --scope project --input reports/gitleaks.json --format gitleaks --name secrets
 node tools/cda.mjs report --name security-review --from secrets --scope project
 ```

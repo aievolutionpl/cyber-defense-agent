@@ -160,8 +160,8 @@ export function Installation({ locale }: { locale: Locale }) {
               <div className="install-status">
                 <strong>{pl ? 'Pierwszy raport' : 'Your first report'}</strong>
                 <p>{pl
-                  ? 'W panelu wybierz Projekty, dodaj nazwę i kliknij Nowe sprawdzenie. Uruchom demo. Przy gotowym wyniku wybierz Pobierz PDF lub Wyjaśnij mi to.'
-                  : 'Open Projects, add a name and choose New review. Run the demo. When the result is ready, choose Download PDF or Explain this.'}</p>
+                  ? 'W Command Center otwórz Projekty i raporty. Wybierz Projekty, dodaj nazwę i kliknij Nowe sprawdzenie. Uruchom demo. Przy gotowym wyniku wybierz Pobierz PDF lub Wyjaśnij mi to.'
+                  : 'In Command Center, open Projects & reports. Choose Projects, add a name and choose New review. Run the demo. When the result is ready, choose Download PDF or Explain this.'}</p>
               </div>
             ) : (<>
             <div className="command-caption">

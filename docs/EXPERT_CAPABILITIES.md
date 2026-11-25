@@ -32,7 +32,14 @@ The flags are consent records enforced in code. They are not authentication and 
 | `report --name <n> --from <report> [...]` | Merges evidence reports into one dark, self-contained HTML report (no scripts, no external resources, strict CSP, every string escaped) and, only with the explicit `--pdf` flag, prints it to PDF with a locally installed Chromium-based browser. Without the flag or without a browser it writes HTML only and says so. A confirmed fix closes a finding only for the same root, rule and file and only when the retest is newer; an incomplete advisory lookup is shown as incomplete and never as a clear verdict. | none; the browser opens only the generated local file |
 | `dashboard` | Re-renders `.cda/reports/dashboard.html` from every stored report. Also runs automatically after each evidence command; the page refreshes itself every five seconds. | none |
 
-Outbound evidence requests use the hosts above for `advisories` and the operator-authorized site for `web`. The operator panel listens on loopback. An explicit agent-session launch starts the selected installed CLI, whose provider settings govern its model access and data handling.
+Network access is limited in code to the hosts above for `advisories` (redirects refused) and to the operator-named site for `web`. The optional model connection (`explain --send-summary`, `ask --send-question`, `chat`) is the only other network use; see [MODEL_PROVIDERS.md](MODEL_PROVIDERS.md). The panel listens on loopback. An explicit agent-session launch starts the selected installed CLI, whose provider settings govern its model access and data handling.
+
+| Command | What it does | Data leaving the machine |
+|---|---|---|
+| `doctor`, `providers` | Local readiness and provider status: Node/Git versions, PDF browser, `.cda` ignore rule, `<cli> --version`, presence of key variables. | none |
+| `connect --provider <id> [--model] [--key-stdin]` | Saves the provider/model choice in `.cda/config.json`; with `--key-stdin` stores an API key in a user-level 0600 file outside every repository. | none |
+| `explain --from <r> --send-summary` | Sends a bounded brief (up to 60 findings: priority, area, redacted title, redacted fix hint, verdict, coverage counts) with a fixed defensive system prompt. `--dry-run` prints the exact payload and sends nothing. Output is sanitized and labelled model judgment. | the brief, to the chosen provider (`openrouter.ai`, `api.anthropic.com`, `api.openai.com`, the provider behind the operator's logged-in `claude`/`codex` CLI, or `127.0.0.1:11434`) |
+| `ask --question <q> --send-question` / `chat` | One question, or an interactive conversation; `/explain` in chat asks again before each brief. | the operator's own text (and confirmed briefs) |
 
 PDF printing starts a child process, so it has its own consent flag (`report --pdf`, `demo.mjs --pdf`): the first existing browser from a fixed path list (or `CDA_BROWSER`), with fixed headless arguments and the `file://` URL of the report this tool just wrote. On Linux as root it adds `--no-sandbox`, which is acceptable only because the page is our own script-free HTML. The verdict line in the report ("Act today", "Needs attention", "Routine", "No findings in the checked scope") is derived from priority counts; it is a reading aid, not a score or a certification.
 
@@ -62,7 +69,7 @@ The separate PR runner uses an explicitly authorized base-branch policy to read 
 
 `node tools/cda.mjs ui --lang pl` opens the local panel on `127.0.0.1:3109`. It checks the actual listener port in Host, Origin and Referer headers. POST actions require the session token. Reports, prompts, sessions and run state use guarded local paths. Session and run JSON use the same atomic state store as evidence reports. Linked state files and directories are rejected.
 
-A project audit requires an explicit list of relative files. The panel displays the CLI's canonical root and complete proposed list before approval. The approval passes the proposal digest to the CLI. Replacing a proposal invalidates that approval. A computer audit first inventories locally, then asks separately before sharing package names and versions with OSV.dev and downloading CISA KEV.
+A project audit requires an explicit list of relative files. The panel displays the CLI's canonical root and complete proposed list before approval. The approval passes the proposal digest to the CLI. Replacing a proposal invalidates that approval. Computer audits default to local inventory. The panel offers a separate opt-in before sending package names and versions to OSV.dev and downloading CISA KEV.
 
 Each run has its own report names and step history. Cancellation is retained when child processes close. Resume waits for the previous attempt to settle and continues from the first unfinished step. Each local evidence step has a five-minute timeout and a two-megabyte combined output limit. Existing interrupted computer audits retain the separate data-sharing gate when resumed.
 
@@ -73,6 +80,8 @@ Agent sessions submit one prompt using Claude Code print mode or `codex exec`. T
 ## Agent review and website planner
 
 The agent-security playbook adds a read-only review route for AI applications, skills and MCP configuration, informed by OWASP Agentic 2026, ASVS 5.0.0 and the MCP security documentation checked on 13 November 2026. It is expert guidance, not a new scanner or connector. Existing local agent rules remain bounded pattern checks. No network destination, OS collector, dependency or implicit permission was added.
+
+The agent missions `changes`, `retest` and `ocr` prepare prompts for the host. The OpenCodeReview mission prepares an integration plan. See the [implementation roadmap](CONTROL_CENTER_ROADMAP.md).
 
 The website's seven-scenario planner generates a localized brief for Codex or Claude Code, with expected evidence and explicit limits. It runs entirely in the browser without target inputs, persistence or audit requests; copying a brief does not grant consent. The evidence-review method adds coverage, counter-evidence and decision framing to the skill. Host/model behavioral acceptance remains separate from document and browser validation.
 ## Local dashboard console and PDF export

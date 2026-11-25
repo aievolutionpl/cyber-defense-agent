@@ -1,0 +1,87 @@
+/* Shared material for the local workspace and Command Center. */
+.glass-shell {
+  --glass-edge: rgba(181, 217, 230, .24);
+  --glass-ink: #edf6f8;
+  --glass-secondary: #b4c7ce;
+  --glass-accent: #89e7d8;
+  --glass-fill: linear-gradient(124deg, #213641 0%, #172733 46%, #182331 100%);
+  --glass-depth: inset 0 1px 0 #edffff21, 0 9px 25px #03091233;
+  color-scheme: dark;
+  background-color: #0a141c;
+  background-image: radial-gradient(ellipse at 22% 8%, #21454d 0%, transparent 53%),
+                    radial-gradient(ellipse at 95% 38%, #293447 0%, transparent 52%);
+  background-attachment: fixed;
+}
+.glass-shell :is(.workspace, main) { background-color: transparent; }
+.glass-shell :is(.sidebar, .topbar) {
+  background: #101d26;
+  border-color: var(--glass-edge);
+}
+.glass-shell :is(.card, .overview-card, .scope-map, .overview-metric, .project-picker,
+                 .project-detail, .agent-context, .conversation-toolbar, .connection-center,
+                 .cyber-terminal, .setup, .agent-settings, dialog) {
+  color: var(--glass-ink);
+  border: 1px solid var(--glass-edge);
+  background: var(--glass-fill);
+  box-shadow: var(--glass-depth);
+}
+/* Blur only the shell, map and dialogs. Long lists and transcript text stay matte. */
+@supports (backdrop-filter: blur(12px)) {
+  .glass-shell {
+    --glass-fill: linear-gradient(124deg, #49677569, #172733dd 49%, #263148a8);
+  }
+  .glass-shell :is(.sidebar, .topbar) {
+    background: #0f1b26dd;
+    backdrop-filter: blur(16px) saturate(120%);
+  }
+  .glass-shell :is(.scope-map, dialog) { backdrop-filter: blur(14px); }
+}
+.glass-shell :is(.terminal-chrome, .card-head) { color: var(--glass-ink); }
+.glass-shell .chat-output { background: #101a24; }
+.glass-shell :is(.quiet, .field-help, .action-note) { color: var(--glass-secondary); }
+.glass-shell .nav-item.active, .glass-shell .nav button[aria-current="page"] {
+  color: #dcfffa;
+  background: #27464b;
+  box-shadow: inset 3px 0 0 var(--glass-accent), inset 0 1px 0 #baf7ef21;
+}
+.glass-shell :is(.btn-primary, .button.primary) {
+  color: #072621;
+  background: #89e7d8;
+  border-color: #a9f8e9;
+}
+.glass-shell :is(.btn-primary, .button.primary):hover:not(:disabled) { background: #adf3e6; }
+.glass-shell :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid #a9f8e9;
+  outline-offset: 3px;
+}
+.workspace-switch {
+  display: inline-flex;
+  gap: .35rem;
+  align-items: center;
+  min-height: 36px;
+  padding: 5px 11px;
+  color: #ddf4ef;
+  background: #203940;
+  border: 1px solid #536e76;
+  border-radius: 9px;
+  font: 600 13px/1.35 system-ui, sans-serif;
+  text-decoration: none;
+}
+.workspace-switch:hover { background: #2c4950; }
+html[lang="pl"] .workspace-switch [lang="en"], html[lang="en"] .workspace-switch [lang="pl"] { display: none; }
+.glass-shell dialog { background-color: #15252e; }
+.glass-shell dialog::backdrop { background: #050b14b8; }
+@media (max-width: 700px) {
+  .glass-shell { background-attachment: scroll; }
+  .glass-shell :is(.topbar, .topbar-actions, .top-actions) { flex-wrap: wrap; height: auto; }
+  .glass-shell .topbar { gap: 8px; padding-block: 10px; }
+  .workspace-switch { min-height: 40px; font-size: 12px; }
+}
+@media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
+  .glass-shell { --glass-fill: #182934; --glass-edge: #70848e; background-image: none; }
+  .glass-shell :is(.sidebar, .topbar, .scope-map, dialog) { background-color: #14232d; backdrop-filter: none; }
+}
+@media (forced-colors: active) {
+  .glass-shell .workspace-switch, .glass-shell button { border: 1px solid ButtonText; }
+  .glass-shell [aria-current="page"] { outline: 2px solid Highlight; }
+}
